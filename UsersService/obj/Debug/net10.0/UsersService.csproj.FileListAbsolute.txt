@@ -64,3 +64,4 @@ C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\U
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\UsersService\obj\Debug\net10.0\UsersService.pdb
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\UsersService\obj\Debug\net10.0\UsersService.genruntimeconfig.cache
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\UsersService\obj\Debug\net10.0\ref\UsersService.dll
+C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\UsersService\obj\Debug\net10.0\UsersService.sourcelink.json

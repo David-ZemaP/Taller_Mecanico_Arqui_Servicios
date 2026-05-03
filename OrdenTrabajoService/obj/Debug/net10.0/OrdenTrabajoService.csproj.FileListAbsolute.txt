@@ -64,3 +64,4 @@ C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\O
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\OrdenTrabajoService\obj\Debug\net10.0\OrdenTrabajoService.pdb
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\OrdenTrabajoService\obj\Debug\net10.0\OrdenTrabajoService.genruntimeconfig.cache
 C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\OrdenTrabajoService\obj\Debug\net10.0\ref\OrdenTrabajoService.dll
+C:\Users\skt1f\Documents\Cato\2026\2026-I\ARQUI\Taller_Mecanico_Arqui_Services\OrdenTrabajoService\obj\Debug\net10.0\OrdenTrabajoService.sourcelink.json
