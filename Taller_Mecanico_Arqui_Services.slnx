@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Front/Front.csproj" />
+  <Project Path="OrdenTrabajoService/OrdenTrabajoService.csproj" />
+  <Project Path="UsersService/UsersService.csproj" />
+</Solution>
