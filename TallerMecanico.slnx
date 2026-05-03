@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TallerMecanico.API/TallerMecanico.API.csproj" />
+    <Project Path="src/TallerMecanico.Core/TallerMecanico.Core.csproj" />
+    <Project Path="src/TallerMecanico.Services/TallerMecanico.Services.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TallerMecanico.Tests/TallerMecanico.Tests.csproj" />
+  </Folder>
+</Solution>
