@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "m/yL3uA6cLM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\skt1f\\Documents\\Cato\\2026\\2026-I\\ARQUI\\Taller_Mecanico_Arqui_Services\\OrdenTrabajoService\\OrdenTrabajoService.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\skt1f\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.2\\microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",
+    "C:\\Users\\skt1f\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
