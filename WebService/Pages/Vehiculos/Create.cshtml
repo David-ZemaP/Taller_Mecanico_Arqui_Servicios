@@ -1,0 +1,41 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Nuevo vehículo";
+}
+
+<section class="panel narrow-panel">
+    <p class="section-kicker">Formulario auxiliar</p>
+    <h1>Crear vehículo</h1>
+
+    <form method="post" class="stack-md">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Cliente Id</label>
+                <input class="form-control" asp-for="ClienteId" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Placa</label>
+                <input class="form-control" asp-for="Placa" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Marca</label>
+                <input class="form-control" asp-for="Marca" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Modelo</label>
+                <input class="form-control" asp-for="Modelo" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Año</label>
+                <input class="form-control" asp-for="Anio" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Color</label>
+                <input class="form-control" asp-for="Color" />
+            </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Guardar vehículo</button>
+    </form>
+</section>

@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\TallerMecanico.Core\TallerMecanico.Core.csproj" />
-    <ProjectReference Include="..\src\TallerMecanico.Services\TallerMecanico.Services.csproj" />
+    <ProjectReference Include="..\TallerMecanico.Core\TallerMecanico.Core.csproj" />
+    <ProjectReference Include="..\TallerMecanico.Services\TallerMecanico.Services.csproj" />
   </ItemGroup>
 
 </Project>

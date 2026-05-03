@@ -1,0 +1,80 @@
+@page "{id:int?}"
+@model OrdenTrabajoModel
+@{
+    ViewData["Title"] = "Reporte imprimible";
+}
+
+<section class="report-shell">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <p class="section-kicker">Pantalla de reportes</p>
+            <h1>Comprobante de orden de trabajo</h1>
+            <p class="section-copy">La salida está pensada para la impresión del navegador, no para generar PDF nativo automático.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir</button>
+    </div>
+
+    @if (Model.Order is null)
+    {
+        <div class="alert alert-warning">No se encontró la orden solicitada.</div>
+    }
+    else
+    {
+        <article class="panel report-card">
+            <div class="report-grid">
+                <div><span>Orden</span><strong>#@Model.Order.Id</strong></div>
+                <div><span>Cliente</span><strong>@Model.ClienteNombre</strong></div>
+                <div><span>Vehículo</span><strong>@Model.VehiculoDescripcion</strong></div>
+                <div><span>Estado</span><strong>@Model.Order.Estado</strong></div>
+            </div>
+
+            <div class="mt-4">
+                <h2 class="h5">Descripción</h2>
+                <p>@Model.Order.Descripcion</p>
+            </div>
+
+            <div class="row g-4 mt-2">
+                <div class="col-12 col-lg-6">
+                    <h2 class="h5">Productos</h2>
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr><th>Producto</th><th class="text-end">Cant.</th><th class="text-end">Subtotal</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Order.Productos)
+                            {
+                                <tr>
+                                    <td>@item.NombreProducto</td>
+                                    <td class="text-end">@item.Cantidad</td>
+                                    <td class="text-end">@item.Subtotal.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <h2 class="h5">Servicios</h2>
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr><th>Servicio</th><th class="text-end">Precio</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var servicio in Model.Order.Servicios)
+                            {
+                                <tr>
+                                    <td>@servicio.Nombre</td>
+                                    <td class="text-end">@servicio.Precio.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="report-total mt-4">
+                <span>Total general</span>
+                <strong>@Model.Order.Total.ToString("C")</strong>
+            </div>
+        </article>
+    }
+</section>

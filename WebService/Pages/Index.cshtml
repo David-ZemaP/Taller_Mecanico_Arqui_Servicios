@@ -1,10 +1,236 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Órdenes de trabajo";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="hero-card">
+    <div>
+        <p class="section-kicker">Transacción principal</p>
+        <h1>Registrar, consultar, editar, imprimir y anular órdenes desde una sola pantalla</h1>
+        <p class="section-copy">La vista combina búsqueda de clientes y vehículos, selección temporal de productos y servicios, cálculo inmediato de totales y una grilla operativa con detalle, edición, impresión y anulación.</p>
+    </div>
+    <div class="hero-metrics">
+        <div><span>Órdenes activas</span><strong>@Model.Ordenes.Count</strong></div>
+        <div><span>Clientes</span><strong>@Model.Clientes.Count</strong></div>
+        <div><span>Productos</span><strong>@Model.Productos.Count</strong></div>
+    </div>
+</section>
+
+<form method="post" asp-page-handler="Guardar" class="stack-xl" id="orderForm">
+    <input type="hidden" asp-for="EditingOrderId" id="EditingOrderId" />
+    <input type="hidden" asp-for="ProductosJson" id="ProductosJson" />
+    <input type="hidden" asp-for="ServiciosJson" id="ServiciosJson" />
+
+    <div class="grid-2">
+        <article class="panel">
+            <div class="panel__header">
+                <div>
+                    <p class="section-kicker">Cliente y vehículo</p>
+                    <h2>Datos de la orden</h2>
+                </div>
+                <div class="panel__actions">
+                    <a class="btn btn-outline-light btn-sm" asp-page="/Clientes/Create">Nuevo cliente</a>
+                    <a class="btn btn-outline-light btn-sm" asp-page="/Vehiculos/Create">Nuevo vehículo</a>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Buscar cliente</label>
+                <input class="form-control order-filter" data-filter-select="clienteSelect" placeholder="Filtra por nombre o apellido" />
+                <select class="form-select mt-2" asp-for="ClienteId" id="clienteSelect" asp-items="Model.ClienteOptions">
+                    <option value="">Seleccione un cliente</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Buscar vehículo</label>
+                <input class="form-control order-filter" data-filter-select="vehiculoSelect" placeholder="Filtra por placa o modelo" />
+                <select class="form-select mt-2" asp-for="VehiculoId" id="vehiculoSelect" asp-items="Model.VehiculoOptions">
+                    <option value="">Seleccione un vehículo</option>
+                </select>
+            </div>
+
+            <label class="form-label">Descripción de la orden</label>
+            <textarea class="form-control" asp-for="Descripcion" rows="4" placeholder="Describe el trabajo a realizar"></textarea>
+        </article>
+
+        <article class="panel">
+            <p class="section-kicker">Totales</p>
+            <h2 class="mb-3">Resumen en tiempo real</h2>
+            <div class="totals-grid">
+                <div><span>Servicios</span><strong id="servicesTotal">$0.00</strong></div>
+                <div><span>Productos</span><strong id="productsTotal">$0.00</strong></div>
+                <div class="totals-grid__grand"><span>Total</span><strong id="orderTotal">$0.00</strong></div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">El total se calcula en el cliente a partir de los renglones temporales antes de enviar la transacción.</p>
+        </article>
+    </div>
+
+    <div class="grid-2">
+        <article class="panel">
+            <div class="panel__header"><div><p class="section-kicker">Productos</p><h2>Selección temporal</h2></div></div>
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Buscar producto</label>
+                    <input class="form-control order-filter" data-filter-select="productoSelect" placeholder="Filtra por nombre" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Producto</label>
+                    <select class="form-select" id="productoSelect" asp-items="Model.ProductoOptions">
+                        <option value="">Seleccione</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" class="form-control" id="productoCantidad" min="1" value="1" />
+                </div>
+                <div class="col-12 col-md-1 d-grid">
+                    <button type="button" class="btn btn-accent" id="addProductBtn">+</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-end">Cant.</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody"></tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel__header"><div><p class="section-kicker">Servicios</p><h2>Selección temporal</h2></div></div>
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-12 col-md-8">
+                    <label class="form-label">Buscar servicio</label>
+                    <input class="form-control order-filter" data-filter-select="servicioSelect" placeholder="Filtra por nombre" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Servicio</label>
+                    <select class="form-select" id="servicioSelect" asp-items="Model.ServicioOptions">
+                        <option value="">Seleccione</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-1 d-grid">
+                    <button type="button" class="btn btn-accent" id="addServiceBtn">+</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th class="text-end">Precio</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="servicesTableBody"></tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div>
+            <button type="submit" class="btn btn-primary btn-lg">Guardar orden</button>
+            <button type="button" class="btn btn-outline-secondary btn-lg ms-2" id="resetOrderBtn">Limpiar</button>
+        </div>
+        <div class="text-muted small">Si el cliente o vehículo no existe, usa los formularios auxiliares antes de guardar.</div>
+    </div>
+</form>
+
+<section class="panel mt-4">
+    <div class="panel__header">
+        <div>
+            <p class="section-kicker">Grilla principal</p>
+            <h2>Órdenes registradas</h2>
+        </div>
+        <a class="btn btn-outline-light btn-sm" asp-page="/Index">Refrescar</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-orders align-middle">
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Cliente</th>
+                    <th>Vehículo</th>
+                    <th class="text-end">Estado</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var orden in Model.Ordenes)
+                {
+                    <tr>
+                        <td>#@orden.Id</td>
+                        <td>@orden.ClienteId</td>
+                        <td>@orden.VehiculoId</td>
+                        <td class="text-end"><span class="badge bg-info text-dark">@orden.Estado</span></td>
+                        <td class="text-end">@orden.Total.ToString("C")</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#detailModal"
+                                    data-order-id="@orden.Id"
+                                    data-client-id="@orden.ClienteId"
+                                    data-vehicle-id="@orden.VehiculoId"
+                                    data-description="@orden.Descripcion"
+                                    data-products='@Html.Raw(JsonSerializer.Serialize(orden.Productos))'
+                                    data-services='@Html.Raw(JsonSerializer.Serialize(orden.Servicios))'
+                                    data-total="@orden.Total">
+                                Consultar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning ms-1"
+                                    data-order-id="@orden.Id"
+                                    data-client-id="@orden.ClienteId"
+                                    data-vehicle-id="@orden.VehiculoId"
+                                    data-description="@orden.Descripcion"
+                                    data-products='@Html.Raw(JsonSerializer.Serialize(orden.Productos))'
+                                    data-services='@Html.Raw(JsonSerializer.Serialize(orden.Servicios))'
+                                    onclick="window.tallerMecanico.loadOrderToForm(this)">
+                                Editar
+                            </button>
+                            <a class="btn btn-sm btn-outline-info ms-1" asp-page="/OrdenTrabajo" asp-route-id="@orden.Id">Imprimir</a>
+                            <form method="post" asp-page-handler="Anular" class="d-inline">
+                                <input type="hidden" name="id" value="@orden.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger ms-1">Anular</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content modal-detail">
+            <div class="modal-header">
+                <div>
+                    <p class="section-kicker mb-1">Detalle de solo lectura</p>
+                    <h5 class="modal-title">Orden de trabajo</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+        </div>
+    </div>
 </div>
+
+<script>
+    window.tallerMecanico = window.tallerMecanico || {};
+    window.tallerMecanico.catalog = {
+        products: @Html.Raw(JsonSerializer.Serialize(Model.Productos.Select(producto => new { id = producto.Id, nombre = producto.Nombre, precio = producto.Precio, stock = producto.Stock }))),
+        services: @Html.Raw(JsonSerializer.Serialize(Model.Servicios.Select(servicio => new { id = servicio.Id, nombre = servicio.Nombre, precio = servicio.Precio })))
+    };
+    window.tallerMecanico.orders = @Html.Raw(JsonSerializer.Serialize(Model.Ordenes.Select(orden => new { id = orden.Id, clienteId = orden.ClienteId, vehiculoId = orden.VehiculoId, descripcion = orden.Descripcion, estado = orden.Estado.ToString(), total = orden.Total, productos = orden.Productos, servicios = orden.Servicios })));
+    window.tallerMecanico.messages = { success: @Html.Raw(JsonSerializer.Serialize(Model.SuccessMessage)) };
+</script>

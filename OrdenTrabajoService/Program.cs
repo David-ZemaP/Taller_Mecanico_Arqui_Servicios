@@ -1,41 +1,23 @@
+using TallerMecanico.Core.Models;
+using TallerMecanico.Services;
+using TallerMecanico.Services.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddSingleton<RepositoryCreator>(sp => new PostgreSqlRepositoryCreator(builder.Configuration.GetConnectionString("TallerMecanico")));
+builder.Services.AddSingleton<ClienteService>();
+builder.Services.AddSingleton<VehiculoService>();
+builder.Services.AddSingleton<ProductoService>();
+builder.Services.AddSingleton<ServicioCatalogoService>();
+builder.Services.AddSingleton<OrdenTrabajoService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapGet("/api/ordenes", (OrdenTrabajoService service) => service.ObtenerTodos());
+app.MapGet("/api/ordenes/{id:int}", (OrdenTrabajoService service, int id) => service.ObtenerPorId(id));
+app.MapGet("/api/clientes", (ClienteService service) => service.ObtenerTodos());
+app.MapGet("/api/vehiculos", (VehiculoService service) => service.ObtenerTodos());
+app.MapPost("/api/ordenes", (OrdenTrabajoService service, OrdenTrabajo ordenTrabajo) => service.Crear(ordenTrabajo, usuarioId: 1));
+app.MapPost("/api/ordenes/{id:int}/anular", (OrdenTrabajoService service, int id) => service.Anular(id, usuarioId: 1));
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

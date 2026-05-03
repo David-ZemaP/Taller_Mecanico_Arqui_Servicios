@@ -1,26 +1,28 @@
+using TallerMecanico.Services;
+using TallerMecanico.Services.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<RepositoryCreator>(sp => new PostgreSqlRepositoryCreator(builder.Configuration.GetConnectionString("TallerMecanico")));
+builder.Services.AddSingleton<ClienteService>();
+builder.Services.AddSingleton<VehiculoService>();
+builder.Services.AddSingleton<ProductoService>();
+builder.Services.AddSingleton<ServicioCatalogoService>();
+builder.Services.AddSingleton<OrdenTrabajoService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
+app.UseStaticFiles();
 app.UseRouting();
 
-app.UseAuthorization();
-
-app.MapStaticAssets();
-app.MapRazorPages()
-   .WithStaticAssets();
+app.MapRazorPages();
 
 app.Run();

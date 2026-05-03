@@ -1,0 +1,33 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Nuevo cliente";
+}
+
+<section class="panel narrow-panel">
+    <p class="section-kicker">Formulario auxiliar</p>
+    <h1>Crear cliente</h1>
+
+    <form method="post" class="stack-md">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Nombre</label>
+                <input class="form-control" asp-for="Nombre" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Apellido</label>
+                <input class="form-control" asp-for="Apellido" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Teléfono</label>
+                <input class="form-control" asp-for="Telefono" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Correo</label>
+                <input class="form-control" asp-for="Email" />
+            </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Guardar cliente</button>
+    </form>
+</section>
