@@ -1,0 +1,243 @@
+@*
+    Componente parcial para modal de crear/editar cliente
+    Uso: <partial name="_ClienteModal" />
+*@
+
+<div class="modal fade" id="clienteModal" tabindex="-1" aria-labelledby="clienteModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-focus="false" style="z-index: 1080;">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark text-light p-3 border border-info shadow-lg">
+            <form id="formCliente">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="clienteModalLabel">Crear cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="ClienteId" id="clienteId" value="0" />
+                    <div id="clienteFormErrors" class="alert alert-danger d-none mb-3"></div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label text-teal">Nombres *</label>
+                            <input name="Nombres" id="clienteNombres" class="form-control form-control-dark" required minlength="2" maxlength="50" />
+                            <div class="invalid-feedback">El nombre es obligatorio y debe tener al menos 2 caracteres.</div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label text-teal">Primer apellido *</label>
+                            <input name="PrimerApellido" id="clientePrimerApellido" class="form-control form-control-dark" required minlength="2" maxlength="50" />
+                            <div class="invalid-feedback">El apellido es obligatorio y debe tener al menos 2 caracteres.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-teal">Segundo apellido</label>
+                            <input name="SegundoApellido" id="clienteSegundoApellido" class="form-control form-control-dark" maxlength="50" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="form-label text-teal">CI *</label>
+                            <input name="CiNumero" id="clienteCiNumero" class="form-control form-control-dark" required minlength="4" maxlength="15" />
+                            <div class="invalid-feedback">El CI es obligatorio y debe tener al menos 4 dígitos.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-teal">Complemento CI</label>
+                            <input name="CiComplemento" id="clienteCiComplemento" class="form-control form-control-dark" maxlength="2" placeholder="Ej: 1A" />
+                            <div class="invalid-feedback">Formato: 1 dígito + 1 letra (ej: 1A, 2B)</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="form-label text-teal">Teléfono *</label>
+                            <input name="Telefono" id="clienteTelefono" class="form-control form-control-dark" required minlength="7" maxlength="15" />
+                            <div class="invalid-feedback">El teléfono es obligatorio y debe tener al menos 7 dígitos.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-teal">Correo electrónico</label>
+                            <input type="email" name="Email" id="clienteEmail" class="form-control form-control-dark" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-info" onclick="validarYGuardarCliente()">Guardar cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function validarYGuardarCliente() {
+        var errors = [];
+        var nombres = document.getElementById('clienteNombres').value.trim();
+        var primerApellido = document.getElementById('clientePrimerApellido').value.trim();
+        var ciNumero = document.getElementById('clienteCiNumero').value.trim();
+        var ciComplemento = document.getElementById('clienteCiComplemento').value.trim();
+        var telefono = document.getElementById('clienteTelefono').value.trim();
+        var email = document.getElementById('clienteEmail').value.trim();
+
+        document.getElementById('clienteNombres').classList.remove('is-invalid');
+        document.getElementById('clientePrimerApellido').classList.remove('is-invalid');
+        document.getElementById('clienteCiNumero').classList.remove('is-invalid');
+        document.getElementById('clienteCiComplemento').classList.remove('is-invalid');
+        document.getElementById('clienteTelefono').classList.remove('is-invalid');
+
+        if (!nombres || nombres.length < 2) {
+            document.getElementById('clienteNombres').classList.add('is-invalid');
+            errors.push('El nombre es obligatorio y debe tener al menos 2 caracteres.');
+        }
+
+        if (!primerApellido || primerApellido.length < 2) {
+            document.getElementById('clientePrimerApellido').classList.add('is-invalid');
+            errors.push('El primer apellido es obligatorio y debe tener al menos 2 caracteres.');
+        }
+
+        if (!ciNumero || ciNumero.length < 4 || !/^\d+$/.test(ciNumero)) {
+            document.getElementById('clienteCiNumero').classList.add('is-invalid');
+            errors.push('El CI es obligatorio y debe tener al menos 4 dígitos.');
+        }
+
+        if (ciComplemento && !/^\d[A-Za-z]$/.test(ciComplemento)) {
+            document.getElementById('clienteCiComplemento').classList.add('is-invalid');
+            errors.push('El complemento CI debe ser 1 dígito + 1 letra (ej: 1A, 2B).');
+        }
+
+        if (!telefono || telefono.length < 7 || !/^\d+$/.test(telefono)) {
+            document.getElementById('clienteTelefono').classList.add('is-invalid');
+            errors.push('El teléfono es obligatorio y debe tener al menos 7 dígitos.');
+        }
+
+        if (email && email.indexOf('@@') < 0) {
+            errors.push('El correo electrónico no tiene un formato válido.');
+        }
+
+        var errorDiv = document.getElementById('clienteFormErrors');
+        if (errors.length > 0) {
+            errorDiv.innerHTML = errors.join('<br>');
+            errorDiv.classList.remove('d-none');
+            return false;
+        } else {
+            errorDiv.classList.add('d-none');
+        }
+
+        guardarClienteAjax();
+    }
+
+    function guardarClienteAjax() {
+        var formData = new FormData(document.getElementById('formCliente'));
+        var obj = {};
+        formData.forEach((value, key) => {
+            if (value === "") return;
+            if (['ClienteId', 'CiNumero', 'Telefono'].includes(key)) {
+                obj[key] = parseInt(value, 10);
+            } else {
+                obj[key] = value;
+            }
+        });
+
+        fetch('/Clientes?handler=SaveAjax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify(obj)
+        })
+        .then(async response => {
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch(e) {
+                throw new Error('Respuesta no válida del servidor. HTTP ' + response.status);
+            }
+
+            if (response.ok) {
+                return data;
+            } else {
+                throw new Error(data.message || 'Error del servidor: ' + response.status);
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById('clienteId').value = data.cliente.clienteId;
+
+                var modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
+                if(modal) {
+                    modal.hide();
+                }
+
+                document.getElementById('formCliente').reset();
+                alert('Cliente guardado exitosamente');
+
+                if (typeof window.onClienteCreado === 'function') {
+                    setTimeout(function() { window.onClienteCreado(data.cliente); }, 100);
+                } else if (window.recargarPagina) {
+                    window.recargarPagina();
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert('Error al guardar el cliente: ' + (data.message || 'Verifique los datos ingresados.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error AJAX:', error);
+            alert('Ocurrió un error al intentar guardar el cliente: ' + error.message);
+        });
+    }
+
+    function limpiarFormularioCliente() {
+        document.getElementById('clienteId').value = '0';
+        document.getElementById('clienteNombres').value = '';
+        document.getElementById('clientePrimerApellido').value = '';
+        document.getElementById('clienteSegundoApellido').value = '';
+        document.getElementById('clienteCiNumero').value = '';
+        document.getElementById('clienteCiComplemento').value = '';
+        document.getElementById('clienteTelefono').value = '';
+        document.getElementById('clienteEmail').value = '';
+        document.getElementById('clienteFormErrors').classList.add('d-none');
+        document.getElementById('clienteModalLabel').textContent = 'Crear cliente';
+
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    document.addEventListener('hidden.bs.modal', function () {
+        limpiarFormularioCliente();
+    });
+
+    function abrirModalCliente() {
+        limpiarFormularioCliente();
+        var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('clienteModal'), { backdrop: 'static', focus: false });
+        modal.show();
+    }
+
+    function cargarDatosEnFormulario(data) {
+        document.getElementById('clienteId').value = data.clienteId;
+        document.getElementById('clienteNombres').value = data.nombres;
+        document.getElementById('clientePrimerApellido').value = data.primerApellido;
+        document.getElementById('clienteSegundoApellido').value = data.segundoApellido || '';
+        document.getElementById('clienteCiNumero').value = data.ciNumero;
+        document.getElementById('clienteCiComplemento').value = data.ciComplemento || '';
+        document.getElementById('clienteTelefono').value = data.telefono;
+        document.getElementById('clienteEmail').value = data.email || '';
+    }
+
+    window.cargarCliente = function(id, callback) {
+        fetch('/Clientes?handler=Cliente&id=' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { alert(data.error); return; }
+                cargarDatosEnFormulario(data);
+                document.getElementById('clienteModalLabel').textContent = 'Editar Cliente';
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('clienteModal'), { backdrop: 'static', focus: false });
+                modal.show();
+                if (callback) callback(data);
+            })
+            .catch(() => alert('Error al cargar los datos del cliente'));
+    };
+
+    window.recargarPagina = function() {
+        location.reload();
+    };
+</script>

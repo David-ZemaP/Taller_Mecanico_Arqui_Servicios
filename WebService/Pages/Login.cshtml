@@ -1,0 +1,235 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.LoginModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Iniciar sesión";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Taller Mecánico</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body { 
+            background-color: #1a1a2e; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        .wrapper {
+            width: 420px;
+            background-color: transparent;
+            border: 2px solid rgba(255, 255, 255, .2);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+            color: #fff;
+            border-radius: 10px;
+            padding: 30px 40px;
+        }
+
+        .wrapper h1 {
+            font-size: 36px;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .wrapper .input-box {
+            position: relative;
+            width: 100%;
+            height: 50px;
+            margin: 30px 0;
+        }
+
+        .input-box input {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            border: 2px solid rgba(255, 255, 255, .2);
+            border-radius: 40px;
+            font-size: 16px;
+            color: #fff;
+            padding: 20px 45px 20px 20px;
+        }
+
+        .input-box input::placeholder {
+            color: #fff; 
+        }
+
+        .input-box input:focus {
+            border-color: #20c997; 
+        }
+
+        .input-box .icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: #fff; 
+        }
+
+        .input-box input:focus ~ .icon {
+            color: #20c997; 
+        }
+
+        .wrapper .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin: -15px 0 15px;
+        }
+
+        .remember-forgot label input {
+            accent-color: #20c997;
+            margin-right: 3px;
+            cursor: pointer;
+        }
+
+        .remember-forgot a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .remember-forgot a:hover {
+            text-decoration: underline;
+        }
+
+        .wrapper .btn {
+            width: 100%;
+            height: 45px;
+            background: #fff; /* matching image's white button */
+            border: none;
+            outline: none;
+            border-radius: 40px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+            cursor: pointer;
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+            transition: 0.3s ease;
+        }
+
+        .wrapper .btn:hover {
+            background: #20c997; /* predetermined teal on hover */
+            color: #fff;
+        }
+
+        .wrapper .register-link {
+            text-align: center;
+            font-size: 14px;
+            margin: 20px 0 0;
+        }
+
+        .wrapper .register-link p a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .wrapper .register-link p a:hover {
+            text-decoration: underline;
+        }
+
+        .text-danger {
+            font-size: 0.85rem;
+            margin-top: -10px;
+            display: block;
+            margin-bottom: 5px;
+            padding-left: 20px;
+        }
+
+        .validation-summary-errors {
+            color: #ff4d4d;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .validation-summary-errors ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <form method="post">
+            <h1>Iniciar sesión</h1>
+
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors" style="display: @(ViewData.ModelState.ErrorCount > 0 ? "block" : "none");"></div>
+
+            <div class="input-box">
+                <input asp-for="Input.Email" placeholder="Correo electrónico" required />
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                </svg>
+            </div>
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+
+            <div class="input-box">
+                <input asp-for="Input.Password" type="password" placeholder="Contraseña" required id="passwordInput" />
+                <span class="icon" style="cursor: pointer;" onclick="togglePasswordVisibility()">
+                    <svg id="eyeSlashIcon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" style="width: 100%; height: 100%;">
+                        <path d="M10.79 12.912l-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588zM5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z"/><path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708l-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6l-12-12 .708-.708 12 12-.708.708z"/>
+                    </svg>
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" style="width: 100%; height: 100%; display: none;">
+                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+                    </svg>
+                </span>
+            </div>
+            <span asp-validation-for="Input.Password" class="text-danger"></span>
+
+            <div class="remember-forgot">
+                <label>
+                    <input type="checkbox" asp-for="Input.RememberMe"> Recordarme
+                </label>
+                <a href="#">¿Olvidó su contraseña?</a>
+            </div>
+
+            <button type="submit" class="btn">Iniciar sesión</button>
+
+            <div class="register-link">
+                <p>¿No tiene una cuenta? <a href="#">Registrarse</a></p>
+            </div>
+        </form>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function togglePasswordVisibility() {
+            var passwordInput = document.getElementById("passwordInput");
+            var eyeSlash = document.getElementById("eyeSlashIcon");
+            var eye = document.getElementById("eyeIcon");
+
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                eyeSlash.style.display = "none";
+                eye.style.display = "block";
+            } else {
+                passwordInput.type = "password";
+                eyeSlash.style.display = "block";
+                eye.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>

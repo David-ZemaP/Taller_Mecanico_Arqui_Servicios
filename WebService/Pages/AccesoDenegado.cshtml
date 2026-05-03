@@ -1,0 +1,134 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.AccesoDenegadoModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Acceso Denegado";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Taller Mecánico</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body { 
+            background-color: #1a1a2e; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        .wrapper {
+            width: 480px;
+            background-color: transparent;
+            border: 2px solid rgba(255, 255, 255, .2);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+            color: #fff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .icon-container {
+            margin-bottom: 20px;
+        }
+
+        .icon-container svg {
+            width: 80px;
+            height: 80px;
+            color: #ff4d4d;
+        }
+
+        .wrapper h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .wrapper .message {
+            font-size: 16px;
+            color: rgba(255, 255, 255, .8);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: rgba(255, 77, 77, 0.1);
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .info-box strong {
+            font-size: 15px;
+            color: #fff;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, .7);
+            margin: 5px 0;
+        }
+
+        .btn {
+            width: 100%;
+            height: 45px;
+            background: #fff;
+            border: none;
+            outline: none;
+            border-radius: 40px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+            cursor: pointer;
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+            transition: 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            line-height: 45px;
+        }
+
+        .btn:hover {
+            background: #20c997;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="icon-container">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+            </svg>
+        </div>
+
+        <h1>Acceso Denegado</h1>
+        <p class="message">
+            No tienes permisos suficientes para acceder a esta página.
+        </p>
+
+        <div class="info-box">
+            <strong>Información:</strong>
+            <p><strong>Tu nivel:</strong> @Model.UserLevel</p>
+            <p><strong>Motivo:</strong> Esta función requiere un nivel de acceso superior o permisos específicos.</p>
+        </div>
+
+        <a href="/" class="btn">Volver al inicio</a>
+    </div>
+</body>
+</html>

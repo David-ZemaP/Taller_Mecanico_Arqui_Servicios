@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Front.Pages;
+namespace Taller_Mecanico_Arqui.Pages;
 
 public class PrivacyModel : PageModel
 {

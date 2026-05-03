@@ -1,0 +1,389 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.Vehiculo.IndexModel
+@using Taller_Mecanico_Arqui.Domain.Enums
+@{
+    ViewData["Title"] = "Vehículos";
+}
+
+<style>
+    .autocomplete-results {
+        position: absolute;
+        z-index: 1050;
+        display: none;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        margin-top: 2px;
+        background-color: #1a1d20;
+        border: 1px solid #343a40;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+    }
+    
+    .autocomplete-item {
+        padding: 0.5rem 0.75rem;
+        color: #e9ecef;
+        cursor: pointer;
+        border-bottom: 1px solid #2d3338;
+        font-size: 0.9rem;
+        transition: background-color 0.15s ease;
+    }
+    
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    
+    .autocomplete-item:hover {
+        background-color: #2d3338;
+        color: #20c997;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-teal fw-bold mb-0">Gestión de vehículos</h2>
+        <p class="text-muted-dark">Administra los vehículos registrados en el taller.</p>
+    </div>
+    @if (Model.CanModify)
+    {
+        <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#vehiculoModal" onclick="limpiarFormulario()">
+            <i class="bi bi-plus-lg me-2"></i>Nuevo vehículo
+        </button>
+    }
+</div>
+
+<div class="card-dark p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
+                <tr>
+                    <th class="text-teal pb-3">#</th>
+                    <th class="text-teal pb-3">Placa</th>
+                    <th class="text-teal pb-3">Marca</th>
+                    <th class="text-teal pb-3">Modelo</th>
+                    <th class="text-teal pb-3">Año</th>
+                    <th class="text-teal pb-3">Propietario</th>
+                    <th class="text-teal pb-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Vehiculos != null && Model.Vehiculos.Any())
+                {
+                    int contador = 1;
+                    @foreach (var item in Model.Vehiculos)
+                    {
+                        <tr class="border-bottom border-secondary">
+                            <td><span class="badge bg-secondary">@(contador++)</span></td>
+                            <td><span class="badge bg-light text-dark px-2 py-1 border border-secondary shadow-sm" style="font-family: monospace;">@item.Placa</span></td>
+                            <td class="text-white fw-semibold">@item.Marca?.Nombre</td>
+                            <td class="text-light">@item.Modelo?.Nombre</td>
+                            <td class="text-light">@item.Anio</td>
+                            <td class="text-light"><i class="bi bi-person text-teal me-2"></i>@(item.Cliente?.NombreCompleto)</td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-info border-secondary" title="Detalles" data-bs-toggle="modal" data-bs-target="#detailsModal" onclick="verDetalles(@item.VehiculoId)"><i class="bi bi-eye"></i></button>
+                                    @if (Model.CanModify)
+                                    {
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary" title="Editar" data-bs-toggle="modal" data-bs-target="#vehiculoModal" onclick="editarVehiculo(@item.VehiculoId)"><i class="bi bi-pencil"></i></button>
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary" title="Eliminar" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="prepararEliminar(@item.VehiculoId, '@Html.Raw(item.Placa.Replace("'", "\\'"))')"><i class="bi bi-trash"></i></button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="text-center text-muted-dark py-5"><i class="bi bi-car-front fs-2 d-block mb-2 text-secondary"></i>No hay vehículos registrados aún.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: Vehículo (reutilizable) -->
+<partial name="_VehiculoModal" />
+
+<!-- MODAL 2: Detalles -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-light p-3">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="detailsModalLabel">Detalles del vehículo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4 px-4" id="detailsContent">
+                <div class="text-center py-4"><div class="spinner-border text-teal" role="status"></div></div>
+            </div>
+            <div class="modal-footer border-secondary py-3 px-4">
+                <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: Eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="deleteModalLabel">Eliminar vehículo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="id" id="deleteVehiculoId" />
+                    <div class="text-center mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i></div>
+                    <p class="text-center">¿Está seguro de eliminar el vehículo con placa <strong id="deleteVehiculoPlaca"></strong>?</p>
+                    <p class="text-danger text-center mb-0">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function limpiarFormulario() {
+            window.limpiarFormularioVehiculo();
+            document.getElementById('vehiculoModalLabel').textContent = 'Crear vehículo';
+        }
+
+        function editarVehiculo(id) {
+            window.cargarVehiculo(id);
+        }
+
+function verDetalles(id) {
+            document.getElementById('detailsContent').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-teal" role="status"></div></div>';
+            fetch('?handler=Vehiculo&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">' + data.error + '</p>'; return; }
+                    document.getElementById('detailsContent').innerHTML =
+                        '<div class="card-dark p-3 mb-3" style="border-top: 4px solid #20c997;">' +
+                        '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-car-front text-teal me-2"></i>Información del Vehículo</h6>' +
+                        '<dl class="row mb-0">' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Placa</dt><dd class="col-sm-8 text-white fw-bold fs-5 mb-2"><span class="badge bg-light text-dark px-2 py-1" style="font-family: monospace;">' + data.placa + '</span></dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Propietario</dt><dd class="col-sm-8 text-white mb-2"><i class="bi bi-person text-teal me-2"></i>' + data.clienteNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Marca</dt><dd class="col-sm-8 text-white mb-2">' + data.marcaNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Modelo</dt><dd class="col-sm-8 text-white mb-2">' + data.modeloNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Color</dt><dd class="col-sm-8 text-white mb-2">' + data.colorNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Año</dt><dd class="col-sm-8 text-white mb-2">' + data.anio + '</dd>' +
+                        '</dl></div>';
+                })
+                .catch(() => { document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">Error al cargar los detalles</p>'; });
+        }
+
+        function prepararEliminar(id, placa) {
+            document.getElementById('deleteVehiculoId').value = id;
+            document.getElementById('deleteVehiculoPlaca').textContent = placa;
+        }
+
+        // Auto-show modal on validation errors
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var modal = new bootstrap.Modal(document.getElementById('vehiculoModal'));
+                modal.show();
+                document.getElementById('vehiculoModalLabel').textContent = 'Editar vehículo';
+                document.getElementById('modalSubmitBtn').textContent = 'Actualizar vehículo';
+            });
+            </text>
+        }
+    
+                    .then(data => {
+                        var container = document.getElementById('clienteResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) { container.style.display = 'none'; return; }
+                        data.forEach(function(c) {
+                            var div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = c.text;
+                            div.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('FormDto_ClienteId').value = c.id;
+                                document.getElementById('formClienteSearch').value = c.text;
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(div);
+                        });
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('formClienteSearch').contains(e.target)) {
+                document.getElementById('clienteResults').style.display = 'none';
+            }
+        });
+
+        // Marca search
+        let marcaSearchTimeout;
+        document.getElementById('formMarcaSearch').addEventListener('input', function() {
+            clearTimeout(marcaSearchTimeout);
+            var term = this.value.trim();
+            if (term.length < 1) { document.getElementById('marcaResults').style.display = 'none'; return; }
+            marcaSearchTimeout = setTimeout(function() {
+                fetch('?handler=BuscarMarcas&term=' + encodeURIComponent(term))
+                    .then(r => r.json())
+                    .then(data => {
+                        var container = document.getElementById('marcaResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) { container.style.display = 'none'; return; }
+                        data.forEach(function(m) {
+                            var div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = m.text;
+                            div.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('FormDto_MarcaId').value = m.id;
+                                document.getElementById('formMarcaSearch').value = m.text;
+                                container.style.display = 'none';
+                                // Limpiar modelo cuando se cambia la marca
+                                document.getElementById('FormDto_ModeloId').value = '0';
+                                document.getElementById('formModeloSearch').value = '';
+                            });
+                            container.appendChild(div);
+                        });
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('formMarcaSearch').contains(e.target)) {
+                document.getElementById('marcaResults').style.display = 'none';
+            }
+        });
+
+        // Modelo search
+        let modeloSearchTimeout;
+        document.getElementById('formModeloSearch').addEventListener('input', function() {
+            clearTimeout(modeloSearchTimeout);
+            var term = this.value.trim();
+            if (term.length < 1) { document.getElementById('modeloResults').style.display = 'none'; return; }
+            var marcaId = document.getElementById('FormDto_MarcaId').value;
+            modeloSearchTimeout = setTimeout(function() {
+                var url = '?handler=BuscarModelos&term=' + encodeURIComponent(term);
+                if (marcaId && marcaId > 0) {
+                    url += '&marcaId=' + marcaId;
+                }
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+                        var container = document.getElementById('modeloResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) { container.style.display = 'none'; return; }
+                        data.forEach(function(mo) {
+                            var div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = mo.text;
+                            div.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('FormDto_ModeloId').value = mo.id;
+                                document.getElementById('formModeloSearch').value = mo.text;
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(div);
+                        });
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('formModeloSearch').contains(e.target)) {
+                document.getElementById('modeloResults').style.display = 'none';
+            }
+        });
+
+        // Color search
+        let colorSearchTimeout;
+        document.getElementById('formColorSearch').addEventListener('input', function() {
+            clearTimeout(colorSearchTimeout);
+            var term = this.value.trim();
+            if (term.length < 1) { document.getElementById('colorResults').style.display = 'none'; return; }
+            colorSearchTimeout = setTimeout(function() {
+                fetch('?handler=BuscarColores&term=' + encodeURIComponent(term))
+                    .then(r => r.json())
+                    .then(data => {
+                        var container = document.getElementById('colorResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) { container.style.display = 'none'; return; }
+                        data.forEach(function(c) {
+                            var div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = c.text;
+                            div.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('FormDto_ColorVehiculoId').value = c.id;
+                                document.getElementById('formColorSearch').value = c.text;
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(div);
+                        });
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('formColorSearch').contains(e.target)) {
+                document.getElementById('colorResults').style.display = 'none';
+            }
+        });
+
+        function limpiarFormulario() {
+            window.limpiarFormularioVehiculo();
+            document.getElementById('vehiculoModalLabel').textContent = 'Crear vehículo';
+        }
+
+        function editarVehiculo(id) {
+            window.cargarVehiculo(id);
+            document.getElementById('vehiculoModalLabel').textContent = 'Editar vehículo';
+            document.getElementById('modalSubmitBtn').textContent = 'Actualizar vehículo';
+        }
+
+        function verDetalles(id) {
+            document.getElementById('detailsContent').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-teal" role="status"></div></div>';
+            fetch('?handler=Vehiculo&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">' + data.error + '</p>'; return; }
+                    document.getElementById('detailsContent').innerHTML =
+                        '<div class="card-dark p-3 mb-3" style="border-top: 4px solid #20c997;">' +
+                        '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-car-front text-teal me-2"></i>Información del Vehículo</h6>' +
+                        '<dl class="row mb-0">' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Placa</dt><dd class="col-sm-8 text-white fw-bold fs-5 mb-2"><span class="badge bg-light text-dark px-2 py-1" style="font-family: monospace;">' + data.placa + '</span></dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Propietario</dt><dd class="col-sm-8 text-white mb-2"><i class="bi bi-person text-teal me-2"></i>' + data.clienteNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Marca</dt><dd class="col-sm-8 text-white mb-2">' + data.marcaNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Modelo</dt><dd class="col-sm-8 text-white mb-2">' + data.modeloNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Color</dt><dd class="col-sm-8 text-white mb-2">' + data.colorNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Año</dt><dd class="col-sm-8 text-white mb-2">' + data.anio + '</dd>' +
+                        '</dl></div>';
+                })
+                .catch(() => { document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">Error al cargar los detalles</p>'; });
+        }
+
+        function prepararEliminar(id, placa) {
+            document.getElementById('deleteVehiculoId').value = id;
+            document.getElementById('deleteVehiculoPlaca').textContent = placa;
+        }
+
+        // Auto-show modal on validation errors
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var modal = new bootstrap.Modal(document.getElementById('vehiculoModal'));
+                modal.show();
+                document.getElementById('vehiculoModalLabel').textContent = 'Editar vehículo';
+                document.getElementById('modalSubmitBtn').textContent = 'Actualizar vehículo';
+            });
+            </text>
+        }
+    </script>
+}

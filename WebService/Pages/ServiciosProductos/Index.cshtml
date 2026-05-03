@@ -1,0 +1,314 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.ServiciosProductos.IndexModel
+@{
+    ViewData["Title"] = "Servicios y Productos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-teal fw-bold mb-0">Servicios y Productos</h2>
+        <p class="text-muted-dark">Administra el catálogo de servicios y productos del taller.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#productoModal" onclick="limpiarProductoForm()">
+            <i class="bi bi-box-seam me-2"></i>Nuevo producto
+        </button>
+        <button type="button" class="btn btn-outline-info px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#servicioModal" onclick="limpiarServicioForm()">
+            <i class="bi bi-wrench-adjustable-circle me-2"></i>Nuevo servicio
+        </button>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["SuccessMessage"]</div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["ErrorMessage"]</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-dark p-4 shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-teal mb-0"><i class="bi bi-box-seam me-2"></i>Productos</h5>
+                <span class="badge bg-secondary">@Model.Productos.Count</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+                    <thead class="border-bottom border-secondary">
+                        <tr>
+                            <th class="text-teal">Nombre</th>
+                            <th class="text-teal">Precio (Bs.)</th>
+                            <th class="text-teal">Stock</th>
+                            <th class="text-teal text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Productos.Any())
+                        {
+                            foreach (var item in Model.Productos)
+                            {
+                                <tr class="border-bottom border-secondary">
+                                    <td class="text-white fw-semibold">@item.Nombre</td>
+                                    <td class="text-light">Bs. @item.Precio.ToString("F2")</td>
+                                    <td>
+                                        <span class="badge @(item.Stock > 0 ? "bg-success" : "bg-danger")">@item.Stock</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary" data-bs-toggle="modal" data-bs-target="#productoModal" onclick="editarProducto(@item.ProductoId)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary" data-bs-toggle="modal" data-bs-target="#deleteProductoModal" onclick="prepararEliminarProducto(@item.ProductoId, '@Html.Raw(item.Nombre.Replace("'", "\\'"))')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted-dark py-5">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No hay productos registrados.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-dark p-4 shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-teal mb-0"><i class="bi bi-wrench-adjustable-circle me-2"></i>Servicios</h5>
+                <span class="badge bg-secondary">@Model.Servicios.Count</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+                    <thead class="border-bottom border-secondary">
+                        <tr>
+                            <th class="text-teal">Nombre</th>
+                            <th class="text-teal">Precio (Bs.)</th>
+                            <th class="text-teal text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Servicios.Any())
+                        {
+                            foreach (var item in Model.Servicios)
+                            {
+                                <tr class="border-bottom border-secondary">
+                                    <td class="text-white fw-semibold">@item.Nombre</td>
+                                    <td class="text-light">Bs. @item.Precio.ToString("F2")</td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary" data-bs-toggle="modal" data-bs-target="#servicioModal" onclick="editarServicio(@item.ServicioId)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary" data-bs-toggle="modal" data-bs-target="#deleteServicioModal" onclick="prepararEliminarServicio(@item.ServicioId, '@Html.Raw(item.Nombre.Replace("'", "\\'"))')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted-dark py-5">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No hay servicios registrados.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="SaveProducto">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="productoModalLabel">Nuevo producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" asp-for="ProductoForm.ProductoId" id="formProductoId" />
+
+                    <div class="mb-3">
+                        <label asp-for="ProductoForm.Nombre" class="form-label text-teal">Nombre *</label>
+                        <input asp-for="ProductoForm.Nombre" class="form-control form-control-dark" id="formProductoNombre" />
+                        <span asp-validation-for="ProductoForm.Nombre" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label asp-for="ProductoForm.Precio" class="form-label text-teal">Precio (Bs.) *</label>
+                            <input asp-for="ProductoForm.Precio" type="number" step="0.01" min="0" class="form-control form-control-dark" id="formProductoPrecio" />
+                            <span asp-validation-for="ProductoForm.Precio" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ProductoForm.Stock" class="form-label text-teal">Stock *</label>
+                            <input asp-for="ProductoForm.Stock" type="number" min="0" class="form-control form-control-dark" id="formProductoStock" />
+                            <span asp-validation-for="ProductoForm.Stock" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-teal" id="productoSubmitBtn">Guardar producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="servicioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="SaveServicio">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="servicioModalLabel">Nuevo servicio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" asp-for="ServicioForm.ServicioId" id="formServicioId" />
+
+                    <div class="mb-3">
+                        <label asp-for="ServicioForm.Nombre" class="form-label text-teal">Nombre *</label>
+                        <input asp-for="ServicioForm.Nombre" class="form-control form-control-dark" id="formServicioNombre" />
+                        <span asp-validation-for="ServicioForm.Nombre" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-0">
+                        <label asp-for="ServicioForm.Precio" class="form-label text-teal">Precio (Bs.) *</label>
+                        <input asp-for="ServicioForm.Precio" type="number" step="0.01" min="0" class="form-control form-control-dark" id="formServicioPrecio" />
+                        <span asp-validation-for="ServicioForm.Precio" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-teal" id="servicioSubmitBtn">Guardar servicio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteProductoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="DeleteProducto">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Eliminar producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="id" id="deleteProductoId" />
+                    <p class="text-center mb-0">¿Está seguro de eliminar <strong id="deleteProductoNombre"></strong>?</p>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteServicioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="DeleteServicio">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Eliminar servicio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="id" id="deleteServicioId" />
+                    <p class="text-center mb-0">¿Está seguro de eliminar <strong id="deleteServicioNombre"></strong>?</p>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function limpiarProductoForm() {
+            document.getElementById('formProductoId').value = '0';
+            document.getElementById('formProductoNombre').value = '';
+            document.getElementById('formProductoPrecio').value = '0';
+            document.getElementById('formProductoStock').value = '0';
+            document.getElementById('productoModalLabel').textContent = 'Nuevo producto';
+            document.getElementById('productoSubmitBtn').textContent = 'Guardar producto';
+        }
+
+        function limpiarServicioForm() {
+            document.getElementById('formServicioId').value = '0';
+            document.getElementById('formServicioNombre').value = '';
+            document.getElementById('formServicioPrecio').value = '0';
+            document.getElementById('servicioModalLabel').textContent = 'Nuevo servicio';
+            document.getElementById('servicioSubmitBtn').textContent = 'Guardar servicio';
+        }
+
+        function editarProducto(id) {
+            fetch('?handler=Producto&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { alert(data.error); return; }
+                    document.getElementById('formProductoId').value = data.productoId;
+                    document.getElementById('formProductoNombre').value = data.nombre;
+                    document.getElementById('formProductoPrecio').value = data.precio;
+                    document.getElementById('formProductoStock').value = data.stock;
+                    document.getElementById('productoModalLabel').textContent = 'Editar producto';
+                    document.getElementById('productoSubmitBtn').textContent = 'Actualizar producto';
+                })
+                .catch(() => alert('Error al cargar el producto.'));
+        }
+
+        function editarServicio(id) {
+            fetch('?handler=Servicio&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { alert(data.error); return; }
+                    document.getElementById('formServicioId').value = data.servicioId;
+                    document.getElementById('formServicioNombre').value = data.nombre;
+                    document.getElementById('formServicioPrecio').value = data.precio;
+                    document.getElementById('servicioModalLabel').textContent = 'Editar servicio';
+                    document.getElementById('servicioSubmitBtn').textContent = 'Actualizar servicio';
+                })
+                .catch(() => alert('Error al cargar el servicio.'));
+        }
+
+        function prepararEliminarProducto(id, nombre) {
+            document.getElementById('deleteProductoId').value = id;
+            document.getElementById('deleteProductoNombre').textContent = nombre;
+        }
+
+        function prepararEliminarServicio(id, nombre) {
+            document.getElementById('deleteServicioId').value = id;
+            document.getElementById('deleteServicioNombre').textContent = nombre;
+        }
+    </script>
+}

@@ -1,0 +1,900 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.ordentrabajo.IndexModel
+@{
+    ViewData["Title"] = "Listado de Órdenes";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-teal fw-bold mb-0">Órdenes de trabajo</h2>
+        <p class="text-muted-dark">Gestiona los servicios, diagnósticos y reparaciones del taller.</p>
+    </div>
+    <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#ordenModal" id="btnNuevaOrden">
+        <i class="bi bi-tools me-2"></i>Nueva orden
+    </button>
+</div>
+
+<div class="card-dark p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
+                <tr>
+                    <th class="text-teal pb-3">#</th>
+                    <th class="text-teal pb-3">Vehículo (Placa)</th>
+                    <th class="text-teal pb-3">Fecha de entrega</th>
+                    <th class="text-teal pb-3">Estado</th>
+                    <th class="text-teal pb-3">Total</th>
+                    <th class="text-teal pb-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.OrdenesTrabajo != null && Model.OrdenesTrabajo.Any())
+                {
+                    int contador = 1;
+                    @foreach (var item in Model.OrdenesTrabajo)
+                    {
+                        <tr class="border-bottom border-secondary">
+                            <td><span class="badge bg-secondary fs-6">@(contador++)</span></td>
+                            <td>
+                                <span class="badge bg-light text-dark px-2 py-1 border border-secondary shadow-sm" style="font-family: monospace; font-size: 0.9rem; letter-spacing: 1px;">
+                                    @item.VehiculoPlaca
+                                </span>
+                            </td>
+                            <td class="text-light">
+                                <i class="bi bi-calendar-event text-teal me-2"></i>@item.FechaEntrega?.ToShortDateString()
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-info text-dark px-3 py-2 fw-bold">
+                                    @item.EstadoPago / @item.EstadoTrabajo / @item.EstadoVehiculo
+                                </span>
+                            </td>
+                            <td class="text-white fw-bold">Bs. @item.Total.ToString("F2")</td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-info border-secondary"
+                                            title="Detalles" data-bs-toggle="modal" data-bs-target="#detailsModal"
+                                            onclick="verDetalles(@item.OrdenTrabajoId)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary"
+                                            title="Editar" data-bs-toggle="modal" data-bs-target="#ordenModal"
+                                            onclick="editarOrden(@item.OrdenTrabajoId)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-primary border-secondary"
+                                            title="Imprimir Reporte" onclick="imprimirReporte(@item.OrdenTrabajoId)">
+                                        <i class="bi bi-printer"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary"
+                                            title="Eliminar" data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                            onclick="prepararEliminar(@item.OrdenTrabajoId, 'Orden #@item.OrdenTrabajoId')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted-dark py-5">
+                            <i class="bi bi-clipboard2-x fs-2 d-block mb-2 text-secondary"></i>
+                            No hay órdenes de trabajo activas.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL 1: Formulario Create/Edit (reutilizable) -->
+<div class="modal fade" id="ordenModal" tabindex="-1" aria-labelledby="ordenModalLabel" aria-hidden="true" data-bs-focus="false" data-bs-backdrop="static" style="z-index: 1060;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="Save">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="ordenModalLabel">Nueva orden de trabajo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" asp-for="FormDto.OrdenTrabajoId" id="formOrdenId" value="0" />
+                    <input type="hidden" asp-for="FormDto.ProductosJson" id="formProductosJson" />
+                    <input type="hidden" asp-for="FormDto.ServiciosJson" id="formServiciosJson" />
+
+                    <div class="row mb-3">
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <label asp-for="FormDto.FechaIngreso" class="form-label text-teal">Fecha de ingreso *</label>
+                            <input asp-for="FormDto.FechaIngreso" type="date" class="form-control form-control-dark bg-secondary text-light" id="formFechaIngreso" value="@DateTime.Now.ToString("yyyy-MM-dd")" readonly />
+                            <span asp-validation-for="FormDto.FechaIngreso" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4 position-relative">
+                            <label class="form-label text-teal">Cliente *</label>
+                            <div class="input-group">
+                                <input type="hidden" asp-for="FormDto.ClienteId" id="formClienteId" value="0" />
+                                <input type="text" class="form-control form-control-dark" id="formClienteSearch" placeholder="Escriba el nombre o CI del cliente..." autocomplete="off" />
+                                <button class="btn btn-info text-dark" type="button" title="Agregar Cliente" onclick="abrirModalCliente()">
+                                    <i class="bi bi-person-fill me-1"></i><i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div id="clienteResults" class="list-group position-absolute w-100" style="z-index: 1061; display: none; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+
+                        <div class="col-md-5 position-relative">
+                            <label class="form-label text-teal">Vehículo *</label>
+                            <div class="input-group">
+                                <input type="hidden" asp-for="FormDto.VehiculoId" id="formVehiculoId" value="0" />
+                                <input type="text" class="form-control form-control-dark" id="formVehiculoSearch" placeholder="Escriba la placa del vehículo..." autocomplete="off" />
+                                <button class="btn btn-teal text-white" type="button" title="Agregar Vehículo" onclick="abrirModalVehiculo()">
+                                    <i class="bi bi-car-front-fill me-1"></i><i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div id="vehiculoResults" class="list-group position-absolute w-100" style="z-index: 1061; display: none; max-height: 200px; overflow-y: auto;"></div>
+                            <span asp-validation-for="FormDto.VehiculoId" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label asp-for="FormDto.FechaEntrega" class="form-label text-teal">Fecha de entrega</label>
+                            <input asp-for="FormDto.FechaEntrega" type="date" class="form-control form-control-dark" id="formFechaEntrega" />
+                            <span asp-validation-for="FormDto.FechaEntrega" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label asp-for="FormDto.EstadoTrabajo" class="form-label text-teal">Estado del trabajo *</label>
+                            <select asp-for="FormDto.EstadoTrabajo" class="form-select form-control-dark" id="formEstadoTrabajo">
+                                @foreach (var opt in Model.EstadoTrabajoOptions)
+                                {
+                                    <option value="@opt.Value">@opt.Text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="FormDto.EstadoTrabajo" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label asp-for="FormDto.EstadoPago" class="form-label text-teal">Estado de pago *</label>
+                            <select asp-for="FormDto.EstadoPago" class="form-select form-control-dark" id="formEstadoPago">
+                                @foreach (var opt in Model.EstadoPagoOptions)
+                                {
+                                    <option value="@opt.Value">@opt.Text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="FormDto.EstadoPago" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="FormDto.Total" class="form-label text-teal">Total (Bs.) *</label>
+                            <input asp-for="FormDto.Total" type="number" step="0.01" class="form-control form-control-dark" id="formTotal" />
+                            <span asp-validation-for="FormDto.Total" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="FormDto.EstadoVehiculo" class="form-label text-teal">Estado del vehículo *</label>
+                        <textarea asp-for="FormDto.EstadoVehiculo" class="form-control form-control-dark" id="formEstadoVehiculo" rows="3" placeholder="Describa el estado actual del vehículo..."></textarea>
+                        <span asp-validation-for="FormDto.EstadoVehiculo" class="text-danger"></span>
+                    </div>
+
+                    <div class="card-dark p-3 mt-4 border border-secondary">
+                        <h6 class="text-teal fw-bold mb-3"><i class="bi bi-box-seam me-2"></i>Productos utilizados</h6>
+
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label">Buscar producto</label>
+                                <input type="text" class="form-control form-control-dark" id="productoSearch" placeholder="Nombre del producto..." autocomplete="off" />
+                                <div id="productoResults" class="list-group position-absolute w-100" style="z-index: 1051; display: none; max-height: 200px; overflow-y: auto;"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cantidad</label>
+                                <input type="number" min="1" class="form-control form-control-dark" id="productoCantidad" value="1" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Precio unitario (Bs.)</label>
+                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="productoPrecio" />
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button type="button" class="btn btn-outline-info border-secondary" onclick="agregarProductoSeleccionado()">
+                                    <i class="bi bi-plus-circle me-1"></i>Agregar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mt-3">
+                            <table class="table table-dark table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cant.</th>
+                                        <th>Precio unit. (Bs.)</th>
+                                        <th>Subtotal</th>
+                                        <th class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productosTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted-dark py-3">Sin productos agregados.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card-dark p-3 mt-3 border border-secondary">
+                        <h6 class="text-teal fw-bold mb-3"><i class="bi bi-wrench-adjustable-circle me-2"></i>Servicios realizados</h6>
+
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-9 position-relative">
+                                <label class="form-label">Buscar servicio</label>
+                                <input type="text" class="form-control form-control-dark" id="servicioSearch" placeholder="Nombre del servicio..." autocomplete="off" />
+                                <div id="servicioResults" class="list-group position-absolute w-100" style="z-index: 1051; display: none; max-height: 200px; overflow-y: auto;"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Precio unitario (Bs.)</label>
+                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="servicioPrecio" />
+                            </div>
+                            <div class="col-md-1 d-grid">
+                                <button type="button" class="btn btn-outline-info border-secondary" onclick="agregarServicioSeleccionado()">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mt-3">
+                            <table class="table table-dark table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Servicio</th>
+                                        <th>Precio unit. (Bs.)</th>
+                                        <th>Subtotal</th>
+                                        <th class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="serviciosTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted-dark py-3">Sin servicios agregados.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-teal" id="modalSubmitBtn">Crear Orden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: Detalles -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark text-light p-3">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="detailsModalLabel">Detalles de la Orden</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4 px-4" id="detailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-teal" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary py-3 px-4">
+                <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: Eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="deleteModalLabel">Eliminar Orden</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="id" id="deleteOrdenId" />
+                    <div class="text-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <p class="text-center">¿Está seguro de eliminar <strong id="deleteOrdenNombre"></strong>?</p>
+                    <p class="text-danger text-center mb-0">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: Agregar Cliente (reutilizable) -->
+<partial name="_ClienteModal" />
+
+<!-- MODAL 5: Agregar Vehículo (reutilizable) -->
+<partial name="_VehiculoModal" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let productoSearchTimeout;
+        let servicioSearchTimeout;
+        let productoSeleccionado = null;
+        let servicioSeleccionado = null;
+        let productosSeleccionados = [];
+        let serviciosSeleccionados = [];
+
+        document.getElementById('btnNuevaOrden').addEventListener('click', function() {
+            LimpiarFormularioOrden();
+        });
+
+        function LimpiarFormularioOrden() {
+            productosSeleccionados = [];
+            serviciosSeleccionados = [];
+            productoSeleccionado = null;
+            servicioSeleccionado = null;
+            document.getElementById('formOrdenId').value = '0';
+            document.getElementById('formClienteId').value = '0';
+            document.getElementById('formClienteSearch').value = '';
+            document.getElementById('formVehiculoId').value = '0';
+            document.getElementById('formVehiculoSearch').value = '';
+            document.getElementById('formFechaIngreso').value = new Date().toISOString().split('T')[0];
+            document.getElementById('formFechaEntrega').value = '';
+            document.getElementById('formEstadoTrabajo').value = 'Recibido';
+            document.getElementById('formEstadoPago').value = 'Pendiente';
+            document.getElementById('formTotal').value = '0';
+            document.getElementById('formEstadoVehiculo').value = '';
+            document.getElementById('productoSearch').value = '';
+            document.getElementById('productoCantidad').value = '1';
+            document.getElementById('productoPrecio').value = '';
+            document.getElementById('servicioSearch').value = '';
+            document.getElementById('servicioPrecio').value = '';
+            document.getElementById('formProductosJson').value = '[]';
+            document.getElementById('formServiciosJson').value = '[]';
+            renderProductos();
+            renderServicios();
+            recalcularTotal();
+            document.getElementById('ordenModalLabel').textContent = 'Nueva orden de trabajo';
+            document.getElementById('modalSubmitBtn').textContent = 'Crear orden';
+        }
+
+        let clienteSearchTimeout;
+        document.getElementById('formClienteSearch').addEventListener('input', function() {
+            clearTimeout(clienteSearchTimeout);
+            var term = this.value.trim();
+            document.getElementById('formClienteId').value = '0';
+            document.getElementById('formVehiculoId').value = '0';
+            document.getElementById('formVehiculoSearch').value = '';
+            if (term.length < 1) {
+                document.getElementById('clienteResults').style.display = 'none';
+                return;
+            }
+            clienteSearchTimeout = setTimeout(function() {
+                fetch('?handler=BuscarClientes&term=' + encodeURIComponent(term))
+                    .then(r => {
+                        if (!r.ok) throw new Error('No se pudo buscar clientes.');
+                        return r.json();
+                    })
+                    .then(data => {
+                        var container = document.getElementById('clienteResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) {
+                            container.style.display = 'none';
+                            return;
+                        }
+                        data.forEach(function(c) {
+                            var a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
+                            a.textContent = c.text;
+                            a.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('formClienteId').value = c.id;
+                                document.getElementById('formClienteSearch').value = c.text;
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(a);
+                        });
+                        container.style.display = 'block';
+                    })
+                    .catch(() => {
+                        document.getElementById('clienteResults').style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        let vehiculoSearchTimeout;
+        document.getElementById('formVehiculoSearch').addEventListener('input', function() {
+            clearTimeout(vehiculoSearchTimeout);
+            var term = this.value.trim();
+            var clienteId = document.getElementById('formClienteId').value || '0';
+            if (term.length < 1) {
+                document.getElementById('vehiculoResults').style.display = 'none';
+                return;
+            }
+            vehiculoSearchTimeout = setTimeout(function() {
+                var url = '?handler=BuscarVehiculos&term=' + encodeURIComponent(term) + '&clienteId=' + encodeURIComponent(clienteId);
+                fetch(url)
+                    .then(r => {
+                        if (!r.ok) throw new Error('No se pudo buscar vehiculos.');
+                        return r.json();
+                    })
+                    .then(data => {
+                        var container = document.getElementById('vehiculoResults');
+                        container.innerHTML = '';
+                        if (!data || data.length === 0) {
+                            container.style.display = 'none';
+                            return;
+                        }
+                        data.forEach(function(v) {
+                            var a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
+                            a.textContent = v.text;
+                            a.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                document.getElementById('formVehiculoId').value = v.id;
+                                document.getElementById('formVehiculoSearch').value = v.text;
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(a);
+                        });
+                        container.style.display = 'block';
+                    })
+                    .catch(() => {
+                        document.getElementById('vehiculoResults').style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        document.getElementById('productoSearch').addEventListener('input', function() {
+            clearTimeout(productoSearchTimeout);
+            const term = this.value.trim();
+
+            productoSeleccionado = null;
+            if (term.length < 1) {
+                document.getElementById('productoResults').style.display = 'none';
+                return;
+            }
+
+            productoSearchTimeout = setTimeout(function() {
+                fetch('?handler=BuscarProductos&term=' + encodeURIComponent(term))
+                    .then(r => r.json())
+                    .then(data => {
+                        const container = document.getElementById('productoResults');
+                        container.innerHTML = '';
+
+                        if (!data || data.length === 0) {
+                            container.style.display = 'none';
+                            return;
+                        }
+
+                        data.forEach(function(p) {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
+                            a.textContent = `${p.text} | Bs. ${Number(p.precio).toFixed(2)} | Stock: ${p.stock}`;
+                            a.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                productoSeleccionado = p;
+                                document.getElementById('productoSearch').value = p.text;
+                                document.getElementById('productoPrecio').value = Number(p.precio).toFixed(2);
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(a);
+                        });
+
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        document.getElementById('servicioSearch').addEventListener('input', function() {
+            clearTimeout(servicioSearchTimeout);
+            const term = this.value.trim();
+
+            servicioSeleccionado = null;
+            if (term.length < 1) {
+                document.getElementById('servicioResults').style.display = 'none';
+                return;
+            }
+
+            servicioSearchTimeout = setTimeout(function() {
+                fetch('?handler=BuscarServicios&term=' + encodeURIComponent(term))
+                    .then(r => r.json())
+                    .then(data => {
+                        const container = document.getElementById('servicioResults');
+                        container.innerHTML = '';
+
+                        if (!data || data.length === 0) {
+                            container.style.display = 'none';
+                            return;
+                        }
+
+                        data.forEach(function(s) {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
+                            a.textContent = `${s.text} | Bs. ${Number(s.precio).toFixed(2)}`;
+                            a.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                servicioSeleccionado = s;
+                                document.getElementById('servicioSearch').value = s.text;
+                                document.getElementById('servicioPrecio').value = Number(s.precio).toFixed(2);
+                                container.style.display = 'none';
+                            });
+                            container.appendChild(a);
+                        });
+
+                        container.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('formClienteSearch').contains(e.target) && !document.getElementById('clienteResults').contains(e.target)) {
+                document.getElementById('clienteResults').style.display = 'none';
+            }
+            if (!document.getElementById('formVehiculoSearch').contains(e.target) && !document.getElementById('vehiculoResults').contains(e.target)) {
+                document.getElementById('vehiculoResults').style.display = 'none';
+            }
+            if (!document.getElementById('productoSearch').contains(e.target)) {
+                document.getElementById('productoResults').style.display = 'none';
+            }
+            if (!document.getElementById('servicioSearch').contains(e.target)) {
+                document.getElementById('servicioResults').style.display = 'none';
+            }
+        });
+
+        function limpiarFormulario() {
+            productosSeleccionados = [];
+            serviciosSeleccionados = [];
+            productoSeleccionado = null;
+            servicioSeleccionado = null;
+
+            document.getElementById('formOrdenId').value = '0';
+            document.getElementById('formClienteId').value = '0';
+            document.getElementById('formClienteSearch').value = '';
+            document.getElementById('formVehiculoId').value = '0';
+            document.getElementById('formVehiculoSearch').value = '';
+            document.getElementById('vehiculoResults').innerHTML = '';
+            document.getElementById('formFechaIngreso').value = new Date().toISOString().split('T')[0];
+            document.getElementById('formFechaEntrega').value = '';
+            document.getElementById('formEstadoTrabajo').value = 'Recibido';
+            document.getElementById('formEstadoPago').value = 'Pendiente';
+            document.getElementById('formTotal').value = '0';
+            document.getElementById('formEstadoVehiculo').value = '';
+            document.getElementById('productoSearch').value = '';
+            document.getElementById('productoCantidad').value = '1';
+            document.getElementById('productoPrecio').value = '';
+            document.getElementById('servicioSearch').value = '';
+            document.getElementById('servicioPrecio').value = '';
+            document.getElementById('formProductosJson').value = '[]';
+            document.getElementById('formServiciosJson').value = '[]';
+
+            renderProductos();
+            renderServicios();
+            recalcularTotal();
+
+            document.getElementById('ordenModalLabel').textContent = 'Nueva orden de trabajo';
+            document.getElementById('modalSubmitBtn').textContent = 'Crear orden';
+        }
+
+        function abrirNuevaOrden() {
+            limpiarFormulario();
+        }
+
+        function editarOrden(id) {
+            fetch('?handler=Orden&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) { alert(data.error); return; }
+                    document.getElementById('formOrdenId').value = data.ordenTrabajoId;
+                    document.getElementById('formFechaIngreso').value = data.fechaIngreso;
+                    document.getElementById('formFechaEntrega').value = data.fechaEntrega || '';
+                    document.getElementById('formEstadoTrabajo').value = data.estadoTrabajo;
+                    document.getElementById('formEstadoPago').value = data.estadoPago;
+                    document.getElementById('formTotal').value = data.total;
+                    document.getElementById('formEstadoVehiculo').value = data.estadoVehiculo;
+                    document.getElementById('formClienteId').value = data.clienteId || 0;
+                    document.getElementById('formClienteSearch').value = data.clienteNombre || '';
+                    document.getElementById('formVehiculoId').value = data.vehiculoId;
+                    document.getElementById('formVehiculoSearch').value = data.placa;
+
+                    productosSeleccionados = (data.productos || []).map(p => ({
+                        productoId: p.productoId,
+                        nombre: p.nombre || `Producto #${p.productoId}`,
+                        cantidad: p.cantidad,
+                        precioUnitario: p.precioUnitario,
+                        subtotal: p.subtotal
+                    }));
+                    serviciosSeleccionados = (data.servicios || []).map(s => ({
+                        servicioId: s.servicioId,
+                        nombre: s.nombre || `Servicio #${s.servicioId}`,
+                        cantidad: s.cantidad,
+                        precioUnitario: s.precioUnitario,
+                        subtotal: s.subtotal
+                    }));
+
+                    renderProductos();
+                    renderServicios();
+                    syncDetalleJson();
+
+                    document.getElementById('ordenModalLabel').textContent = 'Editar orden #' + data.ordenTrabajoId;
+                    document.getElementById('modalSubmitBtn').textContent = 'Actualizar orden';
+                })
+                .catch(() => alert('Error al cargar los datos de la orden'));
+        }
+
+        function agregarProductoSeleccionado() {
+            if (!productoSeleccionado) {
+                alert('Seleccione un producto de la lista.');
+                return;
+            }
+
+            const cantidad = parseInt(document.getElementById('productoCantidad').value || '0', 10);
+            const precio = parseFloat(document.getElementById('productoPrecio').value || '0');
+
+            if (cantidad <= 0) {
+                alert('La cantidad de producto debe ser mayor a 0.');
+                return;
+            }
+
+            if (precio < 0) {
+                alert('El precio del producto (Bs.) no puede ser negativo.');
+                return;
+            }
+
+            const subtotal = cantidad * precio;
+            productosSeleccionados.push({
+                productoId: productoSeleccionado.id,
+                nombre: productoSeleccionado.text,
+                cantidad: cantidad,
+                precioUnitario: precio,
+                subtotal: subtotal
+            });
+
+            document.getElementById('productoSearch').value = '';
+            document.getElementById('productoCantidad').value = '1';
+            document.getElementById('productoPrecio').value = '';
+            productoSeleccionado = null;
+
+            renderProductos();
+            syncDetalleJson();
+            recalcularTotal();
+        }
+
+        function agregarServicioSeleccionado() {
+            if (!servicioSeleccionado) {
+                alert('Seleccione un servicio de la lista.');
+                return;
+            }
+
+            const cantidad = 1;
+            const precio = parseFloat(document.getElementById('servicioPrecio').value || '0');
+
+            if (precio < 0) {
+                alert('El precio del servicio (Bs.) no puede ser negativo.');
+                return;
+            }
+
+            const subtotal = cantidad * precio;
+            serviciosSeleccionados.push({
+                servicioId: servicioSeleccionado.id,
+                nombre: servicioSeleccionado.text,
+                cantidad: cantidad,
+                precioUnitario: precio,
+                subtotal: subtotal
+            });
+
+            document.getElementById('servicioSearch').value = '';
+            document.getElementById('servicioPrecio').value = '';
+            servicioSeleccionado = null;
+
+            renderServicios();
+            syncDetalleJson();
+            recalcularTotal();
+        }
+
+        function eliminarProducto(index) {
+            productosSeleccionados.splice(index, 1);
+            renderProductos();
+            syncDetalleJson();
+            recalcularTotal();
+        }
+
+        function eliminarServicio(index) {
+            serviciosSeleccionados.splice(index, 1);
+            renderServicios();
+            syncDetalleJson();
+            recalcularTotal();
+        }
+
+        function renderProductos() {
+            const tbody = document.getElementById('productosTableBody');
+            if (productosSeleccionados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted-dark py-3">Sin productos agregados.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = productosSeleccionados.map((p, i) =>
+                '<tr>' +
+                    `<td>${p.nombre}</td>` +
+                    `<td>${p.cantidad}</td>` +
+                    `<td>Bs. ${Number(p.precioUnitario).toFixed(2)}</td>` +
+                    `<td class="fw-bold">Bs. ${Number(p.subtotal).toFixed(2)}</td>` +
+                    `<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${i})"><i class="bi bi-x-lg"></i></button></td>` +
+                '</tr>'
+            ).join('');
+        }
+
+        function renderServicios() {
+            const tbody = document.getElementById('serviciosTableBody');
+            if (serviciosSeleccionados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted-dark py-3">Sin servicios agregados.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = serviciosSeleccionados.map((s, i) =>
+                '<tr>' +
+                    `<td>${s.nombre}</td>` +
+                    `<td>Bs. ${Number(s.precioUnitario).toFixed(2)}</td>` +
+                    `<td class="fw-bold">Bs. ${Number(s.subtotal).toFixed(2)}</td>` +
+                    `<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarServicio(${i})"><i class="bi bi-x-lg"></i></button></td>` +
+                '</tr>'
+            ).join('');
+        }
+
+        function syncDetalleJson() {
+            const productos = productosSeleccionados.map(p => ({
+                productoId: p.productoId,
+                cantidad: p.cantidad,
+                precioUnitario: p.precioUnitario
+            }));
+
+            const servicios = serviciosSeleccionados.map(s => ({
+                servicioId: s.servicioId,
+                cantidad: s.cantidad,
+                precioUnitario: s.precioUnitario
+            }));
+
+            document.getElementById('formProductosJson').value = JSON.stringify(productos);
+            document.getElementById('formServiciosJson').value = JSON.stringify(servicios);
+        }
+
+        function recalcularTotal() {
+            const totalProductos = productosSeleccionados.reduce((sum, p) => sum + Number(p.subtotal || 0), 0);
+            const totalServicios = serviciosSeleccionados.reduce((sum, s) => sum + Number(s.subtotal || 0), 0);
+            const total = totalProductos + totalServicios;
+            document.getElementById('formTotal').value = total.toFixed(2);
+        }
+
+        function verDetalles(id) {
+            document.getElementById('detailsContent').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-teal" role="status"></div></div>';
+            fetch('?handler=Orden&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">' + data.error + '</p>';
+                        return;
+                    }
+                    document.getElementById('detailsContent').innerHTML =
+                        '<div class="card-dark p-3 mb-3" style="border-top: 4px solid #20c997;">' +
+                        '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-clipboard-check text-teal me-2"></i>Información de la Orden</h6>' +
+                        '<dl class="row mb-0">' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Nº Orden</dt>' +
+                        '<dd class="col-sm-8 text-white fw-bold fs-5 mb-2">#' + data.ordenTrabajoId + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Vehículo</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><span class="badge bg-light text-dark" style="font-family: monospace;">' + data.placa + '</span> - ' + data.clienteNombre + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Fecha Ingreso</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-calendar3 text-teal me-2"></i>' + new Date(data.fechaIngreso).toLocaleDateString('es-ES') + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Fecha Entrega</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2">' + (data.fechaEntrega ? new Date(data.fechaEntrega).toLocaleDateString('es-ES') : '<span class="text-muted-dark fst-italic">Pendiente</span>') + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Estado del trabajo</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><span class="badge bg-info">' + data.estadoTrabajo + '</span></dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Estado de pago</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><span class="badge bg-warning text-dark">' + data.estadoPago + '</span></dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Total</dt>' +
+                        '<dd class="col-sm-8 text-white fw-bold fs-5 mb-2">Bs. ' + parseFloat(data.total).toFixed(2) + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Estado del Vehículo</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2">' + data.estadoVehiculo + '</dd>' +
+                        '</dl></div>';
+
+                    if (data.productos && data.productos.length > 0) {
+                        document.getElementById('detailsContent').innerHTML +=
+                            '<div class="card-dark p-3 mt-3">' +
+                                '<h6 class="text-teal mb-3"><i class="bi bi-box-seam me-2"></i>Productos</h6>' +
+                                '<ul class="mb-0">' +
+                                data.productos.map(p => `<li>${p.nombre || 'Producto #' + p.productoId} | Cant.: ${p.cantidad} | Precio unit. (Bs.): ${Number(p.precioUnitario).toFixed(2)} | Subtotal (Bs.): ${Number(p.subtotal).toFixed(2)}</li>`).join('') +
+                                '</ul>' +
+                            '</div>';
+                    }
+
+                    if (data.servicios && data.servicios.length > 0) {
+                        document.getElementById('detailsContent').innerHTML +=
+                            '<div class="card-dark p-3 mt-3">' +
+                                '<h6 class="text-teal mb-3"><i class="bi bi-wrench-adjustable-circle me-2"></i>Servicios</h6>' +
+                                '<ul class="mb-0">' +
+                                data.servicios.map(s => `<li>${s.nombre || 'Servicio #' + s.servicioId} | Cant.: ${s.cantidad} | Precio unit. (Bs.): ${Number(s.precioUnitario).toFixed(2)} | Subtotal (Bs.): ${Number(s.subtotal).toFixed(2)}</li>`).join('') +
+                                '</ul>' +
+                            '</div>';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">Error al cargar los detalles</p>';
+                });
+        }
+
+        function abrirModalVehiculo() {
+            var ordenModal = bootstrap.Modal.getInstance(document.getElementById('ordenModal'));
+            if (ordenModal) {
+                ordenModal._config.focus = false;
+            }
+
+            limpiarFormularioVehiculo();
+            var vehiculoModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('vehiculoModal'), { backdrop: 'static', focus: false });
+            vehiculoModal.show();
+        }
+
+        function abrirModalCliente() {
+            var ordenModal = bootstrap.Modal.getInstance(document.getElementById('ordenModal'));
+            if (ordenModal) {
+                ordenModal._config.focus = false;
+            }
+
+            var clienteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('clienteModal'), { backdrop: 'static', focus: false });
+            clienteModal.show();
+        }
+
+        function limpiarFormularioVehiculo() {
+            document.getElementById('vehiculoId').value = '0';
+            document.getElementById('vehiculoClienteId').value = '0';
+            document.getElementById('vehiculoClienteSearch').value = '';
+            document.getElementById('vehiculoClienteResults').innerHTML = '';
+            document.getElementById('vehiculoPlaca').value = '';
+            document.getElementById('vehiculoMarcaId').value = '0';
+            document.getElementById('vehiculoMarcaSearch').value = '';
+            document.getElementById('vehiculoMarcaResults').innerHTML = '';
+            document.getElementById('vehiculoModeloId').value = '0';
+            document.getElementById('vehiculoModeloSearch').value = '';
+            document.getElementById('vehiculoModeloResults').innerHTML = '';
+            document.getElementById('vehiculoColorId').value = '0';
+            document.getElementById('vehiculoColorSearch').value = '';
+            document.getElementById('vehiculoColorResults').innerHTML = '';
+            document.getElementById('vehiculoAnio').value = '';
+            document.getElementById('vehiculoModalLabel').textContent = 'Crear vehículo';
+            document.getElementById('modalSubmitBtn').textContent = 'Crear vehículo';
+        }
+
+        function prepararEliminar(id, nombre) {
+            document.getElementById('deleteOrdenId').value = id;
+            document.getElementById('deleteOrdenNombre').textContent = nombre;
+        }
+
+        window.onClienteCreado = function(cliente) {
+            document.getElementById('formClienteId').value = cliente.clienteId;
+            document.getElementById('formClienteSearch').value = cliente.nombres + ' ' + cliente.primerApellido + ' - CI: ' + cliente.ciNumero;
+
+            var ordenModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ordenModal'), { backdrop: 'static', focus: false });
+            ordenModal.show();
+        }
+
+        window.onVehiculoCreado = function(vehiculo) {
+            document.getElementById('formVehiculoId').value = vehiculo.vehiculoId;
+            document.getElementById('formVehiculoSearch').value = vehiculo.placa;
+
+            var ordenModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ordenModal'), { backdrop: 'static', focus: false });
+            ordenModal.show();
+        }
+
+        function imprimirReporte(id) {
+            window.open('/Reportes/OrdenTrabajo?id=' + id, '_blank');
+        }
+    </script>
+}
+@* Closing brace for @section - DO NOT REMOVE *@

@@ -1,10 +1,67 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Inicio";
+    var isCliente = User.IsInRole("Cliente");
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-2">
+    <div class="text-center mb-5">
+        <i class="bi bi-wrench-adjustable text-teal" style="font-size: 4rem;"></i>
+        <h1 class="display-4 fw-bold text-white mt-3">Taller <span class="text-teal">Mecánico</span></h1>
+        <p class="lead text-muted-dark">Sistema integral para gestionar clientes, vehículos y servicios.</p>
+    </div>
+
+    @if (!isCliente)
+    {
+        <div class="row g-4 mb-5">
+            
+            <div class="col-md-4">
+                <div class="card-dark p-4 text-center shadow-sm h-100 d-flex flex-column" style="border-top: 4px solid #0dcaf0;">
+                    <i class="bi bi-people fs-1 text-info mb-3"></i>
+                    <h3 class="text-white fw-bold">Clientes</h3>
+                    <p class="text-muted-dark flex-grow-1">Gestión de clientes y sus datos de contacto.</p>
+                    <a asp-page="/Clientes/Index" class="btn btn-outline-info w-100 mt-auto shadow-sm">Ir a Clientes</a>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-dark p-4 text-center shadow-sm h-100 d-flex flex-column" style="border-top: 4px solid #ffc107;">
+                    <i class="bi bi-car-front fs-1 text-warning mb-3"></i>
+                    <h3 class="text-white fw-bold">Vehículos</h3>
+                    <p class="text-muted-dark flex-grow-1">Control de vehículos registrados y su estado general.</p>
+                    <a asp-page="/Vehiculos/Index" class="btn btn-outline-warning w-100 mt-auto shadow-sm">Ir a Vehículos</a>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-dark p-4 text-center shadow-sm h-100 d-flex flex-column" style="border-top: 4px solid #20c997;">
+                    <i class="bi bi-clipboard2-data fs-1 text-teal mb-3"></i>
+                    <h3 class="text-white fw-bold">Órdenes</h3>
+                    <p class="text-muted-dark flex-grow-1">Administración de servicios, diagnósticos y presupuestos.</p>
+                    <a asp-page="/ordentrabajo/Index" class="btn btn-teal w-100 mt-auto text-white shadow-sm">Ir a Órdenes</a>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!isCliente)
+    {
+        <div class="card-dark p-4 shadow-sm border-0 mb-4">
+            <h5 class="text-white border-bottom border-secondary pb-3 mb-4">
+                <i class="bi bi-lightning-charge text-warning me-2"></i>Acciones rápidas
+            </h5>
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <a asp-page="/Clientes/Index" class="btn btn-outline-light border-secondary">
+                    <i class="bi bi-person-plus me-2 text-info"></i>Nuevo Cliente
+                </a>
+                <a asp-page="/Vehiculos/Index" class="btn btn-outline-light border-secondary">
+                    <i class="bi bi-car-front-fill me-2 text-warning"></i>Ingresar Vehículo
+                </a>
+                <a asp-page="/ordentrabajo/Index" class="btn btn-outline-light border-secondary">
+                    <i class="bi bi-tools me-2 text-teal"></i>Abrir orden
+                </a>
+            </div>
+        </div>
+    }
 </div>

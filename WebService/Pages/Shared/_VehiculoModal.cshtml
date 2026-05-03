@@ -1,0 +1,414 @@
+@*
+    Componente parcial para modal de crear/editar vehículo
+    Uso: <partial name="_VehiculoModal" />
+*@
+
+<div class="modal fade" id="vehiculoModal" tabindex="-1" aria-labelledby="vehiculoModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-focus="false" style="z-index: 1080;">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark text-light p-3 border border-teal shadow-lg">
+            <form id="formVehiculo">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="vehiculoModalLabel">Crear vehículo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="VehiculoId" id="vehiculoId" value="0" />
+                    <div id="vehiculoFormErrors" class="alert alert-danger d-none mb-3"></div>
+
+                    <div class="mb-3 position-relative">
+                        <label class="form-label text-teal">Propietario *</label>
+                        <input type="hidden" name="ClienteId" id="vehiculoClienteId" />
+                        <input type="text" class="form-control form-control-dark" id="vehiculoClienteSearch" placeholder="Escriba el nombre, apellido o CI del cliente..." autocomplete="off" />
+                        <div id="vehiculoClienteResults" class="autocomplete-results"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-teal">Placa *</label>
+                        <input name="Placa" id="vehiculoPlaca" class="form-control form-control-dark" style="text-transform: uppercase;" required minlength="6" maxlength="10" />
+                        <div class="invalid-feedback">Formato: 1234ABC (ejemplo)</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0 position-relative">
+                            <label class="form-label text-teal">Marca *</label>
+                            <input type="hidden" name="MarcaId" id="vehiculoMarcaId" />
+                            <input type="text" class="form-control form-control-dark" id="vehiculoMarcaSearch" placeholder="Escriba el nombre de la marca..." autocomplete="off" />
+                            <div id="vehiculoMarcaResults" class="autocomplete-results"></div>
+                        </div>
+                        <div class="col-md-6 position-relative">
+                            <label class="form-label text-teal">Modelo *</label>
+                            <input type="hidden" name="ModeloId" id="vehiculoModeloId" />
+                            <input type="text" class="form-control form-control-dark" id="vehiculoModeloSearch" placeholder="Escriba el nombre del modelo..." autocomplete="off" />
+                            <div id="vehiculoModeloResults" class="autocomplete-results"></div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0 position-relative">
+                            <label class="form-label text-teal">Color *</label>
+                            <input type="hidden" name="ColorVehiculoId" id="vehiculoColorId" />
+                            <input type="text" class="form-control form-control-dark" id="vehiculoColorSearch" placeholder="Escriba el color..." autocomplete="off" />
+                            <div id="vehiculoColorResults" class="autocomplete-results"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-teal">Año *</label>
+                            <input type="number" name="Anio" id="vehiculoAnio" class="form-control form-control-dark" min="1900" max="2099" required />
+                            <div class="invalid-feedback">El año debe estar entre 1900 y 2099.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-teal" onclick="validarYGuardarVehiculo()">Crear vehículo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let vehiculoClienteSearchTimeout;
+    let vehiculoMarcaSearchTimeout;
+    let vehiculoModeloSearchTimeout;
+    let vehiculoColorSearchTimeout;
+
+    document.getElementById('vehiculoClienteSearch').addEventListener('input', function() {
+        clearTimeout(vehiculoClienteSearchTimeout);
+        var term = this.value.trim();
+        if (term.length < 2) {
+            document.getElementById('vehiculoClienteResults').style.display = 'none';
+            return;
+        }
+
+        vehiculoClienteSearchTimeout = setTimeout(function() {
+            fetch('/Clientes?handler=BuscarClientes&term=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(data => {
+                    var container = document.getElementById('vehiculoClienteResults');
+                    container.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        container.style.display = 'none';
+                        return;
+                    }
+
+                    data.forEach(function(c) {
+                        var item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.textContent = c.text;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            document.getElementById('vehiculoClienteId').value = c.id;
+                            document.getElementById('vehiculoClienteSearch').value = c.text;
+                            container.style.display = 'none';
+                        });
+                        container.appendChild(item);
+                    });
+
+                    container.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    document.getElementById('vehiculoMarcaSearch').addEventListener('input', function() {
+        clearTimeout(vehiculoMarcaSearchTimeout);
+        var term = this.value.trim();
+        if (term.length < 1) {
+            document.getElementById('vehiculoMarcaResults').style.display = 'none';
+            return;
+        }
+
+        vehiculoMarcaSearchTimeout = setTimeout(function() {
+            fetch('/Vehiculos?handler=BuscarMarcas&term=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(data => {
+                    var container = document.getElementById('vehiculoMarcaResults');
+                    container.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        container.style.display = 'none';
+                        return;
+                    }
+
+                    data.forEach(function(m) {
+                        var item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.textContent = m.text;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            document.getElementById('vehiculoMarcaId').value = m.id;
+                            document.getElementById('vehiculoMarcaSearch').value = m.text;
+                            document.getElementById('vehiculoModeloId').value = '0';
+                            document.getElementById('vehiculoModeloSearch').value = '';
+                            document.getElementById('vehiculoModeloResults').innerHTML = '';
+                            container.style.display = 'none';
+                        });
+                        container.appendChild(item);
+                    });
+
+                    container.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    document.getElementById('vehiculoModeloSearch').addEventListener('input', function() {
+        clearTimeout(vehiculoModeloSearchTimeout);
+        var term = this.value.trim();
+        if (term.length < 1) {
+            document.getElementById('vehiculoModeloResults').style.display = 'none';
+            return;
+        }
+
+        var marcaId = document.getElementById('vehiculoMarcaId').value;
+        vehiculoModeloSearchTimeout = setTimeout(function() {
+            var url = '/Vehiculos?handler=BuscarModelos&term=' + encodeURIComponent(term);
+            if (marcaId && marcaId > 0) {
+                url += '&marcaId=' + marcaId;
+            }
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    var container = document.getElementById('vehiculoModeloResults');
+                    container.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        container.style.display = 'none';
+                        return;
+                    }
+
+                    data.forEach(function(mo) {
+                        var item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.textContent = mo.text;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            document.getElementById('vehiculoModeloId').value = mo.id;
+                            document.getElementById('vehiculoModeloSearch').value = mo.text;
+                            container.style.display = 'none';
+                        });
+                        container.appendChild(item);
+                    });
+
+                    container.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    document.getElementById('vehiculoColorSearch').addEventListener('input', function() {
+        clearTimeout(vehiculoColorSearchTimeout);
+        var term = this.value.trim();
+        if (term.length < 1) {
+            document.getElementById('vehiculoColorResults').style.display = 'none';
+            return;
+        }
+
+        vehiculoColorSearchTimeout = setTimeout(function() {
+            fetch('/Vehiculos?handler=BuscarColores&term=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(data => {
+                    var container = document.getElementById('vehiculoColorResults');
+                    container.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        container.style.display = 'none';
+                        return;
+                    }
+
+                    data.forEach(function(c) {
+                        var item = document.createElement('div');
+                        item.className = 'autocomplete-item';
+                        item.textContent = c.text;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            document.getElementById('vehiculoColorId').value = c.id;
+                            document.getElementById('vehiculoColorSearch').value = c.text;
+                            container.style.display = 'none';
+                        });
+                        container.appendChild(item);
+                    });
+
+                    container.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    function validarYGuardarVehiculo() {
+        var errors = [];
+        var clienteId = document.getElementById('vehiculoClienteId').value;
+        var placa = document.getElementById('vehiculoPlaca').value.trim();
+        var marcaId = document.getElementById('vehiculoMarcaId').value;
+        var modeloId = document.getElementById('vehiculoModeloId').value;
+        var colorId = document.getElementById('vehiculoColorId').value;
+        var anio = document.getElementById('vehiculoAnio').value;
+
+        document.getElementById('vehiculoClienteSearch').classList.remove('is-invalid');
+        document.getElementById('vehiculoPlaca').classList.remove('is-invalid');
+        document.getElementById('vehiculoMarcaSearch').classList.remove('is-invalid');
+        document.getElementById('vehiculoModeloSearch').classList.remove('is-invalid');
+        document.getElementById('vehiculoColorSearch').classList.remove('is-invalid');
+        document.getElementById('vehiculoAnio').classList.remove('is-invalid');
+
+        if (!clienteId || clienteId === '0') {
+            document.getElementById('vehiculoClienteSearch').classList.add('is-invalid');
+            errors.push('Seleccione un propietario.');
+        }
+
+        if (!placa || placa.length < 6 || !/^\d{1,4}[A-Za-z]{3}$/i.test(placa)) {
+            document.getElementById('vehiculoPlaca').classList.add('is-invalid');
+            errors.push('La placa debe tener formato boliviano (ejemplo: 1234ABC).');
+        }
+
+        if (!marcaId || marcaId === '0') {
+            document.getElementById('vehiculoMarcaSearch').classList.add('is-invalid');
+            errors.push('Seleccione una marca.');
+        }
+
+        if (!modeloId || modeloId === '0') {
+            document.getElementById('vehiculoModeloSearch').classList.add('is-invalid');
+            errors.push('Seleccione un modelo.');
+        }
+
+        if (!colorId || colorId === '0') {
+            document.getElementById('vehiculoColorSearch').classList.add('is-invalid');
+            errors.push('Seleccione un color.');
+        }
+
+        if (!anio || anio < 1900 || anio > 2099) {
+            document.getElementById('vehiculoAnio').classList.add('is-invalid');
+            errors.push('El año debe estar entre 1900 y 2099.');
+        }
+
+        var errorDiv = document.getElementById('vehiculoFormErrors');
+        if (errors.length > 0) {
+            errorDiv.innerHTML = errors.join('<br>');
+            errorDiv.classList.remove('d-none');
+            return false;
+        } else {
+            errorDiv.classList.add('d-none');
+        }
+
+        guardarVehiculoAjax();
+    }
+
+    function guardarVehiculoAjax() {
+        var obj = {
+            VehiculoId: parseInt(document.getElementById('vehiculoId').value || '0', 10),
+            ClienteId: parseInt(document.getElementById('vehiculoClienteId').value || '0', 10),
+            Placa: (document.getElementById('vehiculoPlaca').value || '').trim().toUpperCase(),
+            MarcaId: parseInt(document.getElementById('vehiculoMarcaId').value || '0', 10),
+            ModeloId: parseInt(document.getElementById('vehiculoModeloId').value || '0', 10),
+            ColorVehiculoId: parseInt(document.getElementById('vehiculoColorId').value || '0', 10),
+            Anio: parseInt(document.getElementById('vehiculoAnio').value || '0', 10)
+        };
+
+        fetch('/Vehiculos?handler=SaveAjax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify(obj)
+        })
+        .then(async response => {
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch(e) {
+                throw new Error('Respuesta no válida del servidor. HTTP ' + response.status);
+            }
+
+            if (response.ok) {
+                return data;
+            } else {
+                throw new Error(data.message || 'Error del servidor: ' + response.status);
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById('vehiculoId').value = data.vehiculo.vehiculoId;
+
+                var modal = bootstrap.Modal.getInstance(document.getElementById('vehiculoModal'));
+                if(modal) {
+                    modal.hide();
+                }
+
+                document.getElementById('formVehiculo').reset();
+                alert('Vehículo guardado exitosamente');
+
+                if (typeof window.onVehiculoCreado === 'function') {
+                    setTimeout(function() { window.onVehiculoCreado(data.vehiculo); }, 100);
+                } else if (window.recargarPagina) {
+                    window.recargarPagina();
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert('Error al guardar el vehículo: ' + (data.message || 'Verifique los datos ingresados.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ocurrió un error al intentar guardar el vehículo.');
+        });
+    }
+
+    function limpiarFormularioVehiculo() {
+        document.getElementById('vehiculoId').value = '0';
+        document.getElementById('vehiculoClienteId').value = '0';
+        document.getElementById('vehiculoClienteSearch').value = '';
+        document.getElementById('vehiculoClienteResults').innerHTML = '';
+        document.getElementById('vehiculoPlaca').value = '';
+        document.getElementById('vehiculoMarcaId').value = '0';
+        document.getElementById('vehiculoMarcaSearch').value = '';
+        document.getElementById('vehiculoMarcaResults').innerHTML = '';
+        document.getElementById('vehiculoModeloId').value = '0';
+        document.getElementById('vehiculoModeloSearch').value = '';
+        document.getElementById('vehiculoModeloResults').innerHTML = '';
+        document.getElementById('vehiculoColorId').value = '0';
+        document.getElementById('vehiculoColorSearch').value = '';
+        document.getElementById('vehiculoColorResults').innerHTML = '';
+        document.getElementById('vehiculoAnio').value = '';
+        document.getElementById('vehiculoFormErrors').classList.add('d-none');
+        document.getElementById('vehiculoModalLabel').textContent = 'Crear vehículo';
+
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    document.addEventListener('hidden.bs.modal', function () {
+        if (document.getElementById('vehiculoModal')) {
+            limpiarFormularioVehiculo();
+        }
+    });
+
+    function abrirModalVehiculo() {
+        limpiarFormularioVehiculo();
+        var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('vehiculoModal'), { backdrop: 'static', focus: false });
+        modal.show();
+    }
+
+    window.cargarVehiculo = function(id, callback) {
+        fetch('/Vehiculos?handler=Vehiculo&id=' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { alert(data.error); return; }
+                document.getElementById('vehiculoId').value = data.vehiculoId;
+                document.getElementById('vehiculoClienteId').value = data.clienteId;
+                document.getElementById('vehiculoClienteSearch').value = data.clienteNombre || '';
+                document.getElementById('vehiculoPlaca').value = data.placa;
+                document.getElementById('vehiculoMarcaId').value = data.marcaId;
+                document.getElementById('vehiculoMarcaSearch').value = data.marca || '';
+                document.getElementById('vehiculoModeloId').value = data.modeloId;
+                document.getElementById('vehiculoModeloSearch').value = data.modelo || '';
+                document.getElementById('vehiculoColorId').value = data.colorId;
+                document.getElementById('vehiculoColorSearch').value = data.color || '';
+                document.getElementById('vehiculoAnio').value = data.anio;
+                document.getElementById('vehiculoModalLabel').textContent = 'Editar Vehículo';
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('vehiculoModal'), { backdrop: 'static', focus: false });
+                modal.show();
+                if (callback) callback(data);
+            })
+            .catch(() => alert('Error al cargar los datos del vehículo'));
+    };
+
+    window.recargarPagina = function() {
+        location.reload();
+    };
+</script>

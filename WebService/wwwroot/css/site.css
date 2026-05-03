@@ -1,31 +1,148 @@
-html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+:root {
+    --bg-main: #10141a;
+    --bg-card: #1a2029;
+    --bg-input: #0f1722;
+    --primary-teal: #20c997;
+    --primary-teal-hover: #17a589;
+    --text-main: #f3f7fb;
+    --text-muted: #9eb0c2;
+    --border-color: #334155;
+    --border-soft: #2a3646;
 }
 
 body {
-  margin-bottom: 60px;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+.card-dark {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+    .card-dark:hover {
+        border-color: var(--primary-teal);
+        transition: border-color 0.3s ease;
+    }
+
+.text-teal {
+    color: var(--primary-teal);
 }
+
+.text-muted-dark {
+    color: var(--text-muted);
+}
+
+.btn-teal {
+    background-color: var(--primary-teal);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+}
+
+    .btn-teal:hover {
+        background-color: var(--primary-teal-hover);
+        color: #fff;
+    }
+
+.form-control-dark {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.form-control-dark::placeholder {
+    color: #8ea3b8;
+    opacity: 1;
+}
+
+.form-select.form-control-dark {
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23c7d6e5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.form-select.form-control-dark option {
+    background-color: #16202c;
+    color: var(--text-main);
+}
+
+.nav-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    overflow: hidden;
+    gap: 0;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.nav-icon-link i {
+    line-height: 1;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.nav-link-label {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0;
+    white-space: nowrap;
+    transform: translateX(-6px);
+    transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease, transform 0.25s ease;
+}
+
+.nav-icon-link:hover,
+.nav-icon-link:focus-visible,
+.nav-icon-link.nav-icon-open {
+    color: var(--primary-teal) !important;
+    background-color: rgba(32, 201, 151, 0.12);
+}
+
+.nav-icon-link:hover .nav-link-label,
+.nav-icon-link:focus-visible .nav-link-label,
+.nav-icon-link.nav-icon-open .nav-link-label {
+    max-width: 180px;
+    opacity: 1;
+    margin-left: 0.45rem;
+    transform: translateX(0);
+}
+
+.nav-icon-link.active {
+    color: var(--primary-teal) !important;
+}
+
+.form-control-dark:focus,
+.form-select.form-control-dark:focus {
+    background-color: var(--bg-input);
+    border-color: var(--primary-teal);
+    color: var(--text-main);
+    box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.2);
+}
+
+.table.table-dark {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+    --bs-table-hover-bg: rgba(32, 201, 151, 0.08);
+    --bs-table-color: var(--text-main);
+    --bs-table-border-color: var(--border-soft);
+}
+
+.list-group-item.bg-dark {
+    background-color: #16202c !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-soft) !important;
+}
+
+.list-group-item.bg-dark:hover,
+.list-group-item.bg-dark:focus {
+    background-color: #1d2a39 !important;
+}
+
+    

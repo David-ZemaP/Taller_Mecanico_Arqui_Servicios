@@ -1,0 +1,69 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.Reportes.IndexModel
+@using Taller_Mecanico_Arqui.Infrastructure.Authorization
+@using Taller_Mecanico_Arqui.Domain.Enums
+@attribute [RequireAccessLevel(NivelAcceso.Gerente)]
+@{
+    ViewData["Title"] = "Reportes";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-white">
+            <i class="bi bi-graph-up me-2"></i>Reportes
+        </h1>
+    </div>
+
+    <div class="card shadow-lg" style="background-color: var(--bg-card); border: 1px solid #2a2a3e;">
+        <div class="card-body text-center py-5">
+            <div class="mb-4">
+                <i class="bi bi-tools" style="font-size: 5rem; color: var(--color-teal);"></i>
+            </div>
+            <h2 class="text-white mb-3">En Construcción</h2>
+            <p class="text-muted mb-4">
+                Esta sección de reportes está actualmente en desarrollo.<br>
+                Pronto podrás acceder a análisis detallados y estadísticas del taller.
+            </p>
+            <div class="alert alert-info d-inline-block" style="background-color: rgba(32, 201, 151, 0.1); border-color: rgba(32, 201, 151, 0.3); color: var(--color-teal);">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Nivel de acceso:</strong> Solo disponible para Gerentes
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow" style="background-color: var(--bg-card); border: 1px solid #2a2a3e; opacity: 0.6;">
+                <div class="card-body">
+                    <h5 class="text-white">
+                        <i class="bi bi-cash-stack me-2"></i>Reporte de Ingresos
+                    </h5>
+                    <p class="text-muted small">Análisis de ingresos mensuales y anuales</p>
+                    <span class="badge bg-secondary">Próximamente</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow" style="background-color: var(--bg-card); border: 1px solid #2a2a3e; opacity: 0.6;">
+                <div class="card-body">
+                    <h5 class="text-white">
+                        <i class="bi bi-people me-2"></i>Desempeño de Empleados
+                    </h5>
+                    <p class="text-muted small">Estadísticas de productividad del personal</p>
+                    <span class="badge bg-secondary">Próximamente</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow" style="background-color: var(--bg-card); border: 1px solid #2a2a3e; opacity: 0.6;">
+                <div class="card-body">
+                    <h5 class="text-white">
+                        <i class="bi bi-clipboard-data me-2"></i>Órdenes Completadas
+                    </h5>
+                    <p class="text-muted small">Resumen de trabajos realizados</p>
+                    <span class="badge bg-secondary">Próximamente</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

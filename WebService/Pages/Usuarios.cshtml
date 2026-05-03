@@ -1,0 +1,294 @@
+@page
+@model Taller_Mecanico_Arqui.Pages.UsuariosModel
+@using Taller_Mecanico_Arqui.Domain.Enums
+@{
+    ViewData["Title"] = "Usuarios del Sistema";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-teal fw-bold mb-0">Usuarios del Sistema</h2>
+        <p class="text-muted-dark">Gestiona los accesos al sistema.</p>
+    </div>
+    @if (Model.CurrentUserLevel == NivelAcceso.Gerente)
+    {
+        <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#usuarioModal" onclick="limpiarFormulario()">
+            <i class="bi bi-plus-lg me-2"></i>Nuevo usuario
+        </button>
+    }
+    else if (Model.AdministradoresSelect.Any())
+    {
+        <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#usuarioModal" onclick="limpiarFormulario()">
+            <i class="bi bi-plus-lg me-2"></i>Nuevo usuario
+        </button>
+    }
+</div>
+
+<div class="card-dark p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
+                <tr>
+                    <th class="text-teal pb-3">Correo electrónico</th>
+                    <th class="text-teal pb-3">Empleado</th>
+                    <th class="text-teal pb-3">Último acceso</th>
+                    <th class="text-teal pb-3">Estado</th>
+                    <th class="text-teal pb-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Usuarios != null && Model.Usuarios.Any())
+                {
+                    @foreach (var item in Model.Usuarios)
+                    {
+                        <tr class="border-bottom border-secondary">
+                            <td class="text-light">@item.Email</td>
+                            <td class="text-white fw-semibold">@item.EmpleadoNombre</td>
+                            <td class="text-light">@(item.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                            <td><span class="badge @(item.Activo ? "bg-success" : "bg-danger")">@(item.Activo ? "Activo" : "Inactivo")</span></td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    @if (Model.CurrentUserLevel == NivelAcceso.Gerente || item.AdminNivelAcceso == NivelAcceso.Parcial)
+                                    {
+                                        <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary" title="Editar" data-bs-toggle="modal" data-bs-target="#usuarioModal" onclick="editarUsuario(@item.UsuarioLoginId, '@item.Email', @item.EmpleadoId)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="ToggleActivo" class="d-inline">
+                                            <input type="hidden" name="id" value="@item.UsuarioLoginId" />
+                                            <button type="submit" class="btn btn-icon btn-sm @(item.Activo ? "btn-outline-warning text-warning" : "btn-outline-success text-success") border-secondary" title="@(item.Activo ? "Desactivar" : "Activar")">
+                                                <i class="bi bi-@(item.Activo ? "lock" : "unlock")"></i>
+                                            </button>
+                                        </form>
+                                        <form method="post" asp-page-handler="ResetPassword" class="d-inline">
+                                            <input type="hidden" name="id" value="@item.UsuarioLoginId" />
+                                            <button type="submit" class="btn btn-icon btn-sm btn-outline-info border-secondary" title="Resetear contraseña">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin permisos</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted-dark py-5">
+                            <i class="bi bi-person-x fs-2 d-block mb-2 text-secondary"></i>
+                            No hay usuarios creados aún.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL: Crear/Editar Usuario -->
+<div class="modal fade" id="usuarioModal" tabindex="-1" aria-labelledby="usuarioModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <form method="post" asp-page-handler="Save">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="usuarioModalLabel">Crear usuario</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" asp-for="FormDto.UsuarioLoginId" id="FormDto_UsuarioLoginId" />
+
+                    <div class="mb-3">
+                        <label asp-for="FormDto.EmpleadoId" class="form-label text-teal">Empleado (Administrador) *</label>
+                        <select asp-for="FormDto.EmpleadoId" class="form-select form-control-dark" id="FormDto_EmpleadoId">
+                            <option value="">Seleccione un administrador...</option>
+                            @foreach (var emp in Model.AdministradoresSelect)
+                            {
+                                <option value="@emp.Value">@emp.Text</option>
+                            }
+                        </select>
+                        <span asp-validation-for="FormDto.EmpleadoId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="FormDto.Email" class="form-label text-teal">Correo electrónico *</label>
+                        <input asp-for="FormDto.Email" class="form-control form-control-dark" id="FormDto_Email" />
+                        <span asp-validation-for="FormDto.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3" id="passwordField">
+                        <label asp-for="FormDto.Password" class="form-label text-teal">Contraseña *</label>
+                        <input asp-for="FormDto.Password" class="form-control form-control-dark" type="password" id="FormDto_Password" />
+                        <span asp-validation-for="FormDto.Password" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-teal" id="modalSubmitBtn">Crear usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["NewPassword"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
+        <strong>Contraseña temporal:</strong> @TempData["NewPassword"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["EmailWarning"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
+        <i class="bi bi-exclamation-triangle me-2"></i>@TempData["EmailWarning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- MODAL: Credenciales de acceso -->
+<div class="modal fade" id="credencialesModal" tabindex="-1" aria-labelledby="credencialesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-secondary bg-gradient">
+                <div>
+                    <h5 class="modal-title text-teal fw-bold" id="credencialesModalLabel">
+                        <i class="bi bi-key me-2"></i>Credenciales de Acceso
+                    </h5>
+                    <p class="text-muted small mb-0">Guarda estas credenciales en un lugar seguro</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Nuevo administrador creado exitosamente.</strong> Las credenciales de acceso se muestran a continuación.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-teal fw-semibold">Correo electrónico:</label>
+                    <div class="input-group">
+                        <input type="email" class="form-control form-control-dark" id="email_credential" value="@Model.NuevoEmail" readonly>
+                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('email_credential')" title="Copiar">
+                            <i class="bi bi-clipboard me-1"></i>Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-teal fw-semibold">Contraseña:</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control form-control-dark" id="password_credential" value="@Model.NuevaPassword" readonly>
+                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="mostrarOcultarPassword('password_credential')" title="Mostrar/Ocultar">
+                            <i class="bi bi-eye me-1"></i>Mostrar
+                        </button>
+                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('password_credential')" title="Copiar">
+                            <i class="bi bi-clipboard me-1"></i>Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Importante:</strong> El usuario deberá cambiar su contraseña en el primer inicio de sesión.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Mostrar/ocultar contraseña
+        function mostrarOcultarPassword(elementId) {
+            const input = document.getElementById(elementId);
+            const btn = event.target.closest('button');
+            const icon = btn.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+                btn.textContent = 'Ocultar';
+                btn.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Ocultar';
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+                btn.textContent = 'Mostrar';
+                btn.innerHTML = '<i class="bi bi-eye me-1"></i>Mostrar';
+            }
+        }
+
+        // Copiar al portapapeles
+        function copiarAlPortapapeles(elementId) {
+            const element = document.getElementById(elementId);
+            const valor = element.value;
+            
+            navigator.clipboard.writeText(valor).then(() => {
+                const btn = event.target.closest('button');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check me-1"></i>¡Copiado!';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary', 'text-teal', 'border-secondary');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary', 'text-teal', 'border-secondary');
+                }, 2000);
+            }).catch(err => {
+                alert('Error al copiar al portapapeles');
+            });
+        }
+
+        // Mostrar modal de credenciales si hay credenciales nuevas
+        document.addEventListener('DOMContentLoaded', function() {
+            const email = document.getElementById('email_credential')?.value;
+            const password = document.getElementById('password_credential')?.value;
+            
+            if (email && password) {
+                const credencialesModal = new bootstrap.Modal(document.getElementById('credencialesModal'));
+                credencialesModal.show();
+            }
+        });
+
+        function limpiarFormulario() {
+            document.getElementById('FormDto_UsuarioLoginId').value = '0';
+            document.getElementById('FormDto_EmpleadoId').value = '';
+            document.getElementById('FormDto_Email').value = '';
+            document.getElementById('FormDto_Password').value = '';
+            document.getElementById('passwordField').style.display = 'block';
+            document.getElementById('usuarioModalLabel').textContent = 'Crear usuario';
+            document.getElementById('modalSubmitBtn').textContent = 'Crear usuario';
+        }
+
+        function editarUsuario(id, email, empleadoId) {
+            document.getElementById('FormDto_UsuarioLoginId').value = id;
+            document.getElementById('FormDto_EmpleadoId').value = empleadoId;
+            document.getElementById('FormDto_Email').value = email;
+            document.getElementById('FormDto_Password').value = '';
+            document.getElementById('passwordField').style.display = 'none';
+            document.getElementById('usuarioModalLabel').textContent = 'Editar usuario';
+            document.getElementById('modalSubmitBtn').textContent = 'Actualizar usuario';
+        }
+    </script>
+}
