@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="Front/Front.csproj" />
+  <Project Path="WebService/WebService.csproj" />
   <Project Path="OrdenTrabajoService/OrdenTrabajoService.csproj" />
   <Project Path="UsersService/UsersService.csproj" />
 </Solution>
