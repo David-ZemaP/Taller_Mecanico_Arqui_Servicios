@@ -2,6 +2,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
+
+// Registrar servicios de reportes
+builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.AuditInfoHelper>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.ReportFormatter>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IPDFReportService, Taller_Mecanico_WebService.Services.Reports.PDFReportService>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IExcelReportService, Taller_Mecanico_WebService.Services.Reports.ExcelReportService>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IChartService, Taller_Mecanico_WebService.Services.Reports.ChartService>();
+
+// Registrar HttpClient para consumir APIs
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
@@ -22,5 +34,6 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+app.MapControllers();
 
 app.Run();

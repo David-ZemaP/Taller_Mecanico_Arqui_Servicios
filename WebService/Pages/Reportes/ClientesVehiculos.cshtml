@@ -1,0 +1,366 @@
+@page
+@model Taller_Mecanico_WebService.Pages.Reportes.ClientesVehiculosModel
+@{
+    ViewData["Title"] = "Reporte Clientes y Vehículos";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<style>
+    .report-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 30px;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, #2980B9 0%, #1ABC9C 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .report-header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border-left: 4px solid #2980B9;
+    }
+
+    .filter-section h3 {
+        margin-top: 0;
+        color: #2980B9;
+    }
+
+    .filter-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #2980B9;
+        box-shadow: 0 0 5px rgba(41, 128, 185, 0.3);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #2980B9;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1f618d;
+    }
+
+    .btn-success {
+        background: #27AE60;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #1e8449;
+    }
+
+    .btn-warning {
+        background: #E67E22;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: #C0641B;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .alert-info {
+        background: #D1ECF1;
+        color: #0C5460;
+        border: 1px solid #BEE5EB;
+    }
+
+    .alert-error {
+        background: #F8D7DA;
+        color: #721C24;
+        border: 1px solid #F5C6CB;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .data-table thead {
+        background: #2980B9;
+        color: white;
+    }
+
+    .data-table th {
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+
+    .data-table tbody tr:hover {
+        background: #ecf0f1;
+    }
+
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #2980B9 0%, #1ABC9C 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+    }
+
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: bold;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #2980B9;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="report-container">
+    <div class="report-header">
+        <h1>📋 REPORTE DE CLIENTES Y VEHÍCULOS</h1>
+        <p>Sistema de Gestión - Taller Mecánico</p>
+    </div>
+
+    <div class="filter-section">
+        <h3>🔍 Filtros de Búsqueda</h3>
+        
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="alert alert-error">
+                ⚠️ @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post" asp-page-handler="Buscar">
+            <div class="filter-group">
+                <div class="form-group">
+                    <label for="nombreCliente">Nombre o CI/NIT del Cliente:</label>
+                    <input type="text" id="nombreCliente" name="nombreCliente" 
+                           placeholder="Ej: Juan, 45454512" 
+                           value="@Model.NombreCliente" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="marcaVehiculo">Marca del Vehículo:</label>
+                    <select id="marcaVehiculo" name="marcaVehiculo">
+                        <option value="">-- Todas las marcas --</option>
+                        <option value="TOYOTA" selected="@(Model.MarcaVehiculo == "TOYOTA")">TOYOTA</option>
+                        <option value="FORD" selected="@(Model.MarcaVehiculo == "FORD")">FORD</option>
+                        <option value="BMW" selected="@(Model.MarcaVehiculo == "BMW")">BMW</option>
+                        <option value="CHEVROLET" selected="@(Model.MarcaVehiculo == "CHEVROLET")">CHEVROLET</option>
+                        <option value="HYUNDAI" selected="@(Model.MarcaVehiculo == "HYUNDAI")">HYUNDAI</option>
+                        <option value="NISSAN" selected="@(Model.MarcaVehiculo == "NISSAN")">NISSAN</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    🔍 Buscar
+                </button>
+                <button type="button" class="btn btn-warning" onclick="location.href='@Url.Page()'">
+                    🔄 Limpiar
+                </button>
+                <button type="submit" asp-page-handler="DescargarPDF" class="btn btn-success" style="flex: 1;">
+                    📥 Descargar PDF
+                </button>
+                <button type="submit" asp-page-handler="DescargarExcel" class="btn btn-success" style="flex: 1;">
+                    📊 Exportar Excel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Clientes?.Count > 0)
+    {
+        <div class="alert alert-info">
+            ℹ️ Se encontraron <strong>@Model.Clientes.Count</strong> cliente(s) con <strong>@Model.TotalVehiculos</strong> vehículo(s)
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-card">
+                <h3>Clientes Filtrados</h3>
+                <div class="value">@Model.Clientes.Count</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total de Vehículos</h3>
+                <div class="value">@Model.TotalVehiculos</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nro.</th>
+                        <th>CI/NIT</th>
+                        <th>Nombre Cliente</th>
+                        <th>Placa</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Año</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int contador = 1;
+                        foreach (var cliente in Model.Clientes)
+                        {
+                            if (cliente.Vehiculos?.Count > 0)
+                            {
+                                bool primeraFila = true;
+                                foreach (var vehiculo in cliente.Vehiculos)
+                                {
+                                    <tr>
+                                        @if (primeraFila)
+                                        {
+                                            <td>@contador</td>
+                                            <td>@cliente.Cedula</td>
+                                            <td>@cliente.NombreCompleto</td>
+                                        }
+                                        else
+                                        {
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                        }
+                                        <td>@vehiculo.Placa</td>
+                                        <td>@vehiculo.Marca</td>
+                                        <td>@vehiculo.Modelo</td>
+                                        <td>@vehiculo.Anio</td>
+                                        <td>@vehiculo.Estado</td>
+                                    </tr>
+                                    primeraFila = false;
+                                    contador++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td>@contador</td>
+                                    <td>@cliente.Cedula</td>
+                                    <td>@cliente.NombreCompleto</td>
+                                    <td colspan="5" class="text-center"><em>Sin vehículos registrados</em></td>
+                                </tr>
+                                contador++;
+                            }
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (Model.BusquedaRealizada)
+    {
+        <div class="alert alert-info">
+            ℹ️ No se encontraron resultados para los filtros especificados
+        </div>
+    }
+</div>

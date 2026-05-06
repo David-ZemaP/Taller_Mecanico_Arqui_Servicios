@@ -1,0 +1,391 @@
+@page
+@model Taller_Mecanico_WebService.Pages.Reportes.AnalyticaServiciosModel
+@{
+    ViewData["Title"] = "Analítica de Servicios";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<style>
+    .report-container {
+        max-width: 1400px;
+        margin: 30px auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 30px;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, #8E44AD 0%, #2980B9 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .report-header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border-left: 4px solid #8E44AD;
+    }
+
+    .filter-section h3 {
+        margin-top: 0;
+        color: #8E44AD;
+    }
+
+    .filter-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #8E44AD;
+        box-shadow: 0 0 5px rgba(142, 68, 173, 0.3);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #8E44AD;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #6C3483;
+    }
+
+    .btn-success {
+        background: #27AE60;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #1e8449;
+    }
+
+    .btn-warning {
+        background: #E67E22;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: #C0641B;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .alert-info {
+        background: #D1ECF1;
+        color: #0C5460;
+        border: 1px solid #BEE5EB;
+    }
+
+    .alert-error {
+        background: #F8D7DA;
+        color: #721C24;
+        border: 1px solid #F5C6CB;
+    }
+
+    .chart-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border: 1px solid #ddd;
+    }
+
+    .chart-section h3 {
+        text-align: center;
+        color: #8E44AD;
+        margin-top: 0;
+    }
+
+    .chart-container {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .chart-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .data-table thead {
+        background: #8E44AD;
+        color: white;
+    }
+
+    .data-table th {
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+
+    .data-table tbody tr:hover {
+        background: #ecf0f1;
+    }
+
+    .data-table .total-row {
+        background: #8E44AD;
+        color: white;
+        font-weight: bold;
+    }
+
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #8E44AD 0%, #2980B9 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+    }
+
+    .stat-card .value {
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .stat-card .unit {
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #8E44AD;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="report-container">
+    <div class="report-header">
+        <h1>📊 ANALÍTICA DE INGRESOS POR SERVICIOS</h1>
+        <p>Análisis Gerencial del Rendimiento Económico</p>
+    </div>
+
+    <div class="filter-section">
+        <h3>📅 Rango de Fechas</h3>
+        
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="alert alert-error">
+                ⚠️ @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post" asp-page-handler="Buscar">
+            <div class="filter-group">
+                <div class="form-group">
+                    <label for="fechaDesde">Fecha de Inicio:</label>
+                    <input type="date" id="fechaDesde" name="fechaDesde" 
+                           value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" 
+                           required />
+                </div>
+                
+                <div class="form-group">
+                    <label for="fechaHasta">Fecha de Fin:</label>
+                    <input type="date" id="fechaHasta" name="fechaHasta" 
+                           value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" 
+                           required />
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    🔍 Generar Reporte
+                </button>
+                <button type="button" class="btn btn-warning" onclick="location.href='@Url.Page()'">
+                    🔄 Limpiar
+                </button>
+                <button type="submit" asp-page-handler="DescargarPDF" class="btn btn-success" style="flex: 1;">
+                    📥 Descargar PDF
+                </button>
+                <button type="submit" asp-page-handler="DescargarExcel" class="btn btn-success" style="flex: 1;">
+                    📊 Exportar Excel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Servicios?.Count > 0)
+    {
+        <div class="alert alert-info">
+            ℹ️ Período: <strong>@Model.FechaDesde?.ToString("dd/MM/yyyy")</strong> al <strong>@Model.FechaHasta?.ToString("dd/MM/yyyy")</strong> 
+            | Total de Servicios: <strong>@Model.TotalServicios</strong>
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-card">
+                <h3>Total Recaudado</h3>
+                <div class="value">Bs. @Model.TotalRecaudado:N2</div>
+                <div class="unit">Monto acumulado</div>
+            </div>
+            <div class="stat-card">
+                <h3>Cantidad de Órdenes</h3>
+                <div class="value">@Model.TotalOrdenes</div>
+                <div class="unit">Procesadas en período</div>
+            </div>
+            <div class="stat-card">
+                <h3>Promedio por Orden</h3>
+                <div class="value">Bs. @(Model.PromedioRecaudado:N2)</div>
+                <div class="unit">Ingreso promedio</div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.GraficoBase64))
+        {
+            <div class="chart-section">
+                <h3>📈 Distribución de Servicios</h3>
+                <div class="chart-container">
+                    <img src="data:image/png;base64,@Model.GraficoBase64" alt="Gráfico de distribucion" class="chart-image" />
+                </div>
+            </div>
+        }
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nombre del Servicio</th>
+                        <th class="text-center">Cantidad Atendida</th>
+                        <th class="text-right">Total Recaudado</th>
+                        <th class="text-center">% del Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        decimal sumaTotal = Model.Servicios.Sum(s => s.TotalRecaudado);
+                        foreach (var servicio in Model.Servicios.OrderByDescending(s => s.TotalRecaudado))
+                        {
+                            var porcentaje = sumaTotal > 0 ? (servicio.TotalRecaudado / sumaTotal * 100) : 0;
+                            <tr>
+                                <td>@servicio.NombreServicio</td>
+                                <td class="text-center">@servicio.CantidadAtendida</td>
+                                <td class="text-right">Bs. @servicio.TotalRecaudado.ToString("N2")</td>
+                                <td class="text-center">@porcentaje.ToString("F1")%</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td>TOTAL</td>
+                        <td class="text-center">@Model.TotalServicios</td>
+                        <td class="text-right">Bs. @Model.TotalRecaudado.ToString("N2")</td>
+                        <td class="text-center">100%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    else if (Model.BusquedaRealizada)
+    {
+        <div class="alert alert-info">
+            ℹ️ No se encontraron servicios para el período especificado
+        </div>
+    }
+</div>

@@ -4,10 +4,30 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <!-- Project References -->
   <ItemGroup>
+  </ItemGroup>
+
+  <!-- NuGet Dependencies -->
+  <ItemGroup>
+    <!-- Web API & Auth -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    
+    <!-- Database -->
+    <PackageReference Include="Npgsql" Version="10.0.2" />
+    
+    <!-- Security -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    
+    <!-- Reports (PDF, Excel, Graphics) -->
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.7.12" />
+    <PackageReference Include="EPPlus" Version="7.0.7" />
+    <PackageReference Include="OxyPlot.Core" Version="2.1.2" />
   </ItemGroup>
 
 </Project>
