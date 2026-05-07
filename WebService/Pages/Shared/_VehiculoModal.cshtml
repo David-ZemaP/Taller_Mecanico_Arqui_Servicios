@@ -326,6 +326,11 @@
         })
         .then(data => {
             if (data.success) {
+                const vehiculoCreado = {
+                    ...data.vehiculo,
+                    clienteId: parseInt(document.getElementById('vehiculoClienteId').value || '0', 10),
+                    clienteText: document.getElementById('vehiculoClienteSearch').value || ''
+                };
                 document.getElementById('vehiculoId').value = data.vehiculo.vehiculoId;
 
                 var modal = bootstrap.Modal.getInstance(document.getElementById('vehiculoModal'));
@@ -334,22 +339,25 @@
                 }
 
                 document.getElementById('formVehiculo').reset();
-                alert('Vehículo guardado exitosamente');
 
                 if (typeof window.onVehiculoCreado === 'function') {
-                    setTimeout(function() { window.onVehiculoCreado(data.vehiculo); }, 100);
+                    setTimeout(function() { window.onVehiculoCreado(vehiculoCreado); }, 100);
                 } else if (window.recargarPagina) {
                     window.recargarPagina();
                 } else {
                     location.reload();
                 }
             } else {
-                alert('Error al guardar el vehículo: ' + (data.message || 'Verifique los datos ingresados.'));
+                var errorDiv = document.getElementById('vehiculoFormErrors');
+                errorDiv.innerHTML = data.message || 'Verifique los datos ingresados.';
+                errorDiv.classList.remove('d-none');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Ocurrió un error al intentar guardar el vehículo.');
+            var errorDiv = document.getElementById('vehiculoFormErrors');
+            errorDiv.innerHTML = error.message || 'Ocurrió un error al intentar guardar el vehículo.';
+            errorDiv.classList.remove('d-none');
         });
     }
 
@@ -391,7 +399,12 @@
         fetch('/Vehiculos?handler=Vehiculo&id=' + id)
             .then(r => r.json())
             .then(data => {
-                if (data.error) { alert(data.error); return; }
+                if (data.error) {
+                    var errorDiv = document.getElementById('vehiculoFormErrors');
+                    errorDiv.innerHTML = data.error;
+                    errorDiv.classList.remove('d-none');
+                    return;
+                }
                 document.getElementById('vehiculoId').value = data.vehiculoId;
                 document.getElementById('vehiculoClienteId').value = data.clienteId;
                 document.getElementById('vehiculoClienteSearch').value = data.clienteNombre || '';
@@ -408,7 +421,11 @@
                 modal.show();
                 if (callback) callback(data);
             })
-            .catch(() => alert('Error al cargar los datos del vehículo'));
+            .catch(() => {
+                var errorDiv = document.getElementById('vehiculoFormErrors');
+                errorDiv.innerHTML = 'Error al cargar los datos del vehículo';
+                errorDiv.classList.remove('d-none');
+            });
     };
 
     window.recargarPagina = function() {

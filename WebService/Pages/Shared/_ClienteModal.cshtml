@@ -161,6 +161,12 @@
         })
         .then(data => {
             if (data.success) {
+                const clienteCreado = {
+                    ...data.cliente,
+                    clienteText: data.cliente
+                        ? `${data.cliente.nombres} ${data.cliente.primerApellido}${data.cliente.segundoApellido ? ' ' + data.cliente.segundoApellido : ''} - CI: ${data.cliente.ciNumero}${data.cliente.ciComplemento ? ' ' + data.cliente.ciComplemento : ''}`
+                        : ''
+                };
                 document.getElementById('clienteId').value = data.cliente.clienteId;
 
                 var modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
@@ -169,22 +175,25 @@
                 }
 
                 document.getElementById('formCliente').reset();
-                alert('Cliente guardado exitosamente');
 
                 if (typeof window.onClienteCreado === 'function') {
-                    setTimeout(function() { window.onClienteCreado(data.cliente); }, 100);
+                    setTimeout(function() { window.onClienteCreado(clienteCreado); }, 100);
                 } else if (window.recargarPagina) {
                     window.recargarPagina();
                 } else {
                     location.reload();
                 }
             } else {
-                alert('Error al guardar el cliente: ' + (data.message || 'Verifique los datos ingresados.'));
+                var errorDiv = document.getElementById('clienteFormErrors');
+                errorDiv.innerHTML = data.message || 'Verifique los datos ingresados.';
+                errorDiv.classList.remove('d-none');
             }
         })
         .catch(error => {
             console.error('Error AJAX:', error);
-            alert('Ocurrió un error al intentar guardar el cliente: ' + error.message);
+            var errorDiv = document.getElementById('clienteFormErrors');
+            errorDiv.innerHTML = error.message || 'Ocurrió un error al intentar guardar el cliente.';
+            errorDiv.classList.remove('d-none');
         });
     }
 
@@ -228,14 +237,23 @@
         fetch('/Clientes?handler=Cliente&id=' + id)
             .then(r => r.json())
             .then(data => {
-                if (data.error) { alert(data.error); return; }
+                if (data.error) {
+                    var errorDiv = document.getElementById('clienteFormErrors');
+                    errorDiv.innerHTML = data.error;
+                    errorDiv.classList.remove('d-none');
+                    return;
+                }
                 cargarDatosEnFormulario(data);
                 document.getElementById('clienteModalLabel').textContent = 'Editar Cliente';
                 var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('clienteModal'), { backdrop: 'static', focus: false });
                 modal.show();
                 if (callback) callback(data);
             })
-            .catch(() => alert('Error al cargar los datos del cliente'));
+            .catch(() => {
+                var errorDiv = document.getElementById('clienteFormErrors');
+                errorDiv.innerHTML = 'Error al cargar los datos del cliente';
+                errorDiv.classList.remove('d-none');
+            });
     };
 
     window.recargarPagina = function() {
