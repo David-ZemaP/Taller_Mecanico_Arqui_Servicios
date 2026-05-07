@@ -8,6 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Npgsql" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UsersService\Domain\Domain.csproj" />
+    <ProjectReference Include="..\UsersService\Framework\Framework.csproj" />
+    <ProjectReference Include="..\src\TallerMecanico.Core\TallerMecanico.Core.csproj" />
   </ItemGroup>
 
 </Project>
