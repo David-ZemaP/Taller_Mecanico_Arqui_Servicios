@@ -115,7 +115,9 @@ public class AnalyticaServiciosModel : PageModel
             var infoAuditoria = _auditHelper.GetAuditInfo();
 
             // Generar gráfico
-            var datosGrafico = Servicios.ToDictionary(s => s.NombreServicio, s => s.TotalRecaudado);
+            var datosGrafico = Servicios
+                .Where(s => !string.IsNullOrEmpty(s.NombreServicio))
+                .ToDictionary(s => s.NombreServicio!, s => s.TotalRecaudado);
             var graficoImg = await _chartService.GenerarGraficoPastelAsync(
                 datosGrafico,
                 "Distribución de Servicios",
@@ -193,7 +195,12 @@ public class AnalyticaServiciosModel : PageModel
             BusquedaRealizada = true;
             var httpClient = _httpClientFactory.CreateClient();
 
-            var url = $"{API_BASE_URL}/servicios?fechaDesde={FechaDesde:yyyy-MM-dd}&fechaHasta={FechaHasta:yyyy-MM-dd}";
+            var token = User.FindFirst("Token")?.Value;
+            if (!string.IsNullOrEmpty(token))
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var url = $"{API_BASE_URL}/servicios/ordenes?desde={FechaDesde:yyyy-MM-dd}&hasta={FechaHasta:yyyy-MM-dd}";
 
             _logger.LogInformation($"📡 Llamando API: {url}");
 
@@ -214,31 +221,36 @@ public class AnalyticaServiciosModel : PageModel
             TotalServicios = 0;
             TotalOrdenes = 0;
 
-            if (jsonDocument.RootElement.TryGetProperty("data", out var dataElement))
+            // API returns ServiciosOrdenesReportDto directly (not wrapped in "data")
+            var root = jsonDocument.RootElement;
+
+            if (root.TryGetProperty("totalBsMonto", out var totalBs))
+                TotalRecaudado = totalBs.GetDecimal();
+
+            if (root.TryGetProperty("totalOrdenes", out var totalOrd))
+                TotalOrdenes = totalOrd.GetInt32();
+
+            if (root.TryGetProperty("servicios", out var serviciosElement)
+                && serviciosElement.ValueKind == JsonValueKind.Array)
             {
-                if (dataElement.ValueKind == JsonValueKind.Array)
+                foreach (var servicioElement in serviciosElement.EnumerateArray())
                 {
-                    foreach (var servicioElement in dataElement.EnumerateArray())
-                    {
-                        var servicio = ParseServicioFromJson(servicioElement);
-                        Servicios.Add(servicio);
-                        TotalRecaudado += servicio.TotalRecaudado;
-                        TotalServicios += servicio.CantidadAtendida;
-                    }
+                    var servicio = ParseServicioFromJson(servicioElement);
+                    Servicios.Add(servicio);
+                    TotalServicios += servicio.CantidadAtendida;
                 }
             }
 
-            // Calcular totales
-            if (TotalServicios > 0)
-            {
-                TotalOrdenes = TotalServicios;
+            if (TotalOrdenes > 0)
                 PromedioRecaudado = TotalRecaudado / TotalOrdenes;
-            }
 
             // Generar gráfico
             if (Servicios.Count > 0)
             {
-                var datosGrafico = Servicios.ToDictionary(s => s.NombreServicio, s => s.TotalRecaudado);
+                var datosGrafico = Servicios
+                    .Where(s => !string.IsNullOrEmpty(s.NombreServicio))
+                    .ToDictionary(s => s.NombreServicio!, s => s.TotalRecaudado);
+
                 var graficoImg = await _chartService.GenerarGraficoPastelAsync(
                     datosGrafico,
                     "Distribución de Servicios",
@@ -265,9 +277,9 @@ public class AnalyticaServiciosModel : PageModel
     {
         return new ServicioViewModel
         {
-            NombreServicio = element.TryGetProperty("nombreServicio", out var nombre) ? nombre.GetString() : "N/A",
-            CantidadAtendida = element.TryGetProperty("cantidadAtendida", out var cantidad) ? cantidad.GetInt32() : 0,
-            TotalRecaudado = element.TryGetProperty("totalRecaudado", out var total) ? total.GetDecimal() : 0
+            NombreServicio = element.TryGetProperty("nombre", out var nombre) ? nombre.GetString() : "N/A",
+            CantidadAtendida = element.TryGetProperty("cantidadOrdenes", out var cantidad) ? cantidad.GetInt32() : 0,
+            TotalRecaudado = element.TryGetProperty("totalBs", out var total) ? total.GetDecimal() : 0
         };
     }
 }

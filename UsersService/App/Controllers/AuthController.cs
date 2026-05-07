@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
+using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Taller_Mecanico_Users.Domain.Ports;
+using Taller_Mecanico_Users.Framework.Persistence;
 
 namespace Taller_Mecanico_Users.App.Controllers
 {
@@ -13,11 +16,16 @@ namespace Taller_Mecanico_Users.App.Controllers
     {
         private readonly IUsuarioLoginRepository _loginRepository;
         private readonly IConfiguration _configuration;
+        private readonly ISqlConnectionFactory _connectionFactory;
 
-        public AuthController(IUsuarioLoginRepository loginRepository, IConfiguration configuration)
+        public AuthController(
+            IUsuarioLoginRepository loginRepository,
+            IConfiguration configuration,
+            ISqlConnectionFactory connectionFactory)
         {
             _loginRepository = loginRepository;
-            _configuration = configuration; // Inyectamos configuración para leer el Secret
+            _configuration = configuration;
+            _connectionFactory = connectionFactory;
         }
 
         [HttpPost("login")]
@@ -35,14 +43,38 @@ namespace Taller_Mecanico_Users.App.Controllers
             usuario.RegistrarAcceso();
             await _loginRepository.UpdateAsync(usuario);
 
-            // Generamos el Token JWT
             var token = GenerateJwtToken(usuario);
 
-            return Ok(new 
-            { 
+            var nombre = "";
+            var nivelAcceso = "";
+
+            if (usuario.EmpleadoId.HasValue)
+            {
+                using var conn = _connectionFactory.CreateConnection() as NpgsqlConnection
+                    ?? throw new InvalidOperationException("Conexión inválida");
+                await conn.OpenAsync();
+                using var cmd = new NpgsqlCommand(
+                    "SELECT nombre, primerapellido, nivelacceso FROM empleado WHERE empleadoid = @id",
+                    conn);
+                cmd.Parameters.AddWithValue("id", usuario.EmpleadoId.Value);
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var n  = reader.IsDBNull(0) ? "" : reader.GetString(0);
+                    var ap = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                    nombre     = $"{n} {ap}".Trim();
+                    nivelAcceso = reader.IsDBNull(2) ? "" : reader.GetString(2) ?? "";
+                }
+            }
+
+            return Ok(new
+            {
                 Token = token,
                 RequiereCambioPassword = usuario.RequiereCambioPassword,
-                EsCliente = usuario.EsCliente
+                EsCliente = usuario.EsCliente,
+                UsuarioLoginId = usuario.UsuarioLoginId,
+                Nombre = nombre,
+                NivelAcceso = nivelAcceso
             });
         }
 

@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -74,6 +76,15 @@ namespace Taller_Mecanico_WebService.Pages
                     ModelState.AddModelError(string.Empty, error?.Message ?? "No se pudo actualizar la contraseña.");
                     return Page();
                 }
+
+                // Re-issue cookie with RequiereCambio=False so middleware doesn't loop
+                var newClaims = User.Claims
+                    .Where(c => c.Type != "RequiereCambio")
+                    .Append(new Claim("RequiereCambio", "False"))
+                    .ToList();
+                var identity = new ClaimsIdentity(newClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var props = new AuthenticationProperties { IsPersistent = User.Identity is { IsAuthenticated: true } };
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), props);
 
                 TempData["SuccessMessage"] = "Contraseña actualizada exitosamente.";
                 return RedirectToPage("/Index");

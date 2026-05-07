@@ -149,13 +149,18 @@ public class ClientesVehiculosModel : PageModel
         {
             BusquedaRealizada = true;
             var httpClient = _httpClientFactory.CreateClient();
-            
+
+            var token = User.FindFirst("Token")?.Value;
+            if (!string.IsNullOrEmpty(token))
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
             var url = $"{API_BASE_URL}/cliente/vehiculos";
             var queryParams = new List<string>();
-            
+
             if (!string.IsNullOrEmpty(NombreCliente))
                 queryParams.Add($"nombreCliente={Uri.EscapeDataString(NombreCliente)}");
-            
+
             if (!string.IsNullOrEmpty(MarcaVehiculo))
                 queryParams.Add($"marca={Uri.EscapeDataString(MarcaVehiculo)}");
 
@@ -207,25 +212,31 @@ public class ClientesVehiculosModel : PageModel
     /// </summary>
     private ClienteViewModel ParseClienteFromJson(JsonElement element)
     {
+        var nombres = element.TryGetProperty("nombres", out var n) ? n.GetString() ?? "" : "";
+        var ap1 = element.TryGetProperty("primerApellido", out var a1) ? a1.GetString() ?? "" : "";
+        var ap2 = element.TryGetProperty("segundoApellido", out var a2) ? a2.GetString() ?? "" : "";
+        var nombreCompleto = string.Join(" ", new[] { nombres, ap1, ap2 }.Where(s => !string.IsNullOrEmpty(s)));
+
         var cliente = new ClienteViewModel
         {
-            Cedula = element.TryGetProperty("cedula", out var cedula) ? cedula.GetString() : "N/A",
-            NombreCompleto = element.TryGetProperty("nombreCompleto", out var nombre) ? nombre.GetString() : "N/A",
+            Cedula = element.TryGetProperty("ciNit", out var ci) ? ci.GetString() : "N/A",
+            NombreCompleto = string.IsNullOrEmpty(nombreCompleto) ? "N/A" : nombreCompleto,
             Vehiculos = new List<VehiculoViewModel>()
         };
 
-        if (element.TryGetProperty("vehiculos", out var vehiculosElement) && 
+        if (element.TryGetProperty("vehiculos", out var vehiculosElement) &&
             vehiculosElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var vehiculoElement in vehiculosElement.EnumerateArray())
             {
+                var activo = vehiculoElement.TryGetProperty("activo", out var a) && a.GetBoolean();
                 var vehiculo = new VehiculoViewModel
                 {
                     Placa = vehiculoElement.TryGetProperty("placa", out var placa) ? placa.GetString() : "N/A",
                     Marca = vehiculoElement.TryGetProperty("marca", out var marca) ? marca.GetString() : "N/A",
                     Modelo = vehiculoElement.TryGetProperty("modelo", out var modelo) ? modelo.GetString() : "N/A",
-                    Anio = vehiculoElement.TryGetProperty("anio", out var anio) ? anio.GetInt32() : 0,
-                    Estado = vehiculoElement.TryGetProperty("estado", out var estado) ? estado.GetString() : "Activo"
+                    Anio = vehiculoElement.TryGetProperty("anno", out var anno) ? anno.GetInt32() : 0,
+                    Estado = activo ? "Activo" : "Inactivo"
                 };
 
                 cliente.Vehiculos.Add(vehiculo);

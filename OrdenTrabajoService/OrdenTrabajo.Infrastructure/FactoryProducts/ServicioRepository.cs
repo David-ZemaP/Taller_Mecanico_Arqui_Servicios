@@ -48,7 +48,7 @@ public class ServicioRepository : IRepository<Servicio>
         {
             await using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
-            const string sql = "INSERT INTO servicio (nombre, precio, activo) VALUES (@nombre, @precio, TRUE) RETURNING servicioid;";
+            const string sql = "INSERT INTO servicio (nombre, precio) VALUES (@nombre, @precio) RETURNING servicioid;";
             await using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("nombre", entity.Nombre);
             cmd.Parameters.AddWithValue("precio", entity.Precio);
@@ -85,7 +85,7 @@ public class ServicioRepository : IRepository<Servicio>
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync();
-        const string sql = "UPDATE servicio SET activo=FALSE WHERE servicioid=@id;";
+        const string sql = "UPDATE servicio SET isdeleted=TRUE WHERE servicioid=@id;";
         await using var cmd = new NpgsqlCommand(sql, connection);
         cmd.Parameters.AddWithValue("id", id);
         await cmd.ExecuteNonQueryAsync();

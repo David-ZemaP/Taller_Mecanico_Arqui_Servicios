@@ -14,10 +14,14 @@ public class SqlEntityQueryService
 SELECT ot.ordentrabajoid, ot.vehiculoid, ot.fechaingreso, ot.fechaentrega,
        ot.estadotrabajo, ot.estadopago, ot.estadovehiculo, ot.total,
        ot.isdeleted, ot.fechaactualizacion,
-       v.vehiculoid as v_id, v.placa, v.marca, v.modelo, v.anio, v.clienteid, v.isdeleted as v_deleted,
-       c.clienteid as c_id, c.ci, c.nombres, c.primerapellido, c.segundoapellido
+       v.vehiculoid as v_id, v.placa, ma.nombre AS marca, mo.nombre AS modelo,
+       v.anio, v.clienteid, v.isdeleted as v_deleted,
+       c.clienteid as c_id, c.ci::text AS ci, c.nombre AS nombres,
+       c.primerapellido, c.segundoapellido
 FROM ordentrabajo ot
 LEFT JOIN vehiculo v ON v.vehiculoid = ot.vehiculoid
+LEFT JOIN marca ma ON v.marcaid = ma.marcaid
+LEFT JOIN modelo mo ON v.modeloid = mo.modeloid
 LEFT JOIN cliente c ON c.clienteid = v.clienteid
 WHERE ot.isdeleted = FALSE";
 
@@ -82,7 +86,7 @@ WHERE ot.isdeleted = FALSE";
     public IEnumerable<Producto> LoadProductos(NpgsqlConnection connection)
     {
         var productos = new List<Producto>();
-        const string sql = "SELECT productoid, nombre, precio, stock, activo FROM producto WHERE activo = TRUE";
+        const string sql = "SELECT productoid, nombre, precio, stock, NOT isdeleted AS activo FROM producto WHERE isdeleted = FALSE";
 
         using var cmd = new NpgsqlCommand(sql, connection);
         using var reader = cmd.ExecuteReader();
@@ -104,7 +108,7 @@ WHERE ot.isdeleted = FALSE";
     public IEnumerable<Servicio> LoadServicios(NpgsqlConnection connection)
     {
         var servicios = new List<Servicio>();
-        const string sql = "SELECT servicioid, nombre, precio, activo FROM servicio WHERE activo = TRUE";
+        const string sql = "SELECT servicioid, nombre, precio, NOT isdeleted AS activo FROM servicio WHERE isdeleted = FALSE";
 
         using var cmd = new NpgsqlCommand(sql, connection);
         using var reader = cmd.ExecuteReader();
@@ -126,9 +130,13 @@ WHERE ot.isdeleted = FALSE";
     {
         var vehiculos = new List<Vehiculo>();
         const string sql = @"
-SELECT v.vehiculoid, v.placa, v.marca, v.modelo, v.anio, v.clienteid, v.isdeleted,
-       c.clienteid as c_id, c.ci, c.nombres, c.primerapellido, c.segundoapellido
+SELECT v.vehiculoid, v.placa, ma.nombre AS marca, mo.nombre AS modelo,
+       v.anio, v.clienteid, v.isdeleted,
+       c.clienteid as c_id, c.ci::text AS ci, c.nombre AS nombres,
+       c.primerapellido, c.segundoapellido
 FROM vehiculo v
+LEFT JOIN marca ma ON v.marcaid = ma.marcaid
+LEFT JOIN modelo mo ON v.modeloid = mo.modeloid
 LEFT JOIN cliente c ON c.clienteid = v.clienteid
 WHERE v.isdeleted = FALSE";
 

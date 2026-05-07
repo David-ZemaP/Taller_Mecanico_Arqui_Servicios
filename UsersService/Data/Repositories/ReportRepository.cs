@@ -31,25 +31,27 @@ public class ReportRepository : IReportRepository
 
             var sql = @"
 SELECT
-    c.cliente_id,
-    c.ci_nit,
-    c.nombres,
-    c.primer_apellido,
-    c.segundo_apellido,
-    c.activo,
-    v.vehiculo_id,
+    c.clienteid,
+    c.ci::text AS ci_nit,
+    c.nombre AS nombres,
+    c.primerapellido AS primer_apellido,
+    c.segundoapellido AS segundo_apellido,
+    NOT c.isdeleted AS activo,
+    v.vehiculoid,
     v.placa,
-    v.marca,
-    v.modelo,
+    ma.nombre AS marca,
+    mo.nombre AS modelo,
     v.anio,
-    v.activo AS vehiculo_activo
-FROM clientes c
-LEFT JOIN vehiculos v ON c.cliente_id = v.cliente_id
-WHERE c.activo = true
-    AND (@nombre IS NULL OR c.nombres ILIKE @nombre OR c.ci_nit ILIKE @nombre)
+    NOT v.isdeleted AS vehiculo_activo
+FROM cliente c
+LEFT JOIN vehiculo v ON c.clienteid = v.clienteid
+LEFT JOIN marca ma ON v.marcaid = ma.marcaid
+LEFT JOIN modelo mo ON v.modeloid = mo.modeloid
+WHERE c.isdeleted = false
+    AND (@nombre IS NULL OR c.nombre ILIKE @nombre OR c.ci::text ILIKE @nombre)
     AND (@placa IS NULL OR v.placa ILIKE @placa)
-    AND (@marca IS NULL OR v.marca ILIKE @marca)
-ORDER BY c.primer_apellido, c.nombres, v.placa";
+    AND (@marca IS NULL OR ma.nombre ILIKE @marca)
+ORDER BY c.primerapellido, c.nombre, v.placa";
 
             using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@nombre", (object?)(nombreCliente != null ? $"%{nombreCliente}%" : null) ?? DBNull.Value);
@@ -118,16 +120,16 @@ ORDER BY c.primer_apellido, c.nombres, v.placa";
 
             var sql = @"
 SELECT
-    s.servicio_id,
+    s.servicioid,
     s.nombre,
-    COUNT(DISTINCT ot.orden_id) AS cantidad_ordenes,
-    COALESCE(SUM(ots.cantidad * ots.precio_unitario), 0) AS total_bs
-FROM servicios s
-LEFT JOIN ordentrabajoservicio ots ON s.servicio_id = ots.servicio_id
-LEFT JOIN ordentrabajo ot ON ots.orden_id = ot.orden_id
-    AND ot.fecha_ingreso BETWEEN @desde AND @hasta
-WHERE s.activo = true
-GROUP BY s.servicio_id, s.nombre
+    COUNT(DISTINCT ot.ordentrabajoid) AS cantidad_ordenes,
+    COALESCE(SUM(ots.cantidad * ots.preciounitario), 0) AS total_bs
+FROM servicio s
+LEFT JOIN ordentrabajoservicio ots ON s.servicioid = ots.servicioid
+LEFT JOIN ordentrabajo ot ON ots.ordentrabajoid = ot.ordentrabajoid
+    AND ot.fechaingreso BETWEEN @desde AND @hasta
+WHERE s.isdeleted = false
+GROUP BY s.servicioid, s.nombre
 ORDER BY total_bs DESC";
 
             using var cmd = new NpgsqlCommand(sql, connection);

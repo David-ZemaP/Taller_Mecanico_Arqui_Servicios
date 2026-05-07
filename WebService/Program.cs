@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Taller_Mecanico_WebService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,7 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthentication();
+app.UseMiddleware<RequirePasswordChangeMiddleware>();
 app.UseAuthorization();
 
 app.MapStaticAssets();
