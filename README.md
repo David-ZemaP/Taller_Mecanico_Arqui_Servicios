@@ -38,7 +38,7 @@ TallerMecanico/
 
 ### Mapa real de lo que está activo hoy
 
-- `WebService/`: interfaz web Razor Pages. Es el frontend operativo del repositorio.
+- `Frontend/`: interfaz web Razor Pages. Es el frontend operativo del repositorio.
 - `OrdenTrabajoService/`: servicio con la lógica de órdenes de trabajo y persistencia PostgreSQL por SQL directo.
 - `UsersService/`: servicio separado para usuarios/autenticación.
 - `tests/`: pruebas unitarias del núcleo clásico `TallerMecanico.*`.
