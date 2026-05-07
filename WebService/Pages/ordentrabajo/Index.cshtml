@@ -668,13 +668,21 @@
             }
 
             const subtotal = cantidad * precio;
-            productosSeleccionados.push({
-                productoId: productoSeleccionado.id,
-                nombre: productoSeleccionado.text,
-                cantidad: cantidad,
-                precioUnitario: precio,
-                subtotal: subtotal
-            });
+            const productoExistente = productosSeleccionados.find(p => p.productoId === productoSeleccionado.id);
+
+            if (productoExistente) {
+                productoExistente.cantidad += cantidad;
+                productoExistente.precioUnitario = precio;
+                productoExistente.subtotal = productoExistente.cantidad * productoExistente.precioUnitario;
+            } else {
+                productosSeleccionados.push({
+                    productoId: productoSeleccionado.id,
+                    nombre: productoSeleccionado.text,
+                    cantidad: cantidad,
+                    precioUnitario: precio,
+                    subtotal: subtotal
+                });
+            }
 
             document.getElementById('productoSearch').value = '';
             document.getElementById('productoCantidad').value = '1';
@@ -725,6 +733,22 @@
             recalcularTotal();
         }
 
+        function actualizarCantidadProducto(index, value) {
+            const cantidad = parseInt(value || '0', 10);
+
+            if (Number.isNaN(cantidad) || cantidad <= 0) {
+                mostrarErrorOrden('La cantidad de producto debe ser mayor a 0.');
+                renderProductos();
+                return;
+            }
+
+            productosSeleccionados[index].cantidad = cantidad;
+            productosSeleccionados[index].subtotal = cantidad * Number(productosSeleccionados[index].precioUnitario || 0);
+            syncDetalleJson();
+            recalcularTotal();
+            renderProductos();
+        }
+
         function eliminarServicio(index) {
             serviciosSeleccionados.splice(index, 1);
             renderServicios();
@@ -742,7 +766,7 @@
             tbody.innerHTML = productosSeleccionados.map((p, i) =>
                 '<tr>' +
                     `<td>${p.nombre}</td>` +
-                    `<td>${p.cantidad}</td>` +
+                    `<td><input type="number" min="1" class="form-control form-control-sm form-control-dark" value="${p.cantidad}" onchange="actualizarCantidadProducto(${i}, this.value)" oninput="actualizarCantidadProducto(${i}, this.value)" /></td>` +
                     `<td>Bs. ${Number(p.precioUnitario).toFixed(2)}</td>` +
                     `<td class="fw-bold">Bs. ${Number(p.subtotal).toFixed(2)}</td>` +
                     `<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${i})"><i class="bi bi-x-lg"></i></button></td>` +
