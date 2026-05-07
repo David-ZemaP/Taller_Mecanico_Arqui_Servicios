@@ -20,7 +20,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
             NivelAcceso nivelAcceso = NivelAcceso.Completo,
             EstadoLaboral estadoLaboral = EstadoLaboral.Activo)
         {
-            var empleado = Empleado.Crear(nombreCompleto, ci, telefono, email, fechaContratacion, estadoLaboral);
+            var empleado = Empleado.Crear(nombreCompleto, ci, telefono, email, fechaContratacion, nameof(Administrador), estadoLaboral);
             return new Administrador
             {
                 EmpleadoId = empleado.EmpleadoId,
@@ -28,6 +28,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
                 Ci = empleado.Ci,
                 Telefono = empleado.Telefono,
                 Email = empleado.Email,
+                TipoEmpleado = empleado.TipoEmpleado,
                 FechaContratacion = empleado.FechaContratacion,
                 EstadoLaboral = empleado.EstadoLaboral,
                 FechaActualizacion = empleado.FechaActualizacion,
@@ -57,6 +58,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
                 Ci = ci,
                 Telefono = telefono,
                 Email = email,
+                TipoEmpleado = nameof(Administrador),
                 FechaContratacion = fechaContratacion,
                 EstadoLaboral = estadoLaboral,
                 FechaActualizacion = fechaActualizacion,

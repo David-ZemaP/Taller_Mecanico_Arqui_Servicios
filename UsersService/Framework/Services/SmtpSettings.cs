@@ -20,15 +20,52 @@ namespace Taller_Mecanico_Users.Framework.Services
         public SmtpSettings(IConfiguration configuration)
         {
             var section = configuration.GetSection("Smtp");
-            Enabled = bool.TryParse(section["Enabled"], out var enabled) && enabled;
-            Host = section["Host"] ?? throw new InvalidOperationException("Smtp:Host no configurado.");
-            if (!int.TryParse(section["Port"], out var port)) port = 25;
+
+            static string? Env(string key) => Environment.GetEnvironmentVariable(key);
+
+            var enabledRaw = section["Enabled"]
+                ?? Env("Smtp__Enabled")
+                ?? Env("SMTP_ENABLED");
+            Enabled = bool.TryParse(enabledRaw, out var enabled) && enabled;
+
+            Host = section["Host"]
+                ?? Env("Smtp__Host")
+                ?? Env("SMTP_HOST")
+                ?? "smtp.gmail.com";
+
+            var portRaw = section["Port"]
+                ?? Env("Smtp__Port")
+                ?? Env("SMTP_PORT");
+            if (!int.TryParse(portRaw, out var port)) port = 587;
             Port = port;
-            Username = section["Username"];
-            Password = section["Password"];
-            From = section["From"] ?? Username ?? "no-reply@example.com";
-            EnableSsl = bool.TryParse(section["EnableSsl"], out var ssl) && ssl;
-            if (!int.TryParse(section["TimeoutMs"], out var timeout)) timeout = 100000;
+
+            Username = section["Username"]
+                ?? Env("Smtp__Username")
+                ?? Env("SMTP_USERNAME")
+                ?? Env("SmtpSettings__Username");
+
+            Password = section["Password"]
+                ?? Env("Smtp__Password")
+                ?? Env("SMTP_PASSWORD")
+                ?? Env("SmtpSettings__Password");
+
+            From = section["From"]
+                ?? Env("Smtp__From")
+                ?? Env("SMTP_FROM")
+                ?? Env("SmtpSettings__SenderEmail")
+                ?? Username
+                ?? "no-reply@example.com";
+
+            var sslRaw = section["EnableSsl"]
+                ?? Env("Smtp__EnableSsl")
+                ?? Env("SMTP_ENABLE_SSL")
+                ?? "true";
+            EnableSsl = bool.TryParse(sslRaw, out var ssl) && ssl;
+
+            var timeoutRaw = section["TimeoutMs"]
+                ?? Env("Smtp__TimeoutMs")
+                ?? Env("SMTP_TIMEOUT_MS");
+            if (!int.TryParse(timeoutRaw, out var timeout)) timeout = 100000;
             TimeoutMs = timeout;
         }
     }

@@ -2,11 +2,13 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 using Taller_Mecanico_Arqui.Frontend.DTOs.OrdenTrabajo;
 using System.Linq;
 
 namespace Taller_Mecanico_Arqui.Pages.Clientes
 {
+    [RequireAccessLevel(NivelAcceso.Cliente)]
     public class PerfilModel : PageModel
     {
         private readonly IClienteAdapter _clienteAdapter;

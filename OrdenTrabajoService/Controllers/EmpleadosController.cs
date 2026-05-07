@@ -93,7 +93,7 @@ namespace OrdenTrabajoService.Controllers
             Ci = e.Ci.ToString(),
             Telefono = e.Telefono,
             Email = e.Email,
-            TipoEmpleado = "Empleado",
+            TipoEmpleado = e.TipoEmpleado,
             EstadoLaboral = e.EstadoLaboral.ToString(),
             FechaContratacion = e.FechaContratacion
         };

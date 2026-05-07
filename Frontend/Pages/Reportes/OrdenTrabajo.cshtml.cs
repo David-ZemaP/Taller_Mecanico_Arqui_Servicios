@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 using Taller_Mecanico_Arqui.Frontend.DTOs.OrdenTrabajo;
 
 namespace Taller_Mecanico_Arqui.Pages.Reportes;
 
-[Authorize]
+[RequireAccessLevel(NivelAcceso.Gerente)]
 public class OrdenTrabajoModel : PageModel
 {
     private readonly IOrdenTrabajoAdapter _ordenTrabajoAdapter;

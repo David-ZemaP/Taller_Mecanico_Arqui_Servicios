@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 
 namespace Taller_Mecanico_Arqui.Pages
 {
@@ -76,14 +77,15 @@ namespace Taller_Mecanico_Arqui.Pages
             }
 
             var clienteId = authResult.ClienteId?.ToString() ?? Input.Email;
+            var accessLevel = NivelAcceso.Cliente;
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, clienteId),
                 new Claim(ClaimTypes.Name, Input.Email),
                 new Claim(ClaimTypes.Email, Input.Email),
-                new Claim(ClaimTypes.Role, "Cliente"),
+                new Claim(ClaimTypes.Role, accessLevel.ToString()),
                 new Claim("ClienteId", clienteId),
-                new Claim("NivelAcceso", "Cliente")
+                new Claim("NivelAcceso", accessLevel.ToString())
             };
 
             var identity = new ClaimsIdentity(claims, "FrontendScheme");
@@ -99,14 +101,15 @@ namespace Taller_Mecanico_Arqui.Pages
             }
 
             var userId = authResult.UserId?.ToString() ?? Input.Email;
+            var accessLevel = ResolveEmployeeAccessLevel(authResult);
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, userId),
                 new Claim(ClaimTypes.Name, Input.Email),
                 new Claim(ClaimTypes.Email, Input.Email),
-                new Claim(ClaimTypes.Role, "Administrador"),
+                new Claim(ClaimTypes.Role, accessLevel.ToString()),
                 new Claim("UserId", userId),
-                new Claim("NivelAcceso", "Admin")
+                new Claim("NivelAcceso", accessLevel.ToString())
             };
 
             var identity = new ClaimsIdentity(claims, "FrontendScheme");
@@ -118,6 +121,34 @@ namespace Taller_Mecanico_Arqui.Pages
             }
 
             return LocalRedirect(ReturnUrl);
+        }
+
+        private NivelAcceso ResolveEmployeeAccessLevel(AuthResponse authResult)
+        {
+            if (!string.IsNullOrWhiteSpace(authResult.NivelAcceso) &&
+                Enum.TryParse<NivelAcceso>(authResult.NivelAcceso, true, out var parsedLevel))
+            {
+                return parsedLevel;
+            }
+
+            if (!string.IsNullOrWhiteSpace(authResult.NivelAcceso) &&
+                (string.Equals(authResult.NivelAcceso, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(authResult.NivelAcceso, "Administrador", StringComparison.OrdinalIgnoreCase)))
+            {
+                return NivelAcceso.Completo;
+            }
+
+            if (string.Equals(Input.Email, "administrador.principal@taller.com", StringComparison.OrdinalIgnoreCase))
+            {
+                return NivelAcceso.Gerente;
+            }
+
+            if (Input.Email.Contains("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return NivelAcceso.Completo;
+            }
+
+            return NivelAcceso.Parcial;
         }
     }
 

@@ -50,7 +50,12 @@ builder.Services.AddHttpContextAccessor();
 
 // Mail Service - configure SMTP settings and choose implementation (SMTP or Dummy)
 builder.Services.AddSingleton<Taller_Mecanico_Users.Framework.Services.SmtpSettings>();
-var smtpEnabled = builder.Configuration.GetValue<bool>("Smtp:Enabled");
+
+var smtpEnabled = builder.Configuration.GetValue<bool?>("Smtp:Enabled")
+    ?? bool.TryParse(Environment.GetEnvironmentVariable("Smtp__Enabled"), out var smtpEnabledFromEnv) && smtpEnabledFromEnv
+    || bool.TryParse(Environment.GetEnvironmentVariable("SMTP_ENABLED"), out var smtpEnabledFromLegacyEnv) && smtpEnabledFromLegacyEnv
+    || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SmtpSettings__SenderEmail"));
+
 if (smtpEnabled)
 {
     builder.Services.AddScoped<Taller_Mecanico_Users.App.Services.SmtpMailSender>();

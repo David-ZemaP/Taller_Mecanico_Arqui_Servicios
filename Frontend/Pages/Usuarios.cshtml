@@ -12,20 +12,109 @@
 </div>
 
 <div class="card-dark p-4 shadow-sm">
-    <div class="alert alert-info text-center mb-0">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Funcionalidad en desarrollo.</strong> La gestión de usuarios está siendo migrada a endpoints de API.
-        Esta página estará disponible una vez que los endpoints de UsersService estén implementados.
-    </div>
+    @if (Model.Usuarios == null || Model.Usuarios.Count == 0)
+    {
+        <div class="alert alert-info text-center mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>No hay usuarios registrados.</strong>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Email</th>
+                        <th>Empleado</th>
+                        <th>Último Acceso</th>
+                        <th>Activo</th>
+                        <th>Cambio de Password</th>
+                        <th>Tipo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usuario in Model.Usuarios)
+                    {
+                        <tr>
+                            <td>
+                                <code>@usuario.Email</code>
+                            </td>
+                            <td>
+                                @if (usuario.EmpleadoId.HasValue)
+                                {
+                                    <span>@(usuario.EmpleadoNombre ?? "Empleado #" + usuario.EmpleadoId)</span>
+                                }
+                                else if (usuario.ClienteId.HasValue)
+                                {
+                                    <span class="badge bg-secondary">Cliente #@usuario.ClienteId</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (usuario.UltimoAcceso.HasValue)
+                                {
+                                    <span>@usuario.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Nunca</span>
+                                }
+                            </td>
+                            <td>
+                                @if (usuario.Activo)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                @if (usuario.RequiereCambioPassword)
+                                {
+                                    <span class="badge bg-warning text-dark">Requiere</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No</span>
+                                }
+                            </td>
+                            <td>
+                                @if (usuario.EsCliente)
+                                {
+                                    <span class="badge bg-info">Cliente</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-primary">Empleado</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-primary" title="Ver detalles">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" title="Cambiar contraseña">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
-        @TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 @section Scripts {
 }

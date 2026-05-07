@@ -47,6 +47,7 @@ public class CreateEmpleadoDto
     public string? CiComplemento { get; set; }
     public int Telefono { get; set; }
     public string Email { get; set; } = string.Empty;
+    public DateTime FechaContratacion { get; set; }
     public string Cargo { get; set; } = string.Empty;
 }
 
@@ -60,5 +61,6 @@ public class UpdateEmpleadoDto
     public string? CiComplemento { get; set; }
     public int Telefono { get; set; }
     public string Email { get; set; } = string.Empty;
+    public DateTime FechaContratacion { get; set; }
     public string Cargo { get; set; } = string.Empty;
 }

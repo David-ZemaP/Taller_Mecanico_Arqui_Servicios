@@ -6,6 +6,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
     public class Empleado : Persona
     {
         public int EmpleadoId { get; protected set; }
+        public string TipoEmpleado { get; protected set; } = string.Empty;
         public DateTime FechaContratacion { get; protected set; }
         public EstadoLaboral EstadoLaboral { get; protected set; }
 
@@ -17,6 +18,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
             int telefono,
             string? email,
             DateTime fechaContratacion,
+            string tipoEmpleado,
             EstadoLaboral estadoLaboral = EstadoLaboral.Activo)
         {
             return new Empleado
@@ -25,6 +27,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
                 Ci = ci,
                 Telefono = telefono,
                 Email = email,
+                TipoEmpleado = tipoEmpleado,
                 FechaContratacion = fechaContratacion,
                 EstadoLaboral = estadoLaboral
             };
@@ -37,6 +40,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
             int telefono,
             string? email,
             DateTime fechaContratacion,
+            string tipoEmpleado,
             EstadoLaboral estadoLaboral,
             DateTime? fechaActualizacion = null,
             bool isDeleted = false)
@@ -48,6 +52,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
                 Ci = ci,
                 Telefono = telefono,
                 Email = email,
+                TipoEmpleado = tipoEmpleado,
                 FechaContratacion = fechaContratacion,
                 EstadoLaboral = estadoLaboral,
                 FechaActualizacion = fechaActualizacion,

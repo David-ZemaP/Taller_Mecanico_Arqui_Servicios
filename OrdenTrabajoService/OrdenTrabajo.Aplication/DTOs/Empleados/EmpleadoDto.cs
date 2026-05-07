@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Taller_Mecanico_Arqui.Application.DTOs.Empleados
 {
     public class CreateEmpleadoDto
@@ -10,6 +12,7 @@ namespace Taller_Mecanico_Arqui.Application.DTOs.Empleados
         public int Telefono { get; set; }
         public string? Email { get; set; }
         public DateTime FechaContratacion { get; set; }
+        [JsonPropertyName("cargo")]
         public string TipoEmpleado { get; set; } = "Mecanico";
         public string EstadoLaboral { get; set; } = "Activo";
         public string? Especialidad { get; set; }
@@ -29,6 +32,7 @@ namespace Taller_Mecanico_Arqui.Application.DTOs.Empleados
         public int Telefono { get; set; }
         public string? Email { get; set; }
         public DateTime FechaContratacion { get; set; }
+        [JsonPropertyName("cargo")]
         public string TipoEmpleado { get; set; } = "Mecanico";
         public string EstadoLaboral { get; set; } = "Activo";
         public string? Especialidad { get; set; }
@@ -44,6 +48,7 @@ namespace Taller_Mecanico_Arqui.Application.DTOs.Empleados
         public string Ci { get; set; } = string.Empty;
         public int Telefono { get; set; }
         public string? Email { get; set; }
+        [JsonPropertyName("cargo")]
         public string TipoEmpleado { get; set; } = string.Empty;
         public string EstadoLaboral { get; set; } = string.Empty;
         public DateTime FechaContratacion { get; set; }

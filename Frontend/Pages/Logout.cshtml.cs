@@ -9,15 +9,17 @@ namespace Taller_Mecanico_Arqui.Pages
     [AllowAnonymous]
     public class LogoutModel : PageModel
     {
+        private const string AuthenticationScheme = "FrontendScheme";
+
         public async Task<IActionResult> OnGetAsync()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignOutAsync(AuthenticationScheme);
             return RedirectToPage("/Login");
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignOutAsync(AuthenticationScheme);
             return RedirectToPage("/Login");
         }
     }

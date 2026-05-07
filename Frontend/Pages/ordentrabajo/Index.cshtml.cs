@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 using Taller_Mecanico_Arqui.Frontend.DTOs.OrdenTrabajo;
 
 namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
 {
+    [RequireAccessLevel(NivelAcceso.Parcial, NivelAcceso.Parcial, NivelAcceso.Completo)]
     public class IndexModel : PageModel
     {
         private readonly IOrdenTrabajoAdapter _ordenTrabajoAdapter;

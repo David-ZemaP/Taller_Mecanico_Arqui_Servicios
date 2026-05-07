@@ -9,7 +9,7 @@ using Taller_Mecanico_Arqui.Frontend.DTOs;
 
 namespace Taller_Mecanico_Arqui.Pages.Clientes
 {
-    [RequireAccessLevel(NivelAcceso.Parcial)]
+    [RequireAccessLevel(NivelAcceso.Parcial, NivelAcceso.Parcial, NivelAcceso.Completo)]
     public class IndexModel : PageModel
     {
         private readonly IClienteAdapter _clienteAdapter;
@@ -20,6 +20,7 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
         }
 
         public IList<ClienteListDto> Clientes { get; set; } = new List<ClienteListDto>();
+    public bool CanModify => User.IsInRole(NivelAcceso.Completo.ToString());
 
         [BindProperty]
         public ClienteFormDto FormDto { get; set; } = new();

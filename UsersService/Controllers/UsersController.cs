@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using Taller_Mecanico_Users.UseCases.Users;
+using Taller_Mecanico_Users.Domain.Ports;
 
 namespace Taller_Mecanico_Users.Controllers
 {
@@ -20,6 +21,7 @@ namespace Taller_Mecanico_Users.Controllers
         private readonly ChangePasswordUseCase _changePasswordUseCase;
         private readonly ResetPasswordUseCase _resetPasswordUseCase;
         private readonly DeleteUserUseCase _deleteUserUseCase;
+        private readonly IMailSender _mailSender;
 
         public UsersController(
             CreateUserUseCase createUserUseCase,
@@ -28,7 +30,8 @@ namespace Taller_Mecanico_Users.Controllers
             UpdateUserUseCase updateUserUseCase,
             ChangePasswordUseCase changePasswordUseCase,
             ResetPasswordUseCase resetPasswordUseCase,
-            DeleteUserUseCase deleteUserUseCase)
+            DeleteUserUseCase deleteUserUseCase,
+            IMailSender mailSender)
         {
             _createUserUseCase = createUserUseCase;
             _getUserByIdUseCase = getUserByIdUseCase;
@@ -37,10 +40,40 @@ namespace Taller_Mecanico_Users.Controllers
             _changePasswordUseCase = changePasswordUseCase;
             _resetPasswordUseCase = resetPasswordUseCase;
             _deleteUserUseCase = deleteUserUseCase;
+            _mailSender = mailSender;
         }
 
+        // ENDPOINT DE PRUEBA: Enviar email de prueba
+        [HttpPost("test-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestEmail([FromQuery] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return BadRequest(new { message = "Por favor proporciona un email válido.", success = false });
+            }
+
+            try
+            {
+                await _mailSender.SendEmailAsync(
+                    email,
+                    "Test Email - Taller Mecánico",
+                    $"<h2>Este es un email de prueba</h2>" +
+                    $"<p>Si recibes este email, el servicio SMTP está funcionando correctamente.</p>" +
+                    $"<p>Enviado a: {email}</p>" +
+                    $"<p>Fecha: {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>");
+
+                return Ok(new { message = "Email de prueba enviado correctamente.", success = true, email = email });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error al enviar email: {ex.Message}", success = false, error = ex.ToString() });
+            }
+        }
+
+
         [HttpPost]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden crear
+        [AllowAnonymous] // Llamada interna desde OrdenTrabajoService al crear empleado/cliente
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
             var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);

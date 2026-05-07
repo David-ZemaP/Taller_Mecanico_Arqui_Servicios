@@ -42,7 +42,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.Empleados
             if (estadoLaboralResult.IsFailure)
                 return Result<Empleado>.Failure(estadoLaboralResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoLaboralResult.ErrorMessage ?? "Estado laboral no válido.");
 
-            var empleado = Empleado.Crear(nombreResult.Value, ciResult.Value, dto.Telefono, dto.Email, dto.FechaContratacion, estadoLaboralResult.Value);
+            var empleado = Empleado.Crear(nombreResult.Value, ciResult.Value, dto.Telefono, dto.Email, dto.FechaContratacion, dto.TipoEmpleado, estadoLaboralResult.Value);
 
             var currentUser = _currentUser.GetCurrentUserId() ?? _currentUser.GetCurrentUserEmail() ?? "system";
             empleado.SetAuditoriaCreacion(currentUser);
@@ -95,8 +95,15 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.Empleados
             if (estadoLaboralResult.IsFailure)
                 return Result.Failure(estadoLaboralResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoLaboralResult.ErrorMessage ?? "Estado laboral no válido.");
 
-            var empleado = existing.Value;
-            empleado.ActualizarEstadoLaboral(estadoLaboralResult.Value);
+            var empleado = Empleado.Crear(
+                nombreResult.Value,
+                ciResult.Value,
+                dto.Telefono,
+                dto.Email,
+                dto.FechaContratacion,
+                dto.TipoEmpleado,
+                estadoLaboralResult.Value);
+            empleado.SetId(existing.Value.EmpleadoId);
 
             var currentUser = _currentUser.GetCurrentUserId() ?? _currentUser.GetCurrentUserEmail() ?? "system";
             empleado.SetAuditoriaActualizacion(currentUser);

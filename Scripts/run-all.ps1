@@ -10,6 +10,25 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "=== Taller Mecánico - Iniciando servicios ===" -ForegroundColor Cyan
 
+# Cargar variables desde .env al entorno actual para que dotnet run las herede.
+$envFile = Join-Path $ProjectRoot ".env"
+if (Test-Path $envFile) {
+    Write-Host "Cargando variables desde .env..." -ForegroundColor DarkCyan
+    Get-Content $envFile | ForEach-Object {
+        $line = $_.Trim()
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            return
+        }
+
+        $parts = $line -split "=", 2
+        if ($parts.Length -eq 2) {
+            $key = $parts[0].Trim()
+            $value = $parts[1].Trim()
+            [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+        }
+    }
+}
+
 # Configuración de puertos
 $Ports = @{
     "UsersService" = 5297

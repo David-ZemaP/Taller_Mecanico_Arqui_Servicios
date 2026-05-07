@@ -74,7 +74,8 @@ namespace Taller_Mecanico_Arqui.Pages.Empleados
                 telefono = empleado.Telefono,
                 email = empleado.Email,
                 estadoLaboral = empleado.EstadoLaboral,
-                cargo = empleado.Cargo
+                cargo = empleado.Cargo,
+                fechaContratacion = empleado.FechaContratacion?.ToString("yyyy-MM-dd")
             };
 
             return new JsonResult(data);
@@ -99,6 +100,7 @@ namespace Taller_Mecanico_Arqui.Pages.Empleados
                     CiComplemento = FormDto.CiComplemento,
                     Telefono = FormDto.Telefono,
                     Email = FormDto.Email ?? string.Empty,
+                    FechaContratacion = FormDto.FechaContratacion,
                     Cargo = FormDto.Cargo
                 });
 
@@ -107,6 +109,11 @@ namespace Taller_Mecanico_Arqui.Pages.Empleados
                     ModelState.AddModelError(string.Empty, createResult.Error ?? "No se pudo registrar el empleado.");
                     await OnGetAsync();
                     return Page();
+                }
+
+                if (!string.IsNullOrWhiteSpace(FormDto.Email))
+                {
+                    TempData["SuccessMessage"] = "Empleado creado exitosamente. Se enviaron credenciales al correo electrónico.";
                 }
             }
             else
@@ -121,6 +128,7 @@ namespace Taller_Mecanico_Arqui.Pages.Empleados
                     CiComplemento = FormDto.CiComplemento,
                     Telefono = FormDto.Telefono,
                     Email = FormDto.Email ?? string.Empty,
+                    FechaContratacion = FormDto.FechaContratacion,
                     Cargo = FormDto.Cargo
                 });
 
@@ -130,6 +138,8 @@ namespace Taller_Mecanico_Arqui.Pages.Empleados
                     await OnGetAsync();
                     return Page();
                 }
+
+                TempData["SuccessMessage"] = "Empleado actualizado exitosamente.";
             }
 
             return RedirectToPage();

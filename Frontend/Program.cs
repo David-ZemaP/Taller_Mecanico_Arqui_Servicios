@@ -15,7 +15,7 @@ builder.Services.AddAuthentication("FrontendScheme")
     .AddCookie("FrontendScheme", options =>
     {
         options.LoginPath = "/Login";
-        options.AccessDeniedPath = "/AccessDenied";
+        options.AccessDeniedPath = "/AccesoDenegado";
     });
 
 // ============================================

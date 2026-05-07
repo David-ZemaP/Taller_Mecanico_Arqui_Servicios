@@ -26,33 +26,39 @@ namespace Taller_Mecanico_Users.App.Services
                 return;
             }
 
-            using var message = new MailMessage();
-            message.To.Add(new MailAddress(to));
-            message.Subject = subject;
-            message.Body = body ?? string.Empty;
-            message.IsBodyHtml = true;
-            message.From = new MailAddress(_settings.From);
-
-            using var client = new SmtpClient(_settings.Host, _settings.Port) {
-                EnableSsl = _settings.EnableSsl,
-                Timeout = _settings.TimeoutMs,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
-
-            if (!string.IsNullOrEmpty(_settings.Username))
-            {
-                client.Credentials = new NetworkCredential(_settings.Username, _settings.Password);
-            }
-
             try
             {
+                using var message = new MailMessage();
+                message.To.Add(new MailAddress(to));
+                message.Subject = subject;
+                message.Body = body ?? string.Empty;
+                message.IsBodyHtml = true;
+                message.From = new MailAddress(_settings.From);
+
+                _logger.LogInformation("Conectando a SMTP: Host={Host}, Port={Port}, SSL={EnableSsl}, From={From}", 
+                    _settings.Host, _settings.Port, _settings.EnableSsl, _settings.From);
+
+                using var client = new SmtpClient(_settings.Host, _settings.Port)
+                {
+                    EnableSsl = _settings.EnableSsl,
+                    Timeout = _settings.TimeoutMs,
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false
+                };
+
+                if (!string.IsNullOrEmpty(_settings.Username))
+                {
+                    client.Credentials = new NetworkCredential(_settings.Username, _settings.Password);
+                    _logger.LogInformation("Usando credenciales SMTP para usuario: {Username}", _settings.Username);
+                }
+
+                _logger.LogInformation("Enviando email a {To} con asunto '{Subject}'", to, subject);
                 await client.SendMailAsync(message);
-                _logger.LogInformation("Email sent to {To}", to);
+                _logger.LogInformation("✅ Email enviado correctamente a {To}", to);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send email to {To}", to);
+                _logger.LogError(ex, "❌ Error al enviar email a {To}: {ErrorMessage}", to, ex.Message);
                 throw;
             }
         }

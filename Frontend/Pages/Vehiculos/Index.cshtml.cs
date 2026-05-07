@@ -4,11 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 using System.Linq;
 
 namespace Taller_Mecanico_Arqui.Pages.Vehiculo
 {
-    [Authorize]
+    [RequireAccessLevel(NivelAcceso.Parcial, NivelAcceso.Parcial, NivelAcceso.Completo)]
     public class IndexModel : PageModel
     {
         private readonly IVehiculoAdapter _vehiculoAdapter;
@@ -29,8 +30,8 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
         public List<CatalogoMarcaDto> Marcas { get; set; } = new();
         public List<CatalogoModeloDto> Modelos { get; set; } = new();
         public List<CatalogoColorDto> Colores { get; set; } = new();
-        public bool CanModify => User.IsInRole("Administrador") || User.IsInRole("Completo") || User.IsInRole("Empleado");
-        public bool IsCliente => User.IsInRole("Cliente") || User.IsInRole("Parcial");
+        public bool CanModify => User.IsInRole("Completo");
+        public bool IsCliente => User.IsInRole("Cliente");
 
         [BindProperty]
         public VehiculoFormDto FormDto { get; set; } = new();

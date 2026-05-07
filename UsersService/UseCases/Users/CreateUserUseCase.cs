@@ -76,8 +76,22 @@ namespace Taller_Mecanico_Users.UseCases.Users
             }
 
             // 5. Enviar credenciales por correo
-            string mailBody = $"Hola,\nTu cuenta ha sido creada exitosamente.\nTu contraseña temporal es: {plainPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
-            await _mailSender.SendEmailAsync(email, "Credenciales de Acceso - Taller Mecánico", mailBody);
+            string mailBody = $"Hola,\n\nTu cuenta ha sido creada exitosamente en el Sistema de Gestión del Taller Mecánico.\n\n" +
+                             $"Correo electrónico: {email}\n" +
+                             $"Contraseña temporal: {plainPassword}\n\n" +
+                             $"Por favor, cámbiala al iniciar sesión por primera vez.\n\n" +
+                             $"Saludos,\nEquipo del Taller Mecánico";
+            
+            try
+            {
+                await _mailSender.SendEmailAsync(email, "Credenciales de Acceso - Taller Mecánico", mailBody);
+            }
+            catch (Exception ex)
+            {
+                return Result<UsuarioLogin>.Failure(
+                    ErrorCodes.EmailSendFailed,
+                    $"Usuario creado, pero no se pudo enviar el correo de credenciales: {ex.Message}");
+            }
 
             return Result<UsuarioLogin>.Success(nuevoUsuario);
         }

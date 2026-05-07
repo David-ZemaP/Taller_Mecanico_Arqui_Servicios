@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 
 namespace Taller_Mecanico_Arqui.Pages
 {
-    [Authorize]
+    [RequireAccessLevel(NivelAcceso.Cliente)]
     public class ChangePasswordModel : PageModel
     {
         public ChangePasswordModel()
