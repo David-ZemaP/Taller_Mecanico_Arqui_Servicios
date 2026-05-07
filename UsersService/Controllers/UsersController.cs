@@ -54,7 +54,13 @@ namespace Taller_Mecanico_Users.Controllers
 
             var creation = usuarioResult.Value;
             return CreatedAtAction(nameof(GetUserById), new { id = creation.User.UsuarioLoginId },
-                new { creation.User.UsuarioLoginId, creation.User.Email, plainPassword = creation.PlainPassword });
+                new
+                {
+                    creation.User.UsuarioLoginId,
+                    creation.User.Email,
+                    plainPassword = creation.PlainPassword,
+                    notificationRecipients = creation.NotificationRecipients
+                });
         }
 
         [HttpGet("{id}")]

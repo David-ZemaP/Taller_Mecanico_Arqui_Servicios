@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -148,28 +150,39 @@ namespace WebService.Adapters
             }
         }
 
-        public async Task<(bool ok, string? plainPassword, string? error)> CreateUsuarioAsync(int empleadoId, string email, string? password)
+        public async Task<(bool ok, string? plainPassword, IReadOnlyList<string>? notificationRecipients, string? error)> CreateUsuarioAsync(int empleadoId, string email, string? password)
         {
             try
             {
                 var body = new { empleadoId, email, password };
                 var response = await SendAsync(HttpMethod.Post, "api/users", body);
                 if (!response.IsSuccessStatusCode)
-                    return (false, null, await ReadErrorAsync(response));
+                    return (false, null, null, await ReadErrorAsync(response));
 
                 var json = await response.Content.ReadAsStringAsync();
                 string? plain = null;
+                IReadOnlyList<string>? recipients = null;
                 if (!string.IsNullOrWhiteSpace(json))
                 {
                     using var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("plainPassword", out var pw))
                         plain = pw.GetString();
+                    if (doc.RootElement.TryGetProperty("notificationRecipients", out var recs) && recs.ValueKind == JsonValueKind.Array)
+                    {
+                        recipients = recs
+                            .EnumerateArray()
+                            .Where(e => e.ValueKind == JsonValueKind.String)
+                            .Select(e => e.GetString())
+                            .Where(e => !string.IsNullOrWhiteSpace(e))
+                            .Select(e => e!)
+                            .ToList();
+                    }
                 }
-                return (true, plain, null);
+                return (true, plain, recipients, null);
             }
             catch (Exception)
             {
-                return (false, null, "No se pudo conectar con el servicio de usuarios.");
+                return (false, null, null, "No se pudo conectar con el servicio de usuarios.");
             }
         }
 
