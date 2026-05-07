@@ -17,22 +17,19 @@ namespace Taller_Mecanico_Arqui.Application.Facades
         private readonly CreateOrdenTrabajoUseCase _createUseCase;
         private readonly UpdateOrdenTrabajoUseCase _updateUseCase;
         private readonly IVehiculoRepository _vehiculoRepository;
-        private readonly UpdateProductStocks _updateProductStocks;
 
         public OrdenTrabajoCreate(
             GetAllOrdenesTrabajoUseCase getAllUseCase,
             GetOrdenTrabajoByIdUseCase getByIdUseCase,
             CreateOrdenTrabajoUseCase createUseCase,
             UpdateOrdenTrabajoUseCase updateUseCase,
-            IVehiculoRepository vehiculoRepository,
-            UpdateProductStocks updateProductStocks)
+            IVehiculoRepository vehiculoRepository)
         {
             _getAllUseCase = getAllUseCase;
             _getByIdUseCase = getByIdUseCase;
             _createUseCase = createUseCase;
             _updateUseCase = updateUseCase;
             _vehiculoRepository = vehiculoRepository;
-            _updateProductStocks = updateProductStocks;
         }
 
         public async Task<IEnumerable<OrdenTrabajoListDto>> GetAllAsync()
@@ -85,12 +82,6 @@ namespace Taller_Mecanico_Arqui.Application.Facades
                 if (createResult.IsFailure)
                 {
                     return Result.Failure(createResult.ErrorCode ?? ErrorCodes.DbError, createResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
-                }
-
-                var stockResult = await _updateProductStocks.ExecuteAsync(createDto.Productos);
-                if (stockResult.IsFailure)
-                {
-                    return stockResult;
                 }
 
                 return Result.Success();

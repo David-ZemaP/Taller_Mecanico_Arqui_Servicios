@@ -36,6 +36,14 @@ TallerMecanico/
     └── TallerMecanico.Tests/       # Pruebas unitarias (xUnit)
 ```
 
+### Mapa real de lo que está activo hoy
+
+- `WebService/`: interfaz web Razor Pages. Es el frontend operativo del repositorio.
+- `OrdenTrabajoService/`: servicio con la lógica de órdenes de trabajo y persistencia PostgreSQL por SQL directo.
+- `UsersService/`: servicio separado para usuarios/autenticación.
+- `tests/`: pruebas unitarias del núcleo clásico `TallerMecanico.*`.
+- `src/TallerMecanico.*`: en este workspace no aparece código fuente editable, solo artefactos de compilación; no es la superficie activa que hoy se está modificando.
+
 ---
 
 ## 🚀 Cómo ejecutar
@@ -57,6 +65,44 @@ La interfaz Swagger UI se abre en `/swagger`.
 ```bash
 dotnet test tests/TallerMecanico.Tests
 ```
+
+### Base de datos local con Docker
+
+El proyecto está configurado para trabajar contra PostgreSQL local. La forma más reproducible de levantarla es con Docker.
+
+1. Inicia la base:
+
+```bash
+docker compose up -d
+```
+
+2. Espera a que PostgreSQL termine de inicializar y ejecute `Scripts/init.sql` automáticamente en el primer arranque.
+
+3. Verifica la conexión:
+
+```bash
+docker compose logs -f postgres
+```
+
+4. La base queda expuesta en:
+
+- Host: `localhost`
+- Puerto: `5432`
+- Base: `taller_mecanico`
+- Usuario: `postgres`
+- Clave: `postgres`
+
+5. Si quieres inspeccionarla con interfaz web, abre `http://localhost:5050`.
+
+### Carga manual del `init.sql`
+
+Si no usas Docker, crea primero una base llamada `taller_mecanico` en PostgreSQL y luego ejecuta el script:
+
+```bash
+psql -h localhost -U postgres -d taller_mecanico -f Scripts/init.sql
+```
+
+Si tu instalación usa otro usuario o clave, ajusta esos valores en la cadena de conexión del servicio que consume la base.
 
 ---
 

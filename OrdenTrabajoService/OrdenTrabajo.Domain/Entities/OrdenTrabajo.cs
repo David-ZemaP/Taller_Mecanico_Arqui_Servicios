@@ -16,6 +16,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
         public string EstadoVehiculo { get; private set; } = string.Empty;
         public double Total { get; private set; }
         public bool IsDeleted { get; private set; }
+        public int Estado => IsDeleted ? 0 : 1;
         public DateTime? FechaActualizacion { get; private set; }
 
         public Vehiculo? Vehiculo { get; private set; }
