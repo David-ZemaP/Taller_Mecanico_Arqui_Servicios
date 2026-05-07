@@ -20,6 +20,8 @@ namespace WebService.DTOs
         public string? CiComplemento { get; set; }
         public int Telefono { get; set; }
         public string? Email { get; set; }
+        public string? FechaRegistro { get; set; }
+        public string NombreCompleto => $"{Nombres} {PrimerApellido}{(string.IsNullOrWhiteSpace(SegundoApellido) ? "" : " " + SegundoApellido)}";
     }
 
     public class ClienteFormDto

@@ -11,6 +11,7 @@ namespace OrdenTrabajoService.Domain.Entities
         public int Telefono { get; private set; }
         public string Email { get; private set; } = string.Empty;
         public bool IsDeleted { get; private set; }
+        public DateTime FechaRegistro { get; private set; }
 
         private Cliente() { }
 
@@ -24,11 +25,12 @@ namespace OrdenTrabajoService.Domain.Entities
                 Ci = ci,
                 CiComplemento = string.IsNullOrWhiteSpace(ciComplemento) ? null : ciComplemento,
                 Telefono = telefono,
-                Email = email
+                Email = email,
+                FechaRegistro = DateTime.UtcNow
             };
         }
 
-        public static Cliente Reconstituir(int clienteId, string nombre, string primerApellido, string? segundoApellido, int ci, string? ciComplemento, int telefono, string email, bool isDeleted)
+        public static Cliente Reconstituir(int clienteId, string nombre, string primerApellido, string? segundoApellido, int ci, string? ciComplemento, int telefono, string email, bool isDeleted, DateTime fechaRegistro)
         {
             return new Cliente
             {
@@ -40,7 +42,8 @@ namespace OrdenTrabajoService.Domain.Entities
                 CiComplemento = ciComplemento,
                 Telefono = telefono,
                 Email = email,
-                IsDeleted = isDeleted
+                IsDeleted = isDeleted,
+                FechaRegistro = fechaRegistro
             };
         }
 

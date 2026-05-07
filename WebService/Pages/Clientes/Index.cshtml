@@ -3,67 +3,193 @@
 @{
     ViewData["Title"] = "Clientes";
 }
-<div class="container mt-4">
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <h2>Clientes</h2>
-        </div>
-        <div class="col-md-6 text-end">
-            <a href="/Clientes/Crear" class="btn btn-primary">Agregar Cliente</a>
-        </div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-teal fw-bold mb-0">Gestión de Clientes</h2>
+        <p class="text-muted-dark">Administra los clientes registrados en el taller</p>
     </div>
+    <button type="button" class="btn btn-teal px-4 shadow-sm" onclick="abrirModalCliente()">
+        <i class="bi bi-plus-lg me-2"></i>Nuevo Cliente
+    </button>
+</div>
 
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            @Model.ErrorMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
 
-    @if (Model.Clientes.Any())
-    {
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
+<div class="card-dark p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
                 <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Estado</th>
-                    <th>Último Acceso</th>
-                    <th>Acciones</th>
+                    <th class="text-teal pb-3">#</th>
+                    <th class="text-teal pb-3">Nombre</th>
+                    <th class="text-teal pb-3">CI</th>
+                    <th class="text-teal pb-3">Teléfono</th>
+                    <th class="text-teal pb-3">Email</th>
+                    <th class="text-teal pb-3">Fecha de Registro</th>
+                    <th class="text-teal pb-3 text-center">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var cliente in Model.Clientes)
+                @if (Model.Clientes.Any())
+                {
+                    int contador = 1;
+                    foreach (var item in Model.Clientes)
+                    {
+                        <tr class="border-bottom border-secondary">
+                            <td><span class="badge bg-secondary">@(contador++)</span></td>
+                            <td class="fw-semibold text-white">@item.NombreCompleto</td>
+                            <td class="text-light">@item.CiNumero@(item.CiComplemento != null ? " " + item.CiComplemento : "")</td>
+                            <td class="text-light">@item.Telefono</td>
+                            <td class="text-light">@(item.Email ?? "-")</td>
+                            <td class="text-light">@item.FechaRegistro</td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-info border-secondary"
+                                            title="Detalles" data-bs-toggle="modal" data-bs-target="#detailsModal"
+                                            onclick="verDetalles(@item.ClienteId)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary"
+                                            title="Editar"
+                                            onclick="window.cargarCliente(@item.ClienteId)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary"
+                                            title="Eliminar" data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                            onclick="prepararEliminar(@item.ClienteId, '@Html.Raw(item.NombreCompleto.Replace("'", "\\'"))')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
                 {
                     <tr>
-                        <td>@cliente.UsuarioLoginId</td>
-                        <td>@cliente.Email</td>
-                        <td>
-                            @if (cliente.Activo)
-                            {
-                                <span class="badge bg-success">Activo</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">Inactivo</span>
-                            }
-                        </td>
-                        <td>@(cliente.UltimoAcceso?.ToString("g") ?? "Nunca")</td>
-                        <td>
-                            <a href="/Clientes/Perfil?id=@cliente.UsuarioLoginId" class="btn btn-sm btn-info">Ver</a>
-                            <a href="/Clientes/Editar?id=@cliente.UsuarioLoginId" class="btn btn-sm btn-warning">Editar</a>
+                        <td colspan="7" class="text-center text-muted-dark py-5">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            No hay clientes registrados aún.
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
-    }
-    else
-    {
-        <div class="alert alert-info" role="alert">
-            <strong>Sin clientes</strong>
-            No hay clientes registrados en el sistema.
-        </div>
-    }
+    </div>
 </div>
+
+<!-- MODAL: Crear / Editar Cliente -->
+<partial name="_ClienteModal" />
+
+<!-- MODAL: Detalles -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark text-light p-3">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="detailsModalLabel">Detalles del Cliente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4 px-4" id="detailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-teal" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary py-3 px-4">
+                <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="deleteModalLabel">Eliminar Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body py-4 px-4">
+                    <input type="hidden" name="id" id="deleteClienteId" />
+                    <div class="text-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <p class="text-center">¿Está seguro de eliminar al cliente <strong id="deleteClienteNombre"></strong>?</p>
+                    <p class="text-danger text-center mb-0">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-secondary py-3 px-4">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function verDetalles(id) {
+            document.getElementById('detailsContent').innerHTML =
+                '<div class="text-center py-4"><div class="spinner-border text-teal" role="status"></div></div>';
+
+            fetch('?handler=Cliente&id=' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('detailsContent').innerHTML =
+                            '<p class="text-danger text-center">' + data.error + '</p>';
+                        return;
+                    }
+
+                    var vehiculosHtml = '';
+                    if (data.vehiculos && data.vehiculos.length > 0) {
+                        vehiculosHtml = '<div class="table-responsive"><table class="table table-dark table-hover align-middle mb-0">' +
+                            '<thead><tr><th>Placa</th><th>Marca</th><th>Modelo</th><th>Color</th><th>Año</th></tr></thead><tbody>';
+                        data.vehiculos.forEach(function (v) {
+                            vehiculosHtml += '<tr><td class="fw-semibold">' + v.placa + '</td><td>' +
+                                v.marca + '</td><td>' + v.modelo + '</td><td>' + v.color + '</td><td>' + v.anio + '</td></tr>';
+                        });
+                        vehiculosHtml += '</tbody></table></div>';
+                    } else {
+                        vehiculosHtml = '<p class="text-muted-dark text-center mb-0">' +
+                            '<i class="bi bi-car-front-fill fs-4 d-block mb-2 opacity-50"></i>' +
+                            'Este cliente aún no tiene vehículos registrados.</p>';
+                    }
+
+                    document.getElementById('detailsContent').innerHTML =
+                        '<div class="card-dark p-3 mb-3" style="border-top: 4px solid #20c997;">' +
+                        '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-person-vcard text-teal me-2"></i>Información Personal</h6>' +
+                        '<dl class="row mb-0">' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Nombre Completo</dt>' +
+                        '<dd class="col-sm-8 text-white fw-bold fs-5 mb-2">' + data.nombres + ' ' + data.primerApellido + ' ' + (data.segundoApellido || '') + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Carnet / CI</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2">' + data.ciNumero + ' ' + (data.ciComplemento || '') + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Teléfono</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-telephone text-teal me-2"></i>' + data.telefono + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Email</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2">' + (data.email ? data.email : '<span class="text-muted-dark fst-italic">No registrado</span>') + '</dd>' +
+                        '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Fecha de Registro</dt>' +
+                        '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-calendar3 text-teal me-2"></i>' + (data.fechaRegistro || '-') + '</dd>' +
+                        '</dl></div>' +
+                        '<div class="card-dark p-3" style="border-top: 4px solid #20c997;">' +
+                        '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-car-front text-teal me-2"></i>Vehículos Registrados</h6>' +
+                        vehiculosHtml + '</div>';
+                })
+                .catch(() => {
+                    document.getElementById('detailsContent').innerHTML =
+                        '<p class="text-danger text-center">Error al cargar los detalles</p>';
+                });
+        }
+
+        function prepararEliminar(id, nombre) {
+            document.getElementById('deleteClienteId').value = id;
+            document.getElementById('deleteClienteNombre').textContent = nombre;
+        }
+
+        window.onClienteCreado = function (cliente) {
+            location.reload();
+        };
+    </script>
+}

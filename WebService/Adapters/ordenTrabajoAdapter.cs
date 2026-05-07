@@ -106,6 +106,12 @@ namespace WebService.Adapters
 
         // ─── Clientes ─────────────────────────────────────────────────────────
 
+        public async Task<List<ClienteLookupDto>> GetAllClientesAsync()
+        {
+            var result = await GetAsync<List<ClienteLookupDto>>("api/clientes");
+            return result ?? new List<ClienteLookupDto>();
+        }
+
         public async Task<List<ClienteLookupDto>> BuscarClientesAsync(string term)
         {
             var query = $"api/clientes?term={Uri.EscapeDataString(term)}";
@@ -115,6 +121,20 @@ namespace WebService.Adapters
 
         public async Task<ClienteLookupDto?> GetClienteAsync(int id)
             => await GetAsync<ClienteLookupDto>($"api/clientes/{id}");
+
+        public async Task<List<VehiculoListDto>> GetVehiculosByClienteAsync(int clienteId)
+        {
+            var all = await GetAsync<List<VehiculoListDto>>("api/vehiculos");
+            return all?.Where(v => v.ClienteId == clienteId).ToList() ?? new List<VehiculoListDto>();
+        }
+
+        public async Task<(bool ok, string? error)> DeleteClienteAsync(int id)
+        {
+            var response = await SendAsync(HttpMethod.Delete, $"api/clientes/{id}");
+            if (!response.IsSuccessStatusCode)
+                return (false, await ReadErrorAsync(response));
+            return (true, null);
+        }
 
         public async Task<(bool ok, string? error, ClienteLookupDto? cliente)> SaveClienteAsync(ClienteFormDto form)
         {

@@ -25,7 +25,7 @@ namespace OrdenTrabajoService.Infrastructure.Repositories
             await connection.OpenAsync();
 
             const string sql = @"
-SELECT clienteid, nombre, primerapellido, segundoapellido, ci, cicomplemento, telefono, email, isdeleted
+SELECT clienteid, nombre, primerapellido, segundoapellido, ci, cicomplemento, telefono, email, isdeleted, fecharegistro
 FROM cliente WHERE NOT isdeleted ORDER BY primerapellido, nombre;";
 
             var clientes = new List<Cliente>();
@@ -46,7 +46,7 @@ FROM cliente WHERE NOT isdeleted ORDER BY primerapellido, nombre;";
                 await connection.OpenAsync();
 
                 const string sql = @"
-SELECT clienteid, nombre, primerapellido, segundoapellido, ci, cicomplemento, telefono, email, isdeleted
+SELECT clienteid, nombre, primerapellido, segundoapellido, ci, cicomplemento, telefono, email, isdeleted, fecharegistro
 FROM cliente WHERE clienteid = @id AND NOT isdeleted;";
 
                 await using var cmd = new NpgsqlCommand(sql, connection);
@@ -163,7 +163,8 @@ WHERE clienteid = @id AND NOT isdeleted;";
                 reader.IsDBNull(reader.GetOrdinal("cicomplemento")) ? null : reader.GetString(reader.GetOrdinal("cicomplemento")),
                 reader.GetInt32(reader.GetOrdinal("telefono")),
                 reader.GetString(reader.GetOrdinal("email")),
-                reader.GetBoolean(reader.GetOrdinal("isdeleted")));
+                reader.GetBoolean(reader.GetOrdinal("isdeleted")),
+                reader.IsDBNull(reader.GetOrdinal("fecharegistro")) ? DateTime.MinValue : reader.GetDateTime(reader.GetOrdinal("fecharegistro")));
         }
     }
 }

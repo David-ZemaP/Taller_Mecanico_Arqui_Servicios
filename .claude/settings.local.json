@@ -3,7 +3,13 @@
     "allow": [
       "PowerShell(head -50)",
       "Bash(dotnet build *)",
-      "Bash(docker-compose up *)"
+      "Bash(docker-compose up *)",
+      "Read(//c/Users/Mateo/Documents/Mateo Tareas/TallerMecanico/Repo/Pages/Clientes/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5229/api/clientes)",
+      "Bash(docker exec *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5229/api/Clientes\")",
+      "Bash(docker rm *)",
+      "Bash(docker compose *)"
     ]
   }
 }
