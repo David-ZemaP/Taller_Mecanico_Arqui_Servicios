@@ -6,18 +6,7 @@ using Taller_Mecanico_Users.Domain.Ports;
 
 namespace Taller_Mecanico_Users.UseCases.Users
 {
-    /// <summary>
-    /// UseCase: Creación de nuevo usuario con credenciales seguras.
-    /// 
-    /// Arquitectura:
-    /// - PasswordSecurity: Generar contraseña temporal segura ✅ (IPasswordSecurity)
-    /// - PasswordHasher: Encriptar contraseña ✅ (IPasswordHasher)
-    /// - Repository: Persistencia ✅ (IUsuarioLoginRepository)
-    /// - MailSender: Enviar credenciales ✅ (IMailSender)
-    /// 
-    /// ANTES: Usaba PasswordSecurity.GenerateSecurePassword() y BCrypt.Net.BCrypt.HashPassword() directamente
-    /// AHORA: Inyecta servicios, mejora testabilidad y permite cambio de algoritmo
-    /// </summary>
+    
     public class CreateUserUseCase
     {
         private readonly IUsuarioLoginRepository _repository;

@@ -40,7 +40,7 @@ namespace Taller_Mecanico_Users.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden crear
+        [Authorize(Roles = "Empleado")] 
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
             var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);
@@ -81,7 +81,7 @@ namespace Taller_Mecanico_Users.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden actualizar
+        [Authorize(Roles = "Empleado")] 
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
             var result = await _updateUserUseCase.ExecuteAsync(id, request.Email, request.Activo);

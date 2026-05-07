@@ -31,7 +31,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. INSERTAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
@@ -56,11 +55,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                         return assignIdResult;
                     }
                 }
-
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", entity.UsuarioLoginId, "INSERT");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
@@ -86,7 +82,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. ACTUALIZAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
@@ -112,10 +107,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                     return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "El usuario no existe.");
                 }
 
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", entity.UsuarioLoginId, "UPDATE");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
@@ -218,9 +211,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
             return null;
         }
 
-        // ==========================================
-        // MÉTODOS AUXILIARES
-        // ==========================================
         public async Task<Result> DeleteAsync(int id)
         {
             
@@ -230,7 +220,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. ELIMINAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"DELETE FROM usuariologin WHERE usuariologinid = @UsuarioLoginId;";
@@ -243,10 +232,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                     return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
                 }
 
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", id, "DELETE");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
