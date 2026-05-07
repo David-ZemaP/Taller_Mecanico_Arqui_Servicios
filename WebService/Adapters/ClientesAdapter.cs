@@ -49,10 +49,10 @@ namespace WebService.Adapters
             if (includeBearerToken)
             {
                 var token = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
+                if (string.IsNullOrEmpty(token))
+                    token = _httpContextAccessor.HttpContext?.User.FindFirst("JwtToken")?.Value;
                 if (!string.IsNullOrEmpty(token))
-                {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
             }
 
             return await _httpClient.SendAsync(request);
@@ -67,7 +67,15 @@ namespace WebService.Adapters
         private async Task<string> ReadErrorAsync(HttpResponseMessage response)
         {
             var content = await response.Content.ReadAsStringAsync();
-            return !string.IsNullOrEmpty(content) ? content : $"Error: {response.StatusCode}";
+            if (string.IsNullOrEmpty(content)) return $"Error: {response.StatusCode}";
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(content);
+                if (doc.RootElement.TryGetProperty("message", out var msg))
+                    return msg.GetString() ?? content;
+            }
+            catch { }
+            return content;
         }
     }
 }

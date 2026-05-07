@@ -201,6 +201,17 @@ CREATE TABLE IF NOT EXISTS UsuarioLogin (
 
 CREATE INDEX IF NOT EXISTS IX_Producto_Nombre ON Producto (Nombre);
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id              SERIAL PRIMARY KEY,
+    tabla_afectada  VARCHAR(100) NOT NULL,
+    registro_id     INT NOT NULL,
+    accion          VARCHAR(50)  NOT NULL,
+    realizado_por   VARCHAR(150),
+    fecha_hora      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS IX_audit_logs_tabla ON audit_logs (tabla_afectada, registro_id);
+
 
 INSERT INTO ColorVehiculo (Nombre) VALUES 
 ('Blanco'), ('Negro'), ('Plata'), ('Gris'), ('Rojo'), 

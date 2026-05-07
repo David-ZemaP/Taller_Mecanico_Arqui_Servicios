@@ -104,6 +104,75 @@ namespace WebService.Adapters
             return GetAsync<List<VehiculoLookupDto>>(query) ?? Task.FromResult(new List<VehiculoLookupDto>());
         }
 
+        // ─── Clientes ─────────────────────────────────────────────────────────
+
+        public async Task<List<ClienteLookupDto>> BuscarClientesAsync(string term)
+        {
+            var query = $"api/clientes?term={Uri.EscapeDataString(term)}";
+            var result = await GetAsync<List<ClienteLookupDto>>(query);
+            return result ?? new List<ClienteLookupDto>();
+        }
+
+        public async Task<ClienteLookupDto?> GetClienteAsync(int id)
+            => await GetAsync<ClienteLookupDto>($"api/clientes/{id}");
+
+        public async Task<(bool ok, string? error, ClienteLookupDto? cliente)> SaveClienteAsync(ClienteFormDto form)
+        {
+            HttpResponseMessage response;
+            if (form.ClienteId == 0)
+            {
+                response = await SendAsync(HttpMethod.Post, "api/clientes", new
+                {
+                    nombres = form.Nombres,
+                    primerApellido = form.PrimerApellido,
+                    segundoApellido = form.SegundoApellido,
+                    ciNumero = form.CiNumero,
+                    ciComplemento = form.CiComplemento,
+                    telefono = form.Telefono,
+                    email = form.Email
+                });
+            }
+            else
+            {
+                response = await SendAsync(HttpMethod.Put, $"api/clientes/{form.ClienteId}", new
+                {
+                    nombres = form.Nombres,
+                    primerApellido = form.PrimerApellido,
+                    segundoApellido = form.SegundoApellido,
+                    ciNumero = form.CiNumero,
+                    ciComplemento = form.CiComplemento,
+                    telefono = form.Telefono,
+                    email = form.Email
+                });
+            }
+
+            if (!response.IsSuccessStatusCode)
+                return (false, await ReadErrorAsync(response), null);
+
+            ClienteLookupDto cliente;
+            if (form.ClienteId == 0)
+            {
+                var created = await DeserializeAsync<ClienteLookupDto>(response);
+                cliente = created ?? new ClienteLookupDto { ClienteId = 0, Nombres = form.Nombres, PrimerApellido = form.PrimerApellido, CiNumero = form.CiNumero };
+            }
+            else
+            {
+                cliente = new ClienteLookupDto
+                {
+                    ClienteId = form.ClienteId,
+                    Nombres = form.Nombres,
+                    PrimerApellido = form.PrimerApellido,
+                    SegundoApellido = form.SegundoApellido,
+                    CiNumero = form.CiNumero,
+                    CiComplemento = form.CiComplemento,
+                    Telefono = form.Telefono,
+                    Email = form.Email
+                };
+            }
+
+            return (true, null, cliente);
+        }
+
         // ─── Productos ────────────────────────────────────────────────────────
 
         public async Task<List<ProductoDto>> GetAllProductosAsync()
@@ -245,6 +314,8 @@ namespace WebService.Adapters
             var request = new HttpRequestMessage(method, url);
 
             var token = _ctx.HttpContext?.Session.GetString("JwtToken");
+            if (string.IsNullOrWhiteSpace(token))
+                token = _ctx.HttpContext?.User.FindFirst("JwtToken")?.Value;
             if (!string.IsNullOrWhiteSpace(token))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

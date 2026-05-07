@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(head -50)",
+      "Bash(dotnet build *)",
+      "Bash(docker-compose up *)"
+    ]
+  }
+}

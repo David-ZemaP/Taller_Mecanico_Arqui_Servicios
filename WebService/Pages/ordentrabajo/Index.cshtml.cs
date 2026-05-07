@@ -39,6 +39,19 @@ namespace WebService.Pages.OrdenTrabajo
             return new JsonResult(orden);
         }
 
+        public async Task<JsonResult> OnGetBuscarClientesAsync(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+                return new JsonResult(Array.Empty<object>());
+            var clientes = await _adapter.BuscarClientesAsync(term);
+            var result = clientes.Select(c => new
+            {
+                id = c.ClienteId,
+                text = $"{c.Nombres} {c.PrimerApellido} - CI: {c.CiNumero}"
+            });
+            return new JsonResult(result);
+        }
+
         public async Task<JsonResult> OnGetBuscarVehiculosAsync(string term, int? clienteId)
         {
             if (string.IsNullOrWhiteSpace(term))

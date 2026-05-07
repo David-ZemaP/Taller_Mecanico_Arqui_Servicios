@@ -49,6 +49,7 @@ builder.Services.AddScoped<IOrdenTrabajoCatalogoRepository, OrdenTrabajoCatalogo
 builder.Services.AddScoped<IRepository<Producto>, ProductoRepository>();
 builder.Services.AddScoped<IRepository<Servicio>, ServicioRepository>();
 builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
+builder.Services.AddScoped<IRepository<Cliente>, ClienteRepository>();
 builder.Services.AddScoped<IRepository<Marca>, MarcaRepository>();
 builder.Services.AddScoped<IRepository<Modelo>, ModeloRepository>();
 builder.Services.AddScoped<IRepository<ColorVehiculo>, ColorVehiculoRepository>();

@@ -51,21 +51,34 @@ namespace WebService.Adapters
             }
         }
 
-        public async Task<(bool ok, string? error)> CrearEmpleadoAsync(EmpleadoFormDto form)
+        public async Task<(bool ok, int? empleadoId, string? error)> CrearEmpleadoAsync(EmpleadoFormDto form)
         {
             try
             {
                 var body = BuildEmpleadoBody(form);
                 var response = await SendAsync(HttpMethod.Post, "api/empleado", body);
                 if (!response.IsSuccessStatusCode)
-                    return (false, await ReadErrorAsync(response));
+                    return (false, null, await ReadErrorAsync(response));
 
-                return (true, null);
+                // La API devuelve { "EmpleadoId": <id> } al crear
+                var json = await response.Content.ReadAsStringAsync();
+                int? newId = null;
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    var parsed = JsonSerializer.Deserialize<EmpleadoCreatedDto>(json, _jsonOpts);
+                    newId = parsed?.EmpleadoId;
+                }
+                return (true, newId, null);
             }
             catch (Exception)
             {
-                return (false, "No se pudo conectar con el servicio de usuarios.");
+                return (false, null, "No se pudo conectar con el servicio de usuarios.");
             }
+        }
+
+        private sealed class EmpleadoCreatedDto
+        {
+            public int? EmpleadoId { get; set; }
         }
 
         public async Task<(bool ok, string? error)> ActualizarEmpleadoAsync(int id, EmpleadoFormDto form)
@@ -224,6 +237,8 @@ namespace WebService.Adapters
             var request = new HttpRequestMessage(method, endpoint);
 
             var token = _ctx.HttpContext?.Session.GetString("JwtToken");
+            if (string.IsNullOrEmpty(token))
+                token = _ctx.HttpContext?.User.FindFirst("JwtToken")?.Value;
             if (!string.IsNullOrEmpty(token))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

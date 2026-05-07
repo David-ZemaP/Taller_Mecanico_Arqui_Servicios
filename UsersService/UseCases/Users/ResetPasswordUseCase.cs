@@ -1,37 +1,29 @@
 using Taller_Mecanico_Users.Domain.Common;
 using Taller_Mecanico_Users.Domain.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace Taller_Mecanico_Users.UseCases.Users
 {
-    /// <summary>
-    /// UseCase: Reset administrativo de contraseña.
-    /// 
-    /// Arquitectura:
-    /// - PasswordSecurity: Generar contraseña temporal ✅ (IPasswordSecurity)
-    /// - PasswordHasher: Encriptar contraseña ✅ (IPasswordHasher)
-    /// - Repository: Persistencia ✅ (IUsuarioLoginRepository)
-    /// - MailSender: Enviar credenciales ✅ (IMailSender)
-    /// 
-    /// ANTES: Usaba PasswordSecurity.GenerateSecurePassword() y BCrypt.Net.BCrypt.HashPassword() directamente
-    /// AHORA: Inyecta servicios, mejora testabilidad y flexibilidad
-    /// </summary>
     public class ResetPasswordUseCase
     {
         private readonly IUsuarioLoginRepository _repository;
         private readonly Domain.Ports.IMailSender _mailSender;
         private readonly Domain.Ports.IPasswordSecurity _passwordSecurity;
         private readonly Domain.Ports.IPasswordHasher _passwordHasher;
+        private readonly ILogger<ResetPasswordUseCase> _logger;
 
         public ResetPasswordUseCase(
             IUsuarioLoginRepository repository,
             Domain.Ports.IMailSender mailSender,
             Domain.Ports.IPasswordSecurity passwordSecurity,
-            Domain.Ports.IPasswordHasher passwordHasher)
+            Domain.Ports.IPasswordHasher passwordHasher,
+            ILogger<ResetPasswordUseCase> logger)
         {
             _repository = repository;
             _mailSender = mailSender;
             _passwordSecurity = passwordSecurity;
             _passwordHasher = passwordHasher;
+            _logger = logger;
         }
 
         public async Task<Result<string>> ExecuteAsync(int usuarioLoginId)
@@ -69,9 +61,16 @@ namespace Taller_Mecanico_Users.UseCases.Users
                 return Result<string>.Failure(updateResult.ErrorCode ?? ErrorCodes.DbError, updateResult.ErrorMessage ?? "Error al persistir cambios.");
             }
 
-            // 6. Enviar nueva contraseña por correo
+            // 6. Enviar nueva contraseña por correo (fallo de correo no cancela el reset)
             var emailBody = $"Hola,\nTu contraseña fue restablecida exitosamente.\nTu contraseña temporal es: {temporaryPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
-            await _mailSender.SendEmailAsync(user.Email, "Restablecimiento de contraseña - Taller Mecánico", emailBody);
+            try
+            {
+                await _mailSender.SendEmailAsync(user.Email, "Restablecimiento de contraseña - Taller Mecánico", emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo enviar el correo de restablecimiento a {Email}", user.Email);
+            }
 
             return Result<string>.Success(temporaryPassword);
         }

@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using Taller_Mecanico_Users.Domain.Entities;
 using Taller_Mecanico_Users.Domain.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace Taller_Mecanico_Users.UseCases.Users
 {
@@ -18,17 +19,20 @@ namespace Taller_Mecanico_Users.UseCases.Users
         private readonly Domain.Ports.IMailSender _mailSender;
         private readonly Domain.Ports.IPasswordSecurity _passwordSecurity;
         private readonly Domain.Ports.IPasswordHasher _passwordHasher;
+        private readonly ILogger<CreateUserUseCase> _logger;
 
         public CreateUserUseCase(
             IUsuarioLoginRepository repository,
             Domain.Ports.IMailSender mailSender,
             Domain.Ports.IPasswordSecurity passwordSecurity,
-            Domain.Ports.IPasswordHasher passwordHasher)
+            Domain.Ports.IPasswordHasher passwordHasher,
+            ILogger<CreateUserUseCase> logger)
         {
             _repository = repository;
             _mailSender = mailSender;
             _passwordSecurity = passwordSecurity;
             _passwordHasher = passwordHasher;
+            _logger = logger;
         }
 
         public async Task<Result<UserCreationResult>> ExecuteAsync(int empleadoId, string email, string? plainPasswordProvided = null)
@@ -71,9 +75,16 @@ namespace Taller_Mecanico_Users.UseCases.Users
                 return Result<UserCreationResult>.Failure(addResult.ErrorCode ?? ErrorCodes.DbError, addResult.ErrorMessage ?? "Error al crear usuario.");
             }
 
-            // 5. Enviar credenciales por correo
+            // 5. Enviar credenciales por correo (fallo de correo no cancela la creación)
             string mailBody = $"Hola,\nTu cuenta ha sido creada exitosamente.\nTu contraseña temporal es: {plainPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
-            await _mailSender.SendEmailAsync(email, "Credenciales de Acceso - Taller Mecánico", mailBody);
+            try
+            {
+                await _mailSender.SendEmailAsync(email, "Credenciales de Acceso - Taller Mecánico", mailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo enviar el correo de bienvenida a {Email}", email);
+            }
 
             return Result<UserCreationResult>.Success(new UserCreationResult { User = nuevoUsuario, PlainPassword = plainPassword });
         }

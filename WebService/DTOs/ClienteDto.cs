@@ -9,4 +9,28 @@ namespace WebService.DTOs
         public bool Activo { get; set; }
         public bool RequiereCambioPassword { get; set; }
     }
+
+    public class ClienteLookupDto
+    {
+        public int ClienteId { get; set; }
+        public string Nombres { get; set; } = string.Empty;
+        public string PrimerApellido { get; set; } = string.Empty;
+        public string? SegundoApellido { get; set; }
+        public int CiNumero { get; set; }
+        public string? CiComplemento { get; set; }
+        public int Telefono { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public class ClienteFormDto
+    {
+        public int ClienteId { get; set; }
+        public string Nombres { get; set; } = string.Empty;
+        public string PrimerApellido { get; set; } = string.Empty;
+        public string? SegundoApellido { get; set; }
+        public int CiNumero { get; set; }
+        public string? CiComplemento { get; set; }
+        public int Telefono { get; set; }
+        public string? Email { get; set; }
+    }
 }

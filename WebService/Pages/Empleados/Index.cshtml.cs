@@ -88,20 +88,40 @@ namespace WebService.Pages.Empleados
         {
             if (!ModelState.IsValid)
             {
-                await CargarEmpleadosAsync();
-                return Page();
+                TempData["ErrorMessage"] = string.Join(" | ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage));
+                return RedirectToPage();
             }
 
             bool isNew = FormDto.EmpleadoId == 0;
 
             if (isNew)
             {
-                var (ok, error) = await _adapter.CrearEmpleadoAsync(FormDto);
+                var (ok, empleadoId, error) = await _adapter.CrearEmpleadoAsync(FormDto);
                 if (!ok)
                 {
-                    ModelState.AddModelError(string.Empty, error ?? "No se pudo crear el empleado.");
-                    await CargarEmpleadosAsync();
-                    return Page();
+                    TempData["ErrorMessage"] = error ?? "No se pudo crear el empleado.";
+                    return RedirectToPage();
+                }
+
+                // Crear automáticamente el acceso al sistema si se proporcionó email
+                if (!string.IsNullOrWhiteSpace(FormDto.Email) && empleadoId.HasValue)
+                {
+                    var (userOk, plainPassword, _) = await _adapter.CreateUsuarioAsync(
+                        empleadoId.Value, FormDto.Email, null);
+
+                    if (userOk && !string.IsNullOrWhiteSpace(plainPassword))
+                    {
+                        TempData["NuevoEmail"] = FormDto.Email;
+                        TempData["NuevaPassword"] = plainPassword;
+                    }
+                    else if (!userOk)
+                    {
+                        // El empleado ya tenía usuario asignado
+                        TempData["UsuarioExistente"] = true;
+                        TempData["EmailExistente"] = FormDto.Email;
+                    }
                 }
             }
             else
@@ -109,9 +129,8 @@ namespace WebService.Pages.Empleados
                 var (ok, error) = await _adapter.ActualizarEmpleadoAsync(FormDto.EmpleadoId, FormDto);
                 if (!ok)
                 {
-                    ModelState.AddModelError(string.Empty, error ?? "No se pudo actualizar el empleado.");
-                    await CargarEmpleadosAsync();
-                    return Page();
+                    TempData["ErrorMessage"] = error ?? "No se pudo actualizar el empleado.";
+                    return RedirectToPage();
                 }
             }
 

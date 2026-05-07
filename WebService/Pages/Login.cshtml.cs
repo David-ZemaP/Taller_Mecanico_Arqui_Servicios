@@ -48,8 +48,16 @@ namespace WebService.Pages
             HttpContext.Session.SetString("JwtToken", result.response.Token);
 
             var claims = new List<Claim>();
-            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(result.response.Token);
-            claims.AddRange(jwt.Claims);
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(result.response.Token);
+            var inboundMap = JwtSecurityTokenHandler.DefaultInboundClaimTypeMap;
+            foreach (var c in jwt.Claims)
+            {
+                var type = inboundMap.TryGetValue(c.Type, out var mapped) ? mapped : c.Type;
+                claims.Add(new Claim(type, c.Value, c.ValueType, c.Issuer, c.OriginalIssuer));
+            }
+            // Store the raw JWT as a claim so adapters can recover it if the session is lost
+            claims.Add(new Claim("JwtToken", result.response.Token));
 
             var emailClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
             if (string.IsNullOrWhiteSpace(emailClaim))

@@ -78,10 +78,10 @@ namespace WebService.Adapters
             if (includeBearerToken)
             {
                 var token = _ctx.HttpContext?.Session.GetString("JwtToken");
+                if (string.IsNullOrWhiteSpace(token))
+                    token = _ctx.HttpContext?.User.FindFirst("JwtToken")?.Value;
                 if (!string.IsNullOrWhiteSpace(token))
-                {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
             }
 
             if (body is not null)

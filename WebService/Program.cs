@@ -69,6 +69,31 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var requiresChange = context.User.FindFirst("RequiereCambio")?.Value;
+        if (bool.TryParse(requiresChange, out var mustChange) && mustChange)
+        {
+            var path = context.Request.Path.Value ?? string.Empty;
+            var allowed = path.StartsWith("/ChangePassword", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/Login", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/Logout", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/_framework", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/lib", StringComparison.OrdinalIgnoreCase);
+            if (!allowed)
+            {
+                context.Response.Redirect("/ChangePassword");
+                return;
+            }
+        }
+    }
+    await next();
+});
 app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
 
