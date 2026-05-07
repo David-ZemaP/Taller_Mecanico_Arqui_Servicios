@@ -34,46 +34,46 @@ namespace Taller_Mecanico_Users.UseCases.Users
             _passwordHasher = passwordHasher;
         }
 
-        public async Task<Result> ExecuteAsync(int usuarioLoginId)
+        public async Task<Result<string>> ExecuteAsync(int usuarioLoginId)
         {
             // 1. Obtener usuario
             var userResult = await _repository.GetByIdAsync(usuarioLoginId);
             if (userResult.IsFailure)
             {
-                return Result.Failure(userResult.ErrorCode ?? ErrorCodes.DbError, userResult.ErrorMessage ?? "Error al obtener usuario.");
+                return Result<string>.Failure(userResult.ErrorCode ?? ErrorCodes.DbError, userResult.ErrorMessage ?? "Error al obtener usuario.");
             }
 
             var user = userResult.Value;
             if (user == null)
             {
-                return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
+                return Result<string>.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
             }
 
             // 2. Generar nueva contraseña temporal
             var temporaryPassword = _passwordSecurity.GenerateSecurePassword();
-            
+
             // 3. Hashear la nueva contraseña
             var passwordHash = _passwordHasher.HashPassword(temporaryPassword);
-            
+
             // 4. Aplicar reset en la entidad (activa RequiereCambioPassword = true)
             var resetResult = user.ResetearPassword(passwordHash);
             if (resetResult.IsFailure)
             {
-                return resetResult;
+                return Result<string>.Failure(resetResult.ErrorCode ?? ErrorCodes.DbError, resetResult.ErrorMessage ?? "Error al resetear contraseña.");
             }
 
             // 5. Persistir cambios
             var updateResult = await _repository.UpdateAsync(user);
             if (updateResult.IsFailure)
             {
-                return updateResult;
+                return Result<string>.Failure(updateResult.ErrorCode ?? ErrorCodes.DbError, updateResult.ErrorMessage ?? "Error al persistir cambios.");
             }
 
             // 6. Enviar nueva contraseña por correo
             var emailBody = $"Hola,\nTu contraseña fue restablecida exitosamente.\nTu contraseña temporal es: {temporaryPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
             await _mailSender.SendEmailAsync(user.Email, "Restablecimiento de contraseña - Taller Mecánico", emailBody);
 
-            return Result.Success();
+            return Result<string>.Success(temporaryPassword);
         }
     }
 }

@@ -43,17 +43,18 @@ namespace Taller_Mecanico_Users.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Empleado")] 
+        [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
-            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);
+            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email, request.Password);
             if (usuarioResult.IsFailure || usuarioResult.Value == null)
             {
                 return ApiResultMapper.MapError(this, usuarioResult);
             }
 
-            var usuario = usuarioResult.Value;
-            return CreatedAtAction(nameof(GetUserById), new { id = usuario.UsuarioLoginId }, new { usuario.UsuarioLoginId, usuario.Email });
+            var creation = usuarioResult.Value;
+            return CreatedAtAction(nameof(GetUserById), new { id = creation.User.UsuarioLoginId },
+                new { creation.User.UsuarioLoginId, creation.User.Email, plainPassword = creation.PlainPassword });
         }
 
         [HttpGet("{id}")]
@@ -133,7 +134,7 @@ namespace Taller_Mecanico_Users.Controllers
                 return ApiResultMapper.MapError(this, result);
             }
 
-            return NoContent();
+            return Ok(new { plainPassword = result.Value });
         }
 
         [HttpDelete("{id}")]
@@ -180,6 +181,7 @@ namespace Taller_Mecanico_Users.Controllers
     {
         public int EmpleadoId { get; set; }
         public string Email { get; set; } = string.Empty;
+        public string? Password { get; set; }
     }
 
     public class UpdateUserRequest

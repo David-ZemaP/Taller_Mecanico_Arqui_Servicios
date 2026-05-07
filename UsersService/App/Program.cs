@@ -81,8 +81,15 @@ builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuditServic
 
 
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IUsuarioLoginRepository, 
+builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IUsuarioLoginRepository,
     Taller_Mecanico_Users.Data.Repositories.UsuarioLoginRepository>();
+
+builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IEmpleadoRepository,
+    Taller_Mecanico_Users.Data.Repositories.EmpleadoRepository>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.GetEmpleadosUseCase>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.CreateEmpleadoUseCase>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.UpdateEmpleadoUseCase>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.DeleteEmpleadoUseCase>();
 
 
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Users.LoginUseCase>();
@@ -133,39 +140,54 @@ static async Task SeedDefaultAdminAsync(IServiceProvider services)
         await using var conn = connectionFactory.CreateConnection();
         await conn.OpenAsync();
 
-        // Skip if admin user already exists
+        // Ensure admin employee exists and is active (CI = 100000)
+        var getEmpCmd = conn.CreateCommand();
+        getEmpCmd.CommandText = "SELECT empleadoid, isdeleted FROM empleado WHERE ci = @Ci LIMIT 1;";
+        var p2 = getEmpCmd.CreateParameter(); p2.ParameterName = "@Ci"; p2.Value = adminCi;
+        getEmpCmd.Parameters.Add(p2);
+
+        int empleadoId;
+        using (var empReader = await ((System.Data.Common.DbCommand)getEmpCmd).ExecuteReaderAsync())
+        {
+            if (await empReader.ReadAsync())
+            {
+                empleadoId = empReader.GetInt32(0);
+                var isDeleted = empReader.GetBoolean(1);
+                await empReader.CloseAsync();
+                if (isDeleted)
+                {
+                    var restoreCmd = conn.CreateCommand();
+                    restoreCmd.CommandText = "UPDATE empleado SET isdeleted = FALSE, estadolaboral = 'Activo' WHERE empleadoid = @Id;";
+                    var pr = restoreCmd.CreateParameter(); pr.ParameterName = "@Id"; pr.Value = empleadoId;
+                    restoreCmd.Parameters.Add(pr);
+                    await ((System.Data.Common.DbCommand)restoreCmd).ExecuteNonQueryAsync();
+                    Console.WriteLine("[Seed] Empleado administrador restaurado (estaba eliminado).");
+                }
+            }
+            else
+            {
+                await empReader.CloseAsync();
+                var insEmpCmd = conn.CreateCommand();
+                insEmpCmd.CommandText = @"
+                    INSERT INTO empleado
+                        (nombre, primerapellido, ci, telefono, fechacontratacion, tipoempleado, estadolaboral, nivelacceso, isdeleted)
+                    VALUES
+                        ('Administrador', 'Principal', @Ci, 0, CURRENT_TIMESTAMP, 'Administrador', 'Activo', 'Gerente', FALSE)
+                    RETURNING empleadoid;";
+                var p3 = insEmpCmd.CreateParameter(); p3.ParameterName = "@Ci"; p3.Value = adminCi;
+                insEmpCmd.Parameters.Add(p3);
+                empleadoId = Convert.ToInt32(await ((System.Data.Common.DbCommand)insEmpCmd).ExecuteScalarAsync());
+                Console.WriteLine("[Seed] Empleado administrador creado.");
+            }
+        }
+
+        // Ensure admin login user exists
         var checkCmd = conn.CreateCommand();
         checkCmd.CommandText = "SELECT COUNT(1) FROM usuariologin WHERE email = @Email;";
         var p = checkCmd.CreateParameter(); p.ParameterName = "@Email"; p.Value = adminEmail;
         checkCmd.Parameters.Add(p);
         var count = Convert.ToInt64(await ((System.Data.Common.DbCommand)checkCmd).ExecuteScalarAsync());
         if (count > 0) return;
-
-        // Get or create the admin employee (NivelAcceso = Gerente)
-        var getEmpCmd = conn.CreateCommand();
-        getEmpCmd.CommandText = "SELECT empleadoid FROM empleado WHERE ci = @Ci LIMIT 1;";
-        var p2 = getEmpCmd.CreateParameter(); p2.ParameterName = "@Ci"; p2.Value = adminCi;
-        getEmpCmd.Parameters.Add(p2);
-        var empIdObj = await ((System.Data.Common.DbCommand)getEmpCmd).ExecuteScalarAsync();
-
-        int empleadoId;
-        if (empIdObj is null || empIdObj == DBNull.Value)
-        {
-            var insEmpCmd = conn.CreateCommand();
-            insEmpCmd.CommandText = @"
-                INSERT INTO empleado
-                    (nombre, primerapellido, ci, telefono, fechacontratacion, tipoempleado, estadolaboral, nivelacceso)
-                VALUES
-                    ('Administrador', 'Principal', @Ci, 0, CURRENT_TIMESTAMP, 'Administrador', 'Activo', 'Gerente')
-                RETURNING empleadoid;";
-            var p3 = insEmpCmd.CreateParameter(); p3.ParameterName = "@Ci"; p3.Value = adminCi;
-            insEmpCmd.Parameters.Add(p3);
-            empleadoId = Convert.ToInt32(await ((System.Data.Common.DbCommand)insEmpCmd).ExecuteScalarAsync());
-        }
-        else
-        {
-            empleadoId = Convert.ToInt32(empIdObj);
-        }
 
         // Create admin login user (RequiereCambioPassword = FALSE so no forced reset)
         var passwordHash = passwordHasher.HashPassword(adminPassword);
