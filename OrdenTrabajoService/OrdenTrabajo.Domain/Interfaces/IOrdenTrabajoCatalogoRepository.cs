@@ -1,9 +1,7 @@
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Common;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using OrdenTrabajoService.Domain.Entities;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Domain.Ports
+namespace OrdenTrabajoService.Domain.Interfaces
 {
     public interface IOrdenTrabajoCatalogoRepository
     {

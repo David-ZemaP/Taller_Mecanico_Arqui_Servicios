@@ -1,32 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Application.Facades;
+using WebService.Adapters;
+using WebService.DTOs;
 
-namespace Taller_Mecanico_Arqui.Pages.Reportes;
-
-[Authorize]
-public class OrdenTrabajoModel : PageModel
+namespace WebService.Pages.Reportes
 {
-    private readonly OrdenTrabajoCreate _ordenFacade;
-
-    public OrdenTrabajoModel(OrdenTrabajoCreate ordenFacade)
+    [Authorize]
+    public class OrdenTrabajoModel : PageModel
     {
-        _ordenFacade = ordenFacade;
-    }
+        private readonly OrdenTrabajoAdapter _adapter;
 
-    public OrdenTrabajoDetalleDto? Orden { get; private set; }
-
-    public async Task<IActionResult> OnGetAsync(int id)
-    {
-        var result = await _ordenFacade.GetDetalleAsync(id);
-        if (result.IsFailure)
+        public OrdenTrabajoModel(OrdenTrabajoAdapter adapter)
         {
-            return NotFound();
+            _adapter = adapter;
         }
 
-        Orden = result.Value;
-        return Page();
+        public OrdenTrabajoDetalleDto? Orden { get; private set; }
+
+        public async Task<IActionResult> OnGetAsync(int id)
+        {
+            Orden = await _adapter.GetOrdenDetalleAsync(id);
+            if (Orden is null)
+                return NotFound();
+            return Page();
+        }
     }
 }

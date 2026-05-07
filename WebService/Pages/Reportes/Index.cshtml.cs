@@ -1,15 +1,9 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
-using Taller_Mecanico_Arqui.Domain.Enums;
 
-namespace Taller_Mecanico_Arqui.Pages.Reportes;
-
-[RequireAccessLevel(NivelAcceso.Gerente)]
-public class IndexModel : PageModel
+namespace WebService.Pages.Reportes
 {
-    public void OnGet()
+    public class IndexModel : PageModel
     {
-        // Placeholder - no logic needed yet for the construction page
+        public void OnGet() { }
     }
 }

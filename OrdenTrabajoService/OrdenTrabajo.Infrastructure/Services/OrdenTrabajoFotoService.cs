@@ -1,19 +1,20 @@
 using Microsoft.AspNetCore.Http;
-using Taller_Mecanico_Arqui.Domain.Entities;
+using OrdenTrabajoService.Domain.Entities;
 
-namespace Taller_Mecanico_Arqui.Infrastructure.Services
+namespace OrdenTrabajoService.Infrastructure.Services
 {
     public class OrdenTrabajoFotoService
     {
         private const long MaximoTamanoArchivo = 5 * 1024 * 1024;
 
-        private static readonly Dictionary<string, string> ExtensionesPermitidas = new(StringComparer.OrdinalIgnoreCase)
-        {
-            { ".jpg",  "image/jpeg" },
-            { ".jpeg", "image/jpeg" },
-            { ".png",  "image/png"  },
-            { ".webp", "image/webp" }
-        };
+        private static readonly Dictionary<string, string> ExtensionesPermitidas =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                { ".jpg",  "image/jpeg" },
+                { ".jpeg", "image/jpeg" },
+                { ".png",  "image/png"  },
+                { ".webp", "image/webp" }
+            };
 
         public string? ObtenerErrorValidacion(IFormFile archivo)
         {
@@ -21,7 +22,6 @@ namespace Taller_Mecanico_Arqui.Infrastructure.Services
 
             if (archivo.Length <= 0)
                 return $"La foto '{archivo.FileName}' está vacía.";
-
             if (archivo.Length > MaximoTamanoArchivo)
                 return $"La foto '{archivo.FileName}' supera el límite de 5 MB.";
 
@@ -43,8 +43,7 @@ namespace Taller_Mecanico_Arqui.Infrastructure.Services
             {
                 var extension = Path.GetExtension(archivo.FileName);
                 var contentType = ExtensionesPermitidas.TryGetValue(extension, out var ct)
-                    ? ct
-                    : "application/octet-stream";
+                    ? ct : "application/octet-stream";
 
                 using var ms = new MemoryStream((int)archivo.Length);
                 await archivo.CopyToAsync(ms, cancellationToken);

@@ -1,22 +1,23 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Infrastructure.Persistence;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Infrastructure.Services;
+using Npgsql;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Interfaces;
+using OrdenTrabajoService.Infrastructure.Persistence;
+using Taller_Mecanico_Users.Domain.Common;
+using Taller_Mecanico_Users.Framework.Persistence;
+using Taller_Mecanico_Users.Framework.Services;
 
-namespace Taller_Mecanico_Arqui.Infrastructure.Persistence.Repositories
+namespace OrdenTrabajoService.Infrastructure.Repositories
 {
-    public class OrdenTrabajoRepository : IOrdenTrabajoRepository, IRepository<OrdenTrabajo>
+    public class OrdenTrabajoRepository : IOrdenTrabajoRepository
     {
         private readonly ISqlConnectionFactory _connectionFactory;
-        private readonly SqlEntityQueryService _queryService;
-        private readonly AuthenticationHelper _authHelper;
+        private readonly OrdenTrabajoQueryService _queryService;
+        private readonly IAuthenticationHelper _authHelper;
 
-        public OrdenTrabajoRepository(ISqlConnectionFactory connectionFactory, SqlEntityQueryService queryService, AuthenticationHelper authHelper)
+        public OrdenTrabajoRepository(
+            ISqlConnectionFactory connectionFactory,
+            OrdenTrabajoQueryService queryService,
+            IAuthenticationHelper authHelper)
         {
             _connectionFactory = connectionFactory;
             _queryService = queryService;
@@ -25,9 +26,8 @@ namespace Taller_Mecanico_Arqui.Infrastructure.Persistence.Repositories
 
         public async Task<IEnumerable<OrdenTrabajo>> GetAllAsync()
         {
-            await using var connection = _connectionFactory.CreateConnection();
+            await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
             await connection.OpenAsync();
-            
             return _queryService.LoadOrdenesTrabajo(connection)
                 .OrderByDescending(o => o.FechaIngreso)
                 .ToList();
@@ -37,134 +37,88 @@ namespace Taller_Mecanico_Arqui.Infrastructure.Persistence.Repositories
         {
             try
             {
-                await using var connection = _connectionFactory.CreateConnection();
+                await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
                 var orden = _queryService.LoadOrdenesTrabajo(connection)
                     .FirstOrDefault(o => o.OrdenTrabajoId == id);
 
-                return Result<Domain.Entities.OrdenTrabajo?>.Success(orden);
+                return Result<OrdenTrabajo?>.Success(orden);
             }
             catch (Exception ex)
             {
-                return Result<Domain.Entities.OrdenTrabajo?>.Failure(ErrorCodes.DbError, $"Error al obtener orden de trabajo con ID {id}: {ex.Message}");
+                return Result<OrdenTrabajo?>.Failure(ErrorCodes.DbError,
+                    $"Error al obtener orden de trabajo con ID {id}: {ex.Message}");
             }
         }
 
+        // =====================================================================
+        // AddAsync — TRANSACCIÓN ÚNICA: inserta la orden, sus detalles y
+        // ajusta el stock de productos en un solo bloque atómico.
+        // Si cualquier paso falla se hace ROLLBACK automático.
+        // =====================================================================
         public async Task<Result<int>> AddAsync(OrdenTrabajo entity)
         {
-            await using var connection = _connectionFactory.CreateConnection();
+            await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
             await connection.OpenAsync();
-
             await using var transaction = await connection.BeginTransactionAsync();
 
             try
             {
-                var actorAuditoria = _authHelper.GetCurrentAuditActor();
+                var actor = _authHelper.GetCurrentAuditActor();
                 var fechaIngreso = entity.FechaIngreso == default ? DateTime.UtcNow : entity.FechaIngreso;
 
                 const string sql = @"
-INSERT INTO ordentrabajo (vehiculoid, fechaingreso, fechaentrega, estadotrabajo, estadopago, estadovehiculo, total, estado, isdeleted, fechaactualizacion, creadopor)
-VALUES (@vehiculoid, @fechaingreso, @fechaentrega, @estadotrabajo, @estadopago, @estadovehiculo, @total, 1, FALSE, @fechaactualizacion, @creadopor)
+INSERT INTO ordentrabajo
+    (vehiculoid, fechaingreso, fechaentrega, estadotrabajo, estadopago,
+     estadovehiculo, total, estado, isdeleted, fechaactualizacion, creadopor)
+VALUES
+    (@vehiculoid, @fechaingreso, @fechaentrega, @estadotrabajo, @estadopago,
+     @estadovehiculo, @total, 1, FALSE, @fechaactualizacion, @creadopor)
 RETURNING ordentrabajoid;";
 
-                await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("vehiculoid", entity.VehiculoId);
-                command.Parameters.AddWithValue("fechaingreso", fechaIngreso);
-                command.Parameters.AddWithValue("fechaentrega", (object?)entity.FechaEntrega ?? DBNull.Value);
-                command.Parameters.AddWithValue("estadotrabajo", entity.EstadoTrabajo.ToString());
-                command.Parameters.AddWithValue("estadopago", entity.EstadoPago.ToString());
-                command.Parameters.AddWithValue("estadovehiculo", entity.EstadoVehiculo);
-                command.Parameters.AddWithValue("total", entity.Total);
-                command.Parameters.AddWithValue("fechaactualizacion", (object?)entity.FechaActualizacion ?? DBNull.Value);
-                command.Parameters.AddWithValue("creadopor", actorAuditoria);
+                await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+                cmd.Parameters.AddWithValue("vehiculoid", entity.VehiculoId);
+                cmd.Parameters.AddWithValue("fechaingreso", fechaIngreso);
+                cmd.Parameters.AddWithValue("fechaentrega", (object?)entity.FechaEntrega ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("estadotrabajo", entity.EstadoTrabajo.ToString());
+                cmd.Parameters.AddWithValue("estadopago", entity.EstadoPago.ToString());
+                cmd.Parameters.AddWithValue("estadovehiculo", entity.EstadoVehiculo);
+                cmd.Parameters.AddWithValue("total", entity.Total);
+                cmd.Parameters.AddWithValue("fechaactualizacion", (object?)entity.FechaActualizacion ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("creadopor", actor);
 
-                var ordenIdObj = await command.ExecuteScalarAsync();
-                if (ordenIdObj == null || ordenIdObj == DBNull.Value)
+                var idObj = await cmd.ExecuteScalarAsync();
+                if (idObj == null || idObj == DBNull.Value)
                 {
                     await transaction.RollbackAsync();
-                    return Result<int>.Failure(ErrorCodes.DbInsertFailed, "No se pudo recuperar el ID de la orden de trabajo registrada.");
+                    return Result<int>.Failure(ErrorCodes.DbInsertFailed,
+                        "No se pudo recuperar el ID de la orden registrada.");
                 }
 
-                var ordenTrabajoId = Convert.ToInt32(ordenIdObj);
+                var ordenId = Convert.ToInt32(idObj);
 
-                await InsertarProductosAsync(connection, transaction, ordenTrabajoId, entity.ProductosUsados, actorAuditoria);
-                await InsertarServiciosAsync(connection, transaction, ordenTrabajoId, entity.ServiciosRealizados, actorAuditoria);
+                await InsertarProductosAsync(connection, transaction, ordenId, entity.ProductosUsados, actor);
+                await InsertarServiciosAsync(connection, transaction, ordenId, entity.ServiciosRealizados, actor);
+                await InsertarMecanicosAsync(connection, transaction, ordenId, entity.MecanicosAsignados, actor);
 
-                var stockResult = await AjustarStockProductosAsync(connection, transaction, entity.ProductosUsados, -1, actorAuditoria);
+                // Reducción de stock dentro de la misma transacción (COMMIT/ROLLBACK atómico)
+                var stockResult = await AjustarStockProductosAsync(
+                    connection, transaction, entity.ProductosUsados, movimiento: -1, actor);
                 if (stockResult.IsFailure)
                 {
                     await transaction.RollbackAsync();
-                    return Result<int>.Failure(
-                        stockResult.ErrorCode ?? ErrorCodes.DbError,
-                        stockResult.ErrorMessage ?? "No se pudo actualizar el stock de los productos de la orden.");
+                    return Result<int>.Failure(stockResult.ErrorCode!, stockResult.ErrorMessage!);
                 }
 
                 await transaction.CommitAsync();
-                return Result<int>.Success(ordenTrabajoId);
+                return Result<int>.Success(ordenId);
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return Result<int>.Failure(ErrorCodes.DbError, $"Error al registrar orden de trabajo: {ex.Message}");
-            }
-        }
-
-        private static async Task InsertarProductosAsync(
-            Npgsql.NpgsqlConnection connection,
-            Npgsql.NpgsqlTransaction transaction,
-            int ordenTrabajoId,
-            IReadOnlyCollection<OrdenTrabajoProducto> productos,
-            string actorAuditoria)
-        {
-            if (productos.Count == 0)
-            {
-                return;
-            }
-
-            const string sql = @"
-INSERT INTO ordentrabajoproducto (ordentrabajoid, productoid, cantidad, preciounitario, subtotal, creadopor)
-VALUES (@ordentrabajoid, @productoid, @cantidad, @preciounitario, @subtotal, @creadopor);";
-
-            foreach (var producto in productos)
-            {
-                await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("ordentrabajoid", ordenTrabajoId);
-                command.Parameters.AddWithValue("productoid", producto.ProductoId);
-                command.Parameters.AddWithValue("cantidad", producto.Cantidad);
-                command.Parameters.AddWithValue("preciounitario", Convert.ToDecimal(producto.PrecioUnitario));
-                command.Parameters.AddWithValue("subtotal", Convert.ToDecimal(producto.Subtotal));
-                command.Parameters.AddWithValue("creadopor", actorAuditoria);
-                await command.ExecuteNonQueryAsync();
-            }
-        }
-
-        private static async Task InsertarServiciosAsync(
-            Npgsql.NpgsqlConnection connection,
-            Npgsql.NpgsqlTransaction transaction,
-            int ordenTrabajoId,
-            IReadOnlyCollection<OrdenTrabajoServicio> servicios,
-            string actorAuditoria)
-        {
-            if (servicios.Count == 0)
-            {
-                return;
-            }
-
-            const string sql = @"
-INSERT INTO ordentrabajoservicio (ordentrabajoid, servicioid, cantidad, preciounitario, subtotal, creadopor)
-VALUES (@ordentrabajoid, @servicioid, @cantidad, @preciounitario, @subtotal, @creadopor);";
-
-            foreach (var servicio in servicios)
-            {
-                await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("ordentrabajoid", ordenTrabajoId);
-                command.Parameters.AddWithValue("servicioid", servicio.ServicioId);
-                command.Parameters.AddWithValue("cantidad", servicio.Cantidad);
-                command.Parameters.AddWithValue("preciounitario", Convert.ToDecimal(servicio.PrecioUnitario));
-                command.Parameters.AddWithValue("subtotal", Convert.ToDecimal(servicio.Subtotal));
-                command.Parameters.AddWithValue("creadopor", actorAuditoria);
-                await command.ExecuteNonQueryAsync();
+                return Result<int>.Failure(ErrorCodes.DbError,
+                    $"Error al registrar orden de trabajo: {ex.Message}");
             }
         }
 
@@ -172,108 +126,118 @@ VALUES (@ordentrabajoid, @servicioid, @cantidad, @preciounitario, @subtotal, @cr
         {
             try
             {
-                await using var connection = _connectionFactory.CreateConnection();
+                await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-            var sql = @"
-UPDATE ordentrabajo SET vehiculoid = @vehiculoid, fechaingreso = @fechaingreso, fechaentrega = @fechaentrega,
-estadotrabajo = @estadotrabajo, estadopago = @estadopago, estadovehiculo = @estadovehiculo, total = @total, fechaactualizacion = @fechaactualizacion, actualizadopor = @actualizadopor
-WHERE ordentrabajoid = @ordenid;";
+                var actor = _authHelper.GetCurrentAuditActor();
+                const string sql = @"
+UPDATE ordentrabajo
+SET vehiculoid = @vehiculoid, fechaingreso = @fechaingreso, fechaentrega = @fechaentrega,
+    estadotrabajo = @estadotrabajo, estadopago = @estadopago, estadovehiculo = @estadovehiculo,
+    total = @total, fechaactualizacion = @fechaactualizacion, actualizadopor = @actor
+WHERE ordentrabajoid = @id;";
 
-            var actorAuditoria = _authHelper.GetCurrentAuditActor();
+                await using var cmd = new NpgsqlCommand(sql, connection);
+                cmd.Parameters.AddWithValue("id", entity.OrdenTrabajoId);
+                cmd.Parameters.AddWithValue("vehiculoid", entity.VehiculoId);
+                cmd.Parameters.AddWithValue("fechaingreso", entity.FechaIngreso);
+                cmd.Parameters.AddWithValue("fechaentrega", (object?)entity.FechaEntrega ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("estadotrabajo", entity.EstadoTrabajo.ToString());
+                cmd.Parameters.AddWithValue("estadopago", entity.EstadoPago.ToString());
+                cmd.Parameters.AddWithValue("estadovehiculo", entity.EstadoVehiculo);
+                cmd.Parameters.AddWithValue("total", entity.Total);
+                cmd.Parameters.AddWithValue("fechaactualizacion", DateTime.UtcNow);
+                cmd.Parameters.AddWithValue("actor", actor);
 
-            await using var command = new Npgsql.NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("ordenid", entity.OrdenTrabajoId);
-            command.Parameters.AddWithValue("vehiculoid", entity.VehiculoId);
-            command.Parameters.AddWithValue("fechaingreso", entity.FechaIngreso);
-            command.Parameters.AddWithValue("fechaentrega", (object?)entity.FechaEntrega ?? DBNull.Value);
-            command.Parameters.AddWithValue("estadotrabajo", entity.EstadoTrabajo.ToString());
-            command.Parameters.AddWithValue("estadopago", entity.EstadoPago.ToString());
-            command.Parameters.AddWithValue("estadovehiculo", entity.EstadoVehiculo);
-            command.Parameters.AddWithValue("total", entity.Total);
-            command.Parameters.AddWithValue("fechaactualizacion", DateTime.UtcNow);
-            command.Parameters.AddWithValue("actualizadopor", actorAuditoria);
-
-            await command.ExecuteNonQueryAsync();
-            return Result.Success();
+                await cmd.ExecuteNonQueryAsync();
+                return Result.Success();
             }
             catch (Exception ex)
             {
-                return Result.Failure(ErrorCodes.DbError, $"Error al actualizar orden de trabajo: {ex.Message}");
+                return Result.Failure(ErrorCodes.DbError,
+                    $"Error al actualizar orden de trabajo: {ex.Message}");
             }
         }
 
-        public async Task DeleteAsync(int id)
-        {
-            await SetAnuladoAsync(id, true);
-        }
+        public async Task DeleteAsync(int id) => await SetAnuladoAsync(id, true);
 
+        // =====================================================================
+        // SetAnuladoAsync — DELETE LÓGICO con restauración/descuento de stock.
+        // Usa FOR UPDATE para bloqueo a nivel de fila y evitar condiciones de carrera.
+        // La restauración del stock ocurre dentro de la misma transacción.
+        // =====================================================================
         public async Task<Result> SetAnuladoAsync(int id, bool anulado)
         {
-            await using var connection = _connectionFactory.CreateConnection();
+            await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
             await connection.OpenAsync();
-
             await using var transaction = await connection.BeginTransactionAsync();
 
             try
             {
-                var actorAuditoria = _authHelper.GetCurrentAuditActor();
+                var actor = _authHelper.GetCurrentAuditActor();
 
+                // Bloqueo de fila para evitar anulaciones concurrentes
                 var estadoActual = await ObtenerEstadoActualAsync(connection, transaction, id);
                 if (estadoActual.IsFailure)
                 {
                     await transaction.RollbackAsync();
-                    return Result.Failure(estadoActual.ErrorCode ?? ErrorCodes.DbError, estadoActual.ErrorMessage ?? "No se pudo consultar la orden de trabajo.");
+                    return Result.Failure(estadoActual.ErrorCode!, estadoActual.ErrorMessage!);
                 }
 
                 if (!estadoActual.Value.HasValue)
                 {
                     await transaction.RollbackAsync();
-                    return Result.Failure(ErrorCodes.OrdenTrabajoNotFound, $"Orden de trabajo con ID {id} no encontrada");
+                    return Result.Failure(ErrorCodes.OrdenTrabajoNotFound,
+                        $"Orden de trabajo con ID {id} no encontrada.");
                 }
 
+                // Idempotencia: si ya está en el estado solicitado, commit sin cambios
                 if (estadoActual.Value.Value == anulado)
                 {
                     await transaction.CommitAsync();
                     return Result.Success();
                 }
 
-                var productos = await ObtenerProductosOrdenAsync(connection, transaction, id);
-                if (productos.IsFailure)
+                // Obtener productos de la orden para ajustar el stock
+                var productosResult = await ObtenerProductosOrdenAsync(connection, transaction, id);
+                if (productosResult.IsFailure)
                 {
                     await transaction.RollbackAsync();
-                    return Result.Failure(productos.ErrorCode ?? ErrorCodes.DbError, productos.ErrorMessage ?? "No se pudieron leer los productos asociados a la orden.");
+                    return Result.Failure(productosResult.ErrorCode!, productosResult.ErrorMessage!);
                 }
 
-                var movimientoStock = anulado ? 1 : -1;
-                var stockResult = await AjustarStockProductosAsync(connection, transaction, productos.Value!, movimientoStock, actorAuditoria);
+                // Anular → devolver stock (+1); Restaurar → descontar stock (-1)
+                var movimiento = anulado ? +1 : -1;
+                var stockResult = await AjustarStockProductosAsync(
+                    connection, transaction, productosResult.Value!, movimiento, actor);
                 if (stockResult.IsFailure)
                 {
                     await transaction.RollbackAsync();
-                    return Result.Failure(stockResult.ErrorCode ?? ErrorCodes.DbError, stockResult.ErrorMessage ?? "No se pudo ajustar el stock asociado a la orden.");
+                    return Result.Failure(stockResult.ErrorCode!, stockResult.ErrorMessage!);
                 }
 
-                const string sql = @"
+                const string sqlUpdate = @"
 UPDATE ordentrabajo
-SET estado = @estado,
-    isdeleted = @isdeleted,
-    fechaactualizacion = @fechaactualizacion,
-    eliminadopor = CASE WHEN @isdeleted THEN @actor ELSE NULL END,
-    actualizadopor = CASE WHEN NOT @isdeleted THEN @actor ELSE actualizadopor END
-WHERE ordentrabajoid = @ordenid;";
+SET estado          = @estado,
+    isdeleted       = @isdeleted,
+    fechaactualizacion = @fecha,
+    eliminadopor    = CASE WHEN @isdeleted THEN @actor ELSE NULL END,
+    actualizadopor  = CASE WHEN NOT @isdeleted THEN @actor ELSE actualizadopor END
+WHERE ordentrabajoid = @id;";
 
-                await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("ordenid", id);
-                command.Parameters.AddWithValue("estado", anulado ? 0 : 1);
-                command.Parameters.AddWithValue("isdeleted", anulado);
-                command.Parameters.AddWithValue("fechaactualizacion", DateTime.UtcNow);
-                command.Parameters.AddWithValue("actor", actorAuditoria);
+                await using var cmdUpdate = new NpgsqlCommand(sqlUpdate, connection, transaction);
+                cmdUpdate.Parameters.AddWithValue("id", id);
+                cmdUpdate.Parameters.AddWithValue("estado", anulado ? 0 : 1);
+                cmdUpdate.Parameters.AddWithValue("isdeleted", anulado);
+                cmdUpdate.Parameters.AddWithValue("fecha", DateTime.UtcNow);
+                cmdUpdate.Parameters.AddWithValue("actor", actor);
 
-                var rows = await command.ExecuteNonQueryAsync();
+                var rows = await cmdUpdate.ExecuteNonQueryAsync();
                 if (rows == 0)
                 {
                     await transaction.RollbackAsync();
-                    return Result.Failure(ErrorCodes.OrdenTrabajoNotFound, $"Orden de trabajo con ID {id} no encontrada");
+                    return Result.Failure(ErrorCodes.OrdenTrabajoNotFound,
+                        $"Orden de trabajo con ID {id} no encontrada.");
                 }
 
                 await transaction.CommitAsync();
@@ -282,133 +246,170 @@ WHERE ordentrabajoid = @ordenid;";
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return Result.Failure(ErrorCodes.DbError, $"Error al cambiar el estado de anulación de la orden de trabajo: {ex.Message}");
+                return Result.Failure(ErrorCodes.DbError,
+                    $"Error al cambiar estado de anulación: {ex.Message}");
+            }
+        }
+
+        // =====================================================================
+        // Helpers privados
+        // =====================================================================
+
+        private static async Task InsertarProductosAsync(
+            NpgsqlConnection connection, NpgsqlTransaction transaction,
+            int ordenId, IReadOnlyCollection<OrdenTrabajoProducto> productos, string actor)
+        {
+            if (productos.Count == 0) return;
+            const string sql = @"
+INSERT INTO ordentrabajoproducto
+    (ordentrabajoid, productoid, cantidad, preciounitario, subtotal, creadopor)
+VALUES (@ordenid, @productoid, @cantidad, @precio, @subtotal, @actor);";
+
+            foreach (var p in productos)
+            {
+                await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+                cmd.Parameters.AddWithValue("ordenid", ordenId);
+                cmd.Parameters.AddWithValue("productoid", p.ProductoId);
+                cmd.Parameters.AddWithValue("cantidad", p.Cantidad);
+                cmd.Parameters.AddWithValue("precio", Convert.ToDecimal(p.PrecioUnitario));
+                cmd.Parameters.AddWithValue("subtotal", Convert.ToDecimal(p.Subtotal));
+                cmd.Parameters.AddWithValue("actor", actor);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        private static async Task InsertarServiciosAsync(
+            NpgsqlConnection connection, NpgsqlTransaction transaction,
+            int ordenId, IReadOnlyCollection<OrdenTrabajoServicio> servicios, string actor)
+        {
+            if (servicios.Count == 0) return;
+            const string sql = @"
+INSERT INTO ordentrabajoservicio
+    (ordentrabajoid, servicioid, cantidad, preciounitario, subtotal, creadopor)
+VALUES (@ordenid, @servicioid, @cantidad, @precio, @subtotal, @actor);";
+
+            foreach (var s in servicios)
+            {
+                await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+                cmd.Parameters.AddWithValue("ordenid", ordenId);
+                cmd.Parameters.AddWithValue("servicioid", s.ServicioId);
+                cmd.Parameters.AddWithValue("cantidad", s.Cantidad);
+                cmd.Parameters.AddWithValue("precio", Convert.ToDecimal(s.PrecioUnitario));
+                cmd.Parameters.AddWithValue("subtotal", Convert.ToDecimal(s.Subtotal));
+                cmd.Parameters.AddWithValue("actor", actor);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        private static async Task InsertarMecanicosAsync(
+            NpgsqlConnection connection, NpgsqlTransaction transaction,
+            int ordenId, IReadOnlyCollection<OrdenTrabajoMecanico> mecanicos, string actor)
+        {
+            if (mecanicos.Count == 0) return;
+            const string sql = @"
+INSERT INTO ordentrabajomecanico (ordentrabajoid, mecanicoid, fechaasignacion)
+VALUES (@ordenid, @mecanicoid, @fecha)
+ON CONFLICT DO NOTHING;";
+
+            foreach (var m in mecanicos)
+            {
+                await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+                cmd.Parameters.AddWithValue("ordenid", ordenId);
+                cmd.Parameters.AddWithValue("mecanicoid", m.MecanicoId);
+                cmd.Parameters.AddWithValue("fecha", m.FechaAsignacion);
+                await cmd.ExecuteNonQueryAsync();
             }
         }
 
         private static async Task<Result<bool?>> ObtenerEstadoActualAsync(
-            Npgsql.NpgsqlConnection connection,
-            Npgsql.NpgsqlTransaction transaction,
-            int ordenTrabajoId)
+            NpgsqlConnection connection, NpgsqlTransaction transaction, int id)
         {
-            const string sql = @"
-SELECT isdeleted
-FROM ordentrabajo
-WHERE ordentrabajoid = @ordenid
-FOR UPDATE;";
+            const string sql = "SELECT isdeleted FROM ordentrabajo WHERE ordentrabajoid = @id FOR UPDATE;";
+            await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+            cmd.Parameters.AddWithValue("id", id);
 
-            await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-            command.Parameters.AddWithValue("ordenid", ordenTrabajoId);
-
-            await using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
-            {
                 return Result<bool?>.Success(null);
-            }
 
             return Result<bool?>.Success(reader.GetBoolean(0));
         }
 
         private static async Task<Result<IReadOnlyCollection<OrdenTrabajoProducto>>> ObtenerProductosOrdenAsync(
-            Npgsql.NpgsqlConnection connection,
-            Npgsql.NpgsqlTransaction transaction,
-            int ordenTrabajoId)
+            NpgsqlConnection connection, NpgsqlTransaction transaction, int id)
         {
             const string sql = @"
-SELECT productoid, cantidad
-FROM ordentrabajoproducto
-WHERE ordentrabajoid = @ordenid
-ORDER BY ordentrabajoproductoid;";
+SELECT productoid, cantidad FROM ordentrabajoproducto
+WHERE ordentrabajoid = @id ORDER BY ordentrabajoproductoid;";
 
-            var productos = new List<OrdenTrabajoProducto>();
+            var lista = new List<OrdenTrabajoProducto>();
+            await using var cmd = new NpgsqlCommand(sql, connection, transaction);
+            cmd.Parameters.AddWithValue("id", id);
 
-            await using var command = new Npgsql.NpgsqlCommand(sql, connection, transaction);
-            command.Parameters.AddWithValue("ordenid", ordenTrabajoId);
-
-            await using var reader = await command.ExecuteReaderAsync();
+            await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
-            {
-                var productoId = reader.GetInt32(reader.GetOrdinal("productoid"));
-                var cantidad = reader.GetInt32(reader.GetOrdinal("cantidad"));
-                productos.Add(new OrdenTrabajoProducto(ordenTrabajoId, productoId, cantidad, 0, 0));
-            }
+                lista.Add(new OrdenTrabajoProducto(id, reader.GetInt32(0), reader.GetInt32(1), 0, 0));
 
-            return Result<IReadOnlyCollection<OrdenTrabajoProducto>>.Success(productos);
+            return Result<IReadOnlyCollection<OrdenTrabajoProducto>>.Success(lista);
         }
 
+        // =====================================================================
+        // AjustarStockProductosAsync
+        // movimiento = -1 → reducir stock (crear/restaurar orden)
+        // movimiento = +1 → devolver stock (anular orden)
+        // Usa FOR UPDATE en cada producto para bloqueo a nivel de fila.
+        // =====================================================================
         private static async Task<Result> AjustarStockProductosAsync(
-            Npgsql.NpgsqlConnection connection,
-            Npgsql.NpgsqlTransaction transaction,
-            IEnumerable<OrdenTrabajoProducto> productos,
-            int movimiento,
-            string actorAuditoria)
+            NpgsqlConnection connection, NpgsqlTransaction transaction,
+            IEnumerable<OrdenTrabajoProducto> productos, int movimiento, string actor)
         {
-            var productosAgrupados = productos
+            var agrupados = productos
                 .Where(p => p.ProductoId > 0 && p.Cantidad > 0)
                 .GroupBy(p => p.ProductoId)
-                .Select(grupo => new
-                {
-                    ProductoId = grupo.Key,
-                    Cantidad = grupo.Sum(x => x.Cantidad)
-                })
+                .Select(g => new { ProductoId = g.Key, Cantidad = g.Sum(x => x.Cantidad) })
                 .ToList();
 
-            if (productosAgrupados.Count == 0)
+            if (agrupados.Count == 0) return Result.Success();
+
+            foreach (var item in agrupados)
             {
-                return Result.Success();
-            }
+                const string sqlLeer = "SELECT nombre, stock FROM producto WHERE productoid = @id FOR UPDATE;";
+                await using var cmdLeer = new NpgsqlCommand(sqlLeer, connection, transaction);
+                cmdLeer.Parameters.AddWithValue("id", item.ProductoId);
 
-            foreach (var producto in productosAgrupados)
-            {
-                const string consultaProductoSql = @"
-SELECT nombre, stock
-FROM producto
-WHERE productoid = @productoid
-FOR UPDATE;";
-
-                await using var consultaProducto = new Npgsql.NpgsqlCommand(consultaProductoSql, connection, transaction);
-                consultaProducto.Parameters.AddWithValue("productoid", producto.ProductoId);
-
-                string? nombreProducto = null;
+                string? nombre = null;
                 int stockActual;
 
-                await using (var reader = await consultaProducto.ExecuteReaderAsync())
+                await using (var reader = await cmdLeer.ExecuteReaderAsync())
                 {
                     if (!await reader.ReadAsync())
-                    {
-                        return Result.Failure(ErrorCodes.ValidationInvalidValue, $"Producto con ID {producto.ProductoId} no encontrado.");
-                    }
+                        return Result.Failure(ErrorCodes.ValidationInvalidValue,
+                            $"Producto con ID {item.ProductoId} no encontrado.");
 
-                    nombreProducto = reader.IsDBNull(reader.GetOrdinal("nombre")) ? null : reader.GetString(reader.GetOrdinal("nombre"));
-                    stockActual = reader.GetInt32(reader.GetOrdinal("stock"));
+                    nombre = reader.IsDBNull(0) ? null : reader.GetString(0);
+                    stockActual = reader.GetInt32(1);
                 }
 
-                var nuevoStock = stockActual + (movimiento * producto.Cantidad);
+                var nuevoStock = stockActual + (movimiento * item.Cantidad);
                 if (nuevoStock < 0)
-                {
-                    return Result.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        $"Stock insuficiente para el producto '{nombreProducto ?? producto.ProductoId.ToString()}'. Stock actual: {stockActual}.");
-                }
+                    return Result.Failure(ErrorCodes.ValidationInvalidValue,
+                        $"Stock insuficiente para '{nombre ?? item.ProductoId.ToString()}'. Stock actual: {stockActual}.");
 
-                const string actualizarStockSql = @"
+                const string sqlActualizar = @"
 UPDATE producto
-SET stock = @stock,
-    fechaactualizacion = @fechaactualizacion,
-    actualizadopor = @actualizadopor
-WHERE productoid = @productoid;";
+SET stock = @stock, fechaactualizacion = @fecha, actualizadopor = @actor
+WHERE productoid = @id;";
 
-                await using var actualizarStock = new Npgsql.NpgsqlCommand(actualizarStockSql, connection, transaction);
-                actualizarStock.Parameters.AddWithValue("productoid", producto.ProductoId);
-                actualizarStock.Parameters.AddWithValue("stock", nuevoStock);
-                actualizarStock.Parameters.AddWithValue("fechaactualizacion", DateTime.UtcNow);
-                actualizarStock.Parameters.AddWithValue("actualizadopor", actorAuditoria);
+                await using var cmdActualizar = new NpgsqlCommand(sqlActualizar, connection, transaction);
+                cmdActualizar.Parameters.AddWithValue("stock", nuevoStock);
+                cmdActualizar.Parameters.AddWithValue("fecha", DateTime.UtcNow);
+                cmdActualizar.Parameters.AddWithValue("actor", actor);
+                cmdActualizar.Parameters.AddWithValue("id", item.ProductoId);
 
-                var filasAfectadas = await actualizarStock.ExecuteNonQueryAsync();
-                if (filasAfectadas == 0)
-                {
-                    return Result.Failure(ErrorCodes.DbError, $"No se pudo actualizar el stock del producto con ID {producto.ProductoId}.");
-                }
+                var rows = await cmdActualizar.ExecuteNonQueryAsync();
+                if (rows == 0)
+                    return Result.Failure(ErrorCodes.DbError,
+                        $"No se pudo actualizar el stock del producto con ID {item.ProductoId}.");
             }
 
             return Result.Success();

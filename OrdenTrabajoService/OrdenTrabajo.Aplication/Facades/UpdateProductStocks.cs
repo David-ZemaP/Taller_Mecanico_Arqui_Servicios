@@ -1,9 +1,9 @@
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using OrdenTrabajoService.Application.DTOs.OrdenTrabajo;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Interfaces;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Application.Facades
+namespace OrdenTrabajoService.Application.Facades
 {
     public class UpdateProductStocks
     {
@@ -16,74 +16,47 @@ namespace Taller_Mecanico_Arqui.Application.Facades
 
         public async Task<Result> ExecuteAsync(IEnumerable<CreateOrdenTrabajoProductoDto> productos)
         {
-            foreach (var productoDto in productos.Where(p => p.ProductoId > 0 && p.Cantidad > 0))
+            foreach (var dto in productos.Where(p => p.ProductoId > 0 && p.Cantidad > 0))
             {
-                var productoResult = await _productoRepository.GetByIdAsync(productoDto.ProductoId);
-                if (productoResult.IsFailure)
-                {
-                    return Result.Failure(
-                        productoResult.ErrorCode ?? ErrorCodes.DbError,
-                        productoResult.ErrorMessage ?? "Error al consultar producto.");
-                }
+                var result = await _productoRepository.GetByIdAsync(dto.ProductoId);
+                if (result.IsFailure)
+                    return Result.Failure(result.ErrorCode!, result.ErrorMessage!);
 
-                var producto = productoResult.Value;
+                var producto = result.Value;
                 if (producto == null)
-                {
-                    return Result.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        $"Producto con ID {productoDto.ProductoId} no encontrado.");
-                }
+                    return Result.Failure(ErrorCodes.ValidationInvalidValue,
+                        $"Producto con ID {dto.ProductoId} no encontrado.");
 
-                if (producto.Stock < productoDto.Cantidad)
-                {
-                    return Result.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        $"Stock insuficiente para el producto '{producto.Nombre}'. Stock actual: {producto.Stock}.");
-                }
+                if (producto.Stock < dto.Cantidad)
+                    return Result.Failure(ErrorCodes.ValidationInvalidValue,
+                        $"Stock insuficiente para '{producto.Nombre}'. Stock actual: {producto.Stock}.");
 
-                producto.ReducirStock(productoDto.Cantidad);
+                producto.ReducirStock(dto.Cantidad);
                 var updateResult = await _productoRepository.UpdateAsync(producto);
                 if (updateResult.IsFailure)
-                {
-                    return Result.Failure(
-                        updateResult.ErrorCode ?? ErrorCodes.DbError,
-                        updateResult.ErrorMessage ?? "No se pudo actualizar el stock del producto.");
-                }
+                    return Result.Failure(updateResult.ErrorCode!, updateResult.ErrorMessage!);
             }
-
             return Result.Success();
         }
 
         public async Task<Result> RestoreAsync(IEnumerable<OrdenTrabajoProducto> productos)
         {
-            foreach (var productoOrden in productos.Where(p => p.ProductoId > 0 && p.Cantidad > 0))
+            foreach (var item in productos.Where(p => p.ProductoId > 0 && p.Cantidad > 0))
             {
-                var productoResult = await _productoRepository.GetByIdAsync(productoOrden.ProductoId);
-                if (productoResult.IsFailure)
-                {
-                    return Result.Failure(
-                        productoResult.ErrorCode ?? ErrorCodes.DbError,
-                        productoResult.ErrorMessage ?? "Error al consultar producto.");
-                }
+                var result = await _productoRepository.GetByIdAsync(item.ProductoId);
+                if (result.IsFailure)
+                    return Result.Failure(result.ErrorCode!, result.ErrorMessage!);
 
-                var producto = productoResult.Value;
+                var producto = result.Value;
                 if (producto == null)
-                {
-                    return Result.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        $"Producto con ID {productoOrden.ProductoId} no encontrado.");
-                }
+                    return Result.Failure(ErrorCodes.ValidationInvalidValue,
+                        $"Producto con ID {item.ProductoId} no encontrado.");
 
-                producto.AumentarStock(productoOrden.Cantidad);
+                producto.AumentarStock(item.Cantidad);
                 var updateResult = await _productoRepository.UpdateAsync(producto);
                 if (updateResult.IsFailure)
-                {
-                    return Result.Failure(
-                        updateResult.ErrorCode ?? ErrorCodes.DbError,
-                        updateResult.ErrorMessage ?? "No se pudo reponer el stock del producto.");
-                }
+                    return Result.Failure(updateResult.ErrorCode!, updateResult.ErrorMessage!);
             }
-
             return Result.Success();
         }
     }

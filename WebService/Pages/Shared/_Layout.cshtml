@@ -1,4 +1,4 @@
-@using Taller_Mecanico_Arqui.Domain.Enums
+@using WebService.Models
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
     var isHomeSection = string.Equals(currentPage, "/Index", System.StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(currentPage);
@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Taller_Mecanico_Arqui.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/WebService.styles.css" asp-append-version="true" />
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .select2-container--default .select2-selection--single {

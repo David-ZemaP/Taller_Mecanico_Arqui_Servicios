@@ -1,6 +1,5 @@
 @page
-@model Taller_Mecanico_Arqui.Pages.Vehiculo.IndexModel
-@using Taller_Mecanico_Arqui.Domain.Enums
+@model WebService.Pages.Vehiculos.IndexModel
 @{
     ViewData["Title"] = "Vehículos";
 }
@@ -75,10 +74,10 @@
                         <tr class="border-bottom border-secondary">
                             <td><span class="badge bg-secondary">@(contador++)</span></td>
                             <td><span class="badge bg-light text-dark px-2 py-1 border border-secondary shadow-sm" style="font-family: monospace;">@item.Placa</span></td>
-                            <td class="text-white fw-semibold">@item.Marca?.Nombre</td>
-                            <td class="text-light">@item.Modelo?.Nombre</td>
+                            <td class="text-white fw-semibold">@item.MarcaNombre</td>
+                            <td class="text-light">@item.ModeloNombre</td>
                             <td class="text-light">@item.Anio</td>
-                            <td class="text-light"><i class="bi bi-person text-teal me-2"></i>@(item.Cliente?.NombreCompleto)</td>
+                            <td class="text-light"><i class="bi bi-person text-teal me-2"></i>@item.ClienteNombre</td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
                                     <button type="button" class="btn btn-icon btn-sm btn-outline-info border-secondary" title="Detalles" data-bs-toggle="modal" data-bs-target="#detailsModal" onclick="verDetalles(@item.VehiculoId)"><i class="bi bi-eye"></i></button>

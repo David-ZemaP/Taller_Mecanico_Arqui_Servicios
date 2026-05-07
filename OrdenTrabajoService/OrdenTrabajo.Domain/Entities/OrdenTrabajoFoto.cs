@@ -1,4 +1,4 @@
-namespace Taller_Mecanico_Arqui.Domain.Entities
+namespace OrdenTrabajoService.Domain.Entities
 {
     public class OrdenTrabajoFoto
     {
@@ -8,8 +8,6 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
         public string ContentType { get; private set; } = string.Empty;
         public string NombreArchivo { get; private set; } = string.Empty;
         public DateTime FechaRegistro { get; private set; }
-
-        public OrdenTrabajo? OrdenTrabajo { get; private set; }
 
         private OrdenTrabajoFoto() { }
 

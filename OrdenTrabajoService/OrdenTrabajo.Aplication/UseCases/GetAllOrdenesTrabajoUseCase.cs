@@ -1,7 +1,7 @@
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Interfaces;
 
-namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
+namespace OrdenTrabajoService.Application.UseCases
 {
     public class GetAllOrdenesTrabajoUseCase
     {
@@ -12,7 +12,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
             _repository = repository;
         }
 
-        public async Task<IEnumerable<Domain.Entities.OrdenTrabajo>> ExecuteAsync()
+        public async Task<IEnumerable<OrdenTrabajo>> ExecuteAsync()
         {
             return await _repository.GetAllAsync();
         }

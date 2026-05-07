@@ -1,8 +1,8 @@
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Common;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Interfaces;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
+namespace OrdenTrabajoService.Application.UseCases
 {
     public class GetOrdenTrabajoByIdUseCase
     {
@@ -13,16 +13,17 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
             _repository = repository;
         }
 
-        public async Task<Result<Domain.Entities.OrdenTrabajo>> ExecuteAsync(int id)
+        public async Task<Result<OrdenTrabajo>> ExecuteAsync(int id)
         {
             var result = await _repository.GetByIdAsync(id);
             if (result.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(result.ErrorCode ?? ErrorCodes.DbError, result.ErrorMessage ?? "Error al consultar orden de trabajo.");
+                return Result<OrdenTrabajo>.Failure(result.ErrorCode!, result.ErrorMessage!);
 
             if (result.Value == null)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(ErrorCodes.OrdenTrabajoNotFound, $"Orden de trabajo con ID {id} no encontrada.");
+                return Result<OrdenTrabajo>.Failure(ErrorCodes.OrdenTrabajoNotFound,
+                    $"Orden de trabajo con ID {id} no encontrada.");
 
-            return Result<Domain.Entities.OrdenTrabajo>.Success(result.Value);
+            return Result<OrdenTrabajo>.Success(result.Value);
         }
     }
 }
