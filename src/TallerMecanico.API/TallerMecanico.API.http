@@ -1,0 +1,16 @@
+@TallerMecanico.API_HostAddress = http://localhost:5290
+
+GET {{TallerMecanico.API_HostAddress}}/api/clientes
+Accept: application/json
+
+###
+
+GET {{TallerMecanico.API_HostAddress}}/api/servicios
+Accept: application/json
+
+###
+
+GET {{TallerMecanico.API_HostAddress}}/api/ordenestrabajo
+Accept: application/json
+
+###
