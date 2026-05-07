@@ -9,7 +9,16 @@
       "Bash(docker exec *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5229/api/Clientes\")",
       "Bash(docker rm *)",
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "Bash(Get-ChildItem -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(cd \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\Frontend\" && Get-ChildItem -Recurse -File | Select-Object -ExpandProperty FullName | Where-Object { $_ -notmatch '\\(bin|obj\\)' } | Sort-Object)",
+      "PowerShell(cd \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\Frontend\" && ls -Recurse -File | Select-Object -ExpandProperty FullName | Where-Object { $_ -notmatch 'bin' -and $_ -notmatch 'obj' } | Sort-Object)",
+      "PowerShell(cd \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\WebService\" && Get-ChildItem -Recurse -File | Where-Object { $_.Extension -in '.cs', '.cshtml', '.csproj', '.css', '.json' } | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "PowerShell(cd \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\OrdenTrabajoService\" && Get-ChildItem -Recurse -File | Where-Object { $_.Extension -in '.cs', '.csproj' } | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(dotnet restore *)",
+      "Bash(dir \"%USERPROFILE%\\\\.nuget\\\\packages\\\\closedxml\" /b)",
+      "PowerShell(Get-ChildItem *)"
     ]
   }
 }
