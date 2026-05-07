@@ -1,15 +1,9 @@
-using OxyPlot;
-using OxyPlot.Series;
-using OxyPlot.Wpf;
-using System.IO;
-using System.Text;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using Taller_Mecanico_WebService.Helpers;
 
 namespace Taller_Mecanico_WebService.Services.Reports;
 
-/// <summary>
-/// Servicio para generar gráficos estadísticos usando OxyPlot
-/// Soporta pie charts, bar charts y line charts para reportes
-/// </summary>
 public class ChartService : IChartService
 {
     private readonly ILogger<ChartService> _logger;
@@ -17,174 +11,117 @@ public class ChartService : IChartService
 
     public ChartService(ILogger<ChartService> logger, ReportFormatter formatter)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
+        _logger = logger;
+        _formatter = formatter;
     }
 
-    /// <summary>
-    /// Genera gráfico de pastel (pie chart) con distribución de servicios
-    /// </summary>
-    public async Task<byte[]> GenerarGraficoPastelAsync(
-        Dictionary<string, decimal> datos,
-        string titulo,
-        int ancho = 600,
-        int alto = 400)
+    public async Task<byte[]> GenerarGraficoPastelAsync(Dictionary<string, decimal> datos, string titulo, int ancho = 600, int alto = 400)
     {
+        return await DibujarGraficoBarrasITextAsync(datos, titulo, ancho, alto);
+    }
+
+    public async Task<byte[]> GenerarGraficoBarrasAsync(Dictionary<string, decimal> datos, string titulo, string ejeX, string ejeY, int ancho = 600, int alto = 400)
+    {
+        return await DibujarGraficoBarrasITextAsync(datos, titulo, ancho, alto);
+    }
+
+    public async Task<byte[]> GenerarGraficoLineasAsync(Dictionary<string, decimal> datos, string titulo, string ejeX, string ejeY, int ancho = 600, int alto = 400)
+    {
+        return await DibujarGraficoBarrasITextAsync(datos, titulo, ancho, alto);
+    }
+
+    private async Task<byte[]> DibujarGraficoBarrasITextAsync(Dictionary<string, decimal> datos, string titulo, int ancho, int alto)
+    {
+        await Task.Yield();
         try
         {
-            _logger.LogInformation($"📊 Generando gráfico de pastel: {titulo}");
+            using var ms = new MemoryStream();
+            var doc = new Document(new Rectangle(ancho, alto), 20, 20, 30, 20);
+            var writer = PdfWriter.GetInstance(doc, ms);
+            doc.Open();
 
-            var model = new PlotModel { Title = titulo };
-            var pieSeries = new PieSeries();
+            var cb = writer.DirectContent;
+            var teal = new BaseColor(32, 201, 151);
+            var dark = new BaseColor(26, 26, 46);
+            var white = new BaseColor(255, 255, 255);
+            var gray = new BaseColor(100, 100, 120);
 
-            foreach (var item in datos.OrderByDescending(x => x.Value))
+            // Fondo
+            cb.SetColorFill(dark);
+            cb.Rectangle(0, 0, ancho, alto);
+            cb.Fill();
+
+            // Título
+            var font = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 13, white);
+            var titlePhrase = new Phrase(titulo, font);
+            ColumnText.ShowTextAligned(cb, Element.ALIGN_CENTER, titlePhrase, ancho / 2f, alto - 25, 0);
+
+            if (datos == null || datos.Count == 0)
             {
-                var porcentaje = (double)(item.Value / datos.Values.Sum() * 100);
-                pieSeries.Slices.Add(new PieSlice 
-                { 
-                    Label = $"{item.Key} ({porcentaje:F1}%)", 
-                    Value = (double)item.Value 
-                });
+                doc.Close();
+                return ms.ToArray();
             }
 
-            model.Series.Add(pieSeries);
+            decimal maxVal = datos.Values.Max();
+            if (maxVal == 0) maxVal = 1;
 
-            var pngExporter = new PngExporter { Width = ancho, Height = alto };
-            using (var stream = new MemoryStream())
+            float marginLeft = 60f;
+            float marginRight = 20f;
+            float marginBottom = 50f;
+            float marginTop = 50f;
+            float chartWidth = ancho - marginLeft - marginRight;
+            float chartHeight = alto - marginBottom - marginTop;
+
+            float barWidth = (chartWidth / datos.Count) * 0.6f;
+            float barSpacing = chartWidth / datos.Count;
+            float barStartX = marginLeft + barSpacing * 0.2f;
+
+            int i = 0;
+            foreach (var kv in datos)
             {
-                pngExporter.Export(model, stream);
-                _logger.LogInformation($"✅ Gráfico de pastel generado exitosamente");
-                return stream.ToArray();
+                float barHeight = (float)(kv.Value / maxVal) * chartHeight;
+                float x = barStartX + i * barSpacing;
+                float y = marginBottom;
+
+                // Barra
+                cb.SetColorFill(teal);
+                cb.Rectangle(x, y, barWidth, barHeight);
+                cb.Fill();
+
+                // Valor encima de la barra
+                var valFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 8, white);
+                ColumnText.ShowTextAligned(cb, Element.ALIGN_CENTER,
+                    new Phrase(_formatter.FormatMoneda(kv.Value), valFont),
+                    x + barWidth / 2, y + barHeight + 5, 0);
+
+                // Etiqueta debajo
+                var labelFont = FontFactory.GetFont(FontFactory.HELVETICA, 7, white);
+                var label = kv.Key.Length > 12 ? kv.Key.Substring(0, 12) + "..." : kv.Key;
+                ColumnText.ShowTextAligned(cb, Element.ALIGN_CENTER,
+                    new Phrase(label, labelFont),
+                    x + barWidth / 2, marginBottom - 15, 45);
+
+                i++;
             }
+
+            // Eje Y
+            cb.SetColorStroke(gray);
+            cb.MoveTo(marginLeft, marginBottom);
+            cb.LineTo(marginLeft, marginBottom + chartHeight);
+            cb.Stroke();
+
+            // Eje X
+            cb.MoveTo(marginLeft, marginBottom);
+            cb.LineTo(marginLeft + chartWidth, marginBottom);
+            cb.Stroke();
+
+            doc.Close();
+            return ms.ToArray();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error generando gráfico de pastel");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Genera gráfico de barras con datos de servicios
-    /// </summary>
-    public async Task<byte[]> GenerarGraficoBarrasAsync(
-        Dictionary<string, decimal> datos,
-        string titulo,
-        string ejeX,
-        string ejeY,
-        int ancho = 600,
-        int alto = 400)
-    {
-        try
-        {
-            _logger.LogInformation($"📊 Generando gráfico de barras: {titulo}");
-
-            var model = new PlotModel 
-            { 
-                Title = titulo,
-                Background = OxyColor.FromRgb(255, 255, 255)
-            };
-
-            // Ejes
-            model.Axes.Add(new OxyPlot.Axes.CategoryAxis 
-            { 
-                Position = OxyPlot.Axes.AxisPosition.Bottom,
-                Title = ejeX
-            });
-
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis 
-            { 
-                Position = OxyPlot.Axes.AxisPosition.Left,
-                Title = ejeY
-            });
-
-            // Series de barras
-            var barSeries = new OxyPlot.Series.BarSeries();
-            int index = 0;
-            foreach (var item in datos)
-            {
-                var categoryAxis = model.Axes.OfType<OxyPlot.Axes.CategoryAxis>().First();
-                categoryAxis.Labels.Add(item.Key);
-                barSeries.Items.Add(new OxyPlot.Series.BarItem { Value = (double)item.Value });
-                index++;
-            }
-
-            model.Series.Add(barSeries);
-
-            var pngExporter = new PngExporter { Width = ancho, Height = alto };
-            using (var stream = new MemoryStream())
-            {
-                pngExporter.Export(model, stream);
-                _logger.LogInformation($"✅ Gráfico de barras generado exitosamente");
-                return stream.ToArray();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Error generando gráfico de barras");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Genera gráfico de líneas para tendencias temporales
-    /// </summary>
-    public async Task<byte[]> GenerarGraficoLineasAsync(
-        Dictionary<string, decimal> datos,
-        string titulo,
-        string ejeX,
-        string ejeY,
-        int ancho = 600,
-        int alto = 400)
-    {
-        try
-        {
-            _logger.LogInformation($"📊 Generando gráfico de líneas: {titulo}");
-
-            var model = new PlotModel 
-            { 
-                Title = titulo,
-                Background = OxyColor.FromRgb(255, 255, 255)
-            };
-
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis 
-            { 
-                Position = OxyPlot.Axes.AxisPosition.Bottom,
-                Title = ejeX
-            });
-
-            model.Axes.Add(new OxyPlot.Axes.LinearAxis 
-            { 
-                Position = OxyPlot.Axes.AxisPosition.Left,
-                Title = ejeY
-            });
-
-            var lineSeries = new OxyPlot.Series.LineSeries 
-            { 
-                Color = OxyColor.FromRgb(41, 128, 185)
-            };
-
-            double xValue = 1;
-            foreach (var item in datos)
-            {
-                lineSeries.Points.Add(new DataPoint(xValue, (double)item.Value));
-                xValue++;
-            }
-
-            model.Series.Add(lineSeries);
-
-            var pngExporter = new PngExporter { Width = ancho, Height = alto };
-            using (var stream = new MemoryStream())
-            {
-                pngExporter.Export(model, stream);
-                _logger.LogInformation($"✅ Gráfico de líneas generado exitosamente");
-                return stream.ToArray();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "❌ Error generando gráfico de líneas");
-            throw;
+            _logger.LogError(ex, "Error generando gráfico");
+            return Array.Empty<byte>();
         }
     }
 }

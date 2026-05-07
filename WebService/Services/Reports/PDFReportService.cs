@@ -1,169 +1,138 @@
 using iTextSharp.text;
 using iTextSharp.text.pdf;
-using System.IO;
+using Taller_Mecanico_WebService.Helpers;
 
 namespace Taller_Mecanico_WebService.Services.Reports;
 
-/// <summary>
-/// Servicio para generar reportes en formato PDF con iTextSharp
-/// Incluye estilos corporativos, logo y auditoría
-/// </summary>
 public class PDFReportService : IPDFReportService
 {
     private readonly ILogger<PDFReportService> _logger;
     private readonly ReportFormatter _formatter;
     private readonly AuditInfoHelper _auditHelper;
 
+    private static readonly BaseColor ColorAzul = new BaseColor(41, 128, 185);
+    private static readonly BaseColor ColorBlanco = new BaseColor(255, 255, 255);
+    private static readonly BaseColor ColorGrisClaro = new BaseColor(236, 240, 241);
+    private static readonly BaseColor ColorNegro = new BaseColor(0, 0, 0);
+
     public PDFReportService(ILogger<PDFReportService> logger, ReportFormatter formatter, AuditInfoHelper auditHelper)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
-        _auditHelper = auditHelper ?? throw new ArgumentNullException(nameof(auditHelper));
+        _logger = logger;
+        _formatter = formatter;
+        _auditHelper = auditHelper;
     }
 
-    /// <summary>
-    /// Genera reporte PDF de Clientes y Vehículos
-    /// Incluye tabla con datos filtrados y pie de página con auditoría
-    /// </summary>
     public async Task<byte[]> GenerarReporteClientesVehiculosAsync(
         dynamic reporteData,
         string nombreCliente,
         string marcaVehiculo,
         string infoAuditoria)
     {
+        await Task.Yield();
         try
         {
-            _logger.LogInformation($"🔴 Generando PDF: Reporte Clientes y Vehículos");
+            using var ms = new MemoryStream();
+            var doc = new Document(PageSize.A4, 30, 30, 40, 50);
+            var writer = PdfWriter.GetInstance(doc, ms);
+            doc.Open();
 
-            using (var memoryStream = new MemoryStream())
+            // Título con fondo azul usando tabla 1 celda
+            var tblTitulo = new PdfPTable(1) { WidthPercentage = 100, SpacingAfter = 5 };
+            var celdaTitulo = new PdfPCell(new Phrase("REPORTE DE CLIENTES Y VEHÍCULOS",
+                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14, ColorBlanco)))
             {
-                var document = new Document(PageSize.A4, 30, 30, 40, 50);
-                var writer = PdfWriter.GetInstance(document, memoryStream);
+                BackgroundColor = ColorAzul,
+                HorizontalAlignment = Element.ALIGN_CENTER,
+                Padding = 8,
+                Border = Rectangle.NO_BORDER
+            };
+            tblTitulo.AddCell(celdaTitulo);
+            doc.Add(tblTitulo);
 
-                document.Open();
+            // Filtros
+            doc.Add(new Paragraph($"Filtros: Nombre/CI: {nombreCliente ?? "Todos"} | Marca: {marcaVehiculo ?? "Todas"}",
+                FontFactory.GetFont(FontFactory.HELVETICA_OBLIQUE, 10))
+            { SpacingAfter = 10 });
 
-                // Encabezado principal
-                var titulo = new Paragraph("REPORTE DE CLIENTES Y VEHÍCULOS", 
-                    new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD, BaseColor.WHITE))
+            // Tabla principal
+            var table = new PdfPTable(8) { WidthPercentage = 100, SpacingBefore = 5 };
+            table.SetWidths(new float[] { 5, 12, 18, 11, 11, 12, 8, 10 });
+
+            string[] headers = { "Nro.", "CI/NIT", "Nombre Cliente", "Placa", "Marca", "Modelo", "Año", "Estado" };
+            foreach (var h in headers)
+            {
+                table.AddCell(new PdfPCell(new Phrase(h, FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 9, ColorBlanco)))
                 {
-                    Alignment = Element.ALIGN_CENTER,
-                    BackgroundColor = new BaseColor(41, 128, 185),
-                    SpacingBefore = 10,
-                    SpacingAfter = 10,
-                    IndentationLeft = 10,
-                    IndentationRight = 10
-                };
-                document.Add(titulo);
+                    BackgroundColor = ColorAzul,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 5
+                });
+            }
 
-                // Filtros aplicados
-                var filtros = new Paragraph($"Filtros aplicados: Nombre/CI: {nombreCliente ?? "N/A"} | Marca: {marcaVehiculo ?? "Todas"}", 
-                    new Font(Font.FontFamily.HELVETICA, 10))
+            int nro = 1;
+            bool altRow = false;
+            if (reporteData?.clientes != null)
+            {
+                foreach (var cliente in reporteData.clientes)
                 {
-                    Alignment = Element.ALIGN_LEFT,
-                    SpacingAfter = 15
-                };
-                document.Add(filtros);
-
-                // Tabla principal
-                var table = new PdfPTable(8)
-                {
-                    WidthPercentage = 100
-                };
-                table.SetWidths(new float[] { 6, 12, 18, 12, 12, 12, 10, 12 });
-
-                // Encabezado tabla
-                string[] headerTexts = { "Nro.", "CI/NIT", "Nombre Cliente", "Placa", "Marca", "Modelo", "Año", "Estado" };
-                foreach (var headerText in headerTexts)
-                {
-                    var cell = new PdfPCell(new Phrase(headerText, new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD, BaseColor.WHITE)))
+                    var bg = altRow ? ColorGrisClaro : ColorBlanco;
+                    if (cliente.vehiculos != null && cliente.vehiculos.Count > 0)
                     {
-                        BackgroundColor = new BaseColor(41, 128, 185),
-                        HorizontalAlignment = Element.ALIGN_CENTER,
-                        Padding = 8
-                    };
-                    table.AddCell(cell);
-                }
-
-                // Datos
-                int nro = 1;
-                if (reporteData?.clientes != null)
-                {
-                    foreach (var cliente in reporteData.clientes)
-                    {
-                        table.AddCell(new PdfPCell(new Phrase(nro.ToString())) { HorizontalAlignment = Element.ALIGN_CENTER });
-                        table.AddCell(new PdfPCell(new Phrase(cliente.cedula ?? "N/A")));
-                        table.AddCell(new PdfPCell(new Phrase(_formatter.TruncateText(cliente.nombreCompleto ?? "N/A", 25))));
-
-                        if (cliente.vehiculos != null && cliente.vehiculos.Count > 0)
+                        bool first = true;
+                        foreach (var v in cliente.vehiculos)
                         {
-                            var primeraFila = true;
-                            foreach (var vehiculo in cliente.vehiculos)
+                            if (first)
                             {
-                                if (!primeraFila)
-                                {
-                                    table.AddCell(""); // Nro
-                                    table.AddCell(""); // CI
-                                    table.AddCell(""); // Nombre
-                                }
-                                table.AddCell(new PdfPCell(new Phrase(vehiculo.placa ?? "N/A")));
-                                table.AddCell(new PdfPCell(new Phrase(vehiculo.marca ?? "N/A")));
-                                table.AddCell(new PdfPCell(new Phrase(vehiculo.modelo ?? "N/A")));
-                                table.AddCell(new PdfPCell(new Phrase(vehiculo.anio?.ToString() ?? "N/A")));
-                                table.AddCell(new PdfPCell(new Phrase(vehiculo.estado ?? "Activo")));
-                                primeraFila = false;
-                                nro++;
+                                AddCell(table, nro.ToString(), bg, Element.ALIGN_CENTER);
+                                AddCell(table, (string?)(cliente.cedula ?? "N/A"), bg);
+                                AddCell(table, _formatter.TruncateText((string?)(cliente.nombreCompleto ?? "N/A") ?? "", 22), bg);
                             }
-                        }
-                        else
-                        {
-                            for (int i = 0; i < 5; i++)
-                                table.AddCell("");
+                            else
+                            {
+                                AddCell(table, "", bg, Element.ALIGN_CENTER);
+                                AddCell(table, "", bg);
+                                AddCell(table, "", bg);
+                            }
+                            AddCell(table, (string?)(v.placa ?? "N/A"), bg);
+                            AddCell(table, (string?)(v.marca ?? "N/A"), bg);
+                            AddCell(table, (string?)(v.modelo ?? "N/A"), bg);
+                            AddCell(table, v.anio?.ToString() ?? "N/A", bg, Element.ALIGN_CENTER);
+                            AddCell(table, (string?)(v.estado ?? "Activo"), bg, Element.ALIGN_CENTER);
+                            first = false;
+                            nro++;
                         }
                     }
+                    else
+                    {
+                        AddCell(table, nro.ToString(), bg, Element.ALIGN_CENTER);
+                        AddCell(table, (string?)(cliente.cedula ?? "N/A"), bg);
+                        AddCell(table, _formatter.TruncateText((string?)(cliente.nombreCompleto ?? "N/A") ?? "", 22), bg);
+                        for (int i = 0; i < 5; i++) AddCell(table, "-", bg, Element.ALIGN_CENTER);
+                        nro++;
+                    }
+                    altRow = !altRow;
                 }
-
-                document.Add(table);
-
-                // Totales
-                document.Add(new Paragraph("\n", new Font(Font.FontFamily.HELVETICA, 8)));
-
-                var totalClientes = reporteData?.clientes?.Count ?? 0;
-                var totalVehiculos = reporteData?.clientes?.Sum(c => c.vehiculos?.Count ?? 0) ?? 0;
-
-                var totales = new Paragraph(
-                    $"TOTAL CLIENTES FILTRADOS: {totalClientes}                TOTAL VEHÍCULOS: {totalVehiculos}",
-                    new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD))
-                {
-                    Alignment = Element.ALIGN_CENTER,
-                    SpacingBefore = 10,
-                    SpacingAfter = 10
-                };
-                document.Add(totales);
-
-                // Pie de página
-                var piePagina = new Paragraph(infoAuditoria, new Font(Font.FontFamily.HELVETICA, 9))
-                {
-                    Alignment = Element.ALIGN_CENTER
-                };
-                document.Add(piePagina);
-
-                document.Close();
-                writer.Close();
-
-                _logger.LogInformation($"✅ PDF generado exitosamente");
-                return memoryStream.ToArray();
             }
+            doc.Add(table);
+
+            int totalClientes = reporteData?.clientes?.Count ?? 0;
+            doc.Add(new Paragraph($"\nTotal clientes: {totalClientes}",
+                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10)) { SpacingBefore = 8 });
+
+            doc.Add(new Paragraph(infoAuditoria,
+                FontFactory.GetFont(FontFactory.HELVETICA_OBLIQUE, 8)) { SpacingBefore = 12 });
+
+            doc.Close();
+            _logger.LogInformation("PDF Clientes-Vehículos generado");
+            return ms.ToArray();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error generando PDF de Clientes y Vehículos");
+            _logger.LogError(ex, "Error generando PDF Clientes-Vehículos");
             throw;
         }
     }
 
-    /// <summary>
-    /// Genera reporte PDF de Analítica de Servicios con gráfico
-    /// </summary>
     public async Task<byte[]> GenerarReporteAnalyticaServiciosAsync(
         dynamic reporteData,
         DateTime fechaDesde,
@@ -171,123 +140,117 @@ public class PDFReportService : IPDFReportService
         byte[] graficoImg,
         string infoAuditoria)
     {
+        await Task.Yield();
         try
         {
-            _logger.LogInformation($"🔴 Generando PDF: Reporte Analítica de Servicios");
+            using var ms = new MemoryStream();
+            var doc = new Document(PageSize.A4, 30, 30, 40, 50);
+            var writer = PdfWriter.GetInstance(doc, ms);
+            doc.Open();
 
-            using (var memoryStream = new MemoryStream())
+            // Título
+            var tblTitulo = new PdfPTable(1) { WidthPercentage = 100, SpacingAfter = 5 };
+            tblTitulo.AddCell(new PdfPCell(new Phrase("ANALÍTICA DE INGRESOS POR SERVICIOS",
+                FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14, ColorBlanco)))
             {
-                var document = new Document(PageSize.A4, 30, 30, 40, 50);
-                var writer = PdfWriter.GetInstance(document, memoryStream);
+                BackgroundColor = ColorAzul,
+                HorizontalAlignment = Element.ALIGN_CENTER,
+                Padding = 8,
+                Border = Rectangle.NO_BORDER
+            });
+            doc.Add(tblTitulo);
 
-                document.Open();
+            doc.Add(new Paragraph(
+                $"Período: {_formatter.FormatFecha(fechaDesde)} al {_formatter.FormatFecha(fechaHasta)}",
+                FontFactory.GetFont(FontFactory.HELVETICA, 11)) { Alignment = Element.ALIGN_CENTER, SpacingAfter = 15 });
 
-                // Encabezado
-                var titulo = new Paragraph("ANALÍTICA DE INGRESOS POR SERVICIOS",
-                    new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD, BaseColor.WHITE))
-                {
-                    Alignment = Element.ALIGN_CENTER,
-                    BackgroundColor = new BaseColor(41, 128, 185),
-                    SpacingBefore = 10,
-                    SpacingAfter = 10,
-                    IndentationLeft = 10,
-                    IndentationRight = 10
-                };
-                document.Add(titulo);
-
-                // Rango de fechas
-                var rangoFechas = new Paragraph(
-                    $"Rango de Fechas: Desde {_formatter.FormatFecha(fechaDesde)} Al {_formatter.FormatFecha(fechaHasta)}",
-                    new Font(Font.FontFamily.HELVETICA, 11))
-                {
-                    Alignment = Element.ALIGN_CENTER,
-                    SpacingAfter = 20
-                };
-                document.Add(rangoFechas);
-
-                // Gráfico
-                if (graficoImg != null && graficoImg.Length > 0)
-                {
-                    var image = Image.GetInstance(graficoImg);
-                    image.ScaleToFit(400f, 300f);
-                    image.Alignment = Element.ALIGN_CENTER;
-                    document.Add(image);
-                    document.Add(new Paragraph("\n"));
-                }
-
-                // Tabla de datos
-                var table = new PdfPTable(3)
-                {
-                    WidthPercentage = 100,
-                    SpacingBefore = 20
-                };
-                table.SetWidths(new float[] { 40, 20, 40 });
-
-                // Encabezado tabla
-                string[] headers = { "Nombre del Servicio", "Cant. Atendida", "Total Recaudado" };
-                foreach (var header in headers)
-                {
-                    var cell = new PdfPCell(new Phrase(header, new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD, BaseColor.WHITE)))
-                    {
-                        BackgroundColor = new BaseColor(41, 128, 185),
-                        HorizontalAlignment = Element.ALIGN_CENTER,
-                        Padding = 8
-                    };
-                    table.AddCell(cell);
-                }
-
-                // Datos servicios
-                decimal totalRecaudado = 0;
-                if (reporteData?.servicios != null)
-                {
-                    foreach (var servicio in reporteData.servicios)
-                    {
-                        table.AddCell(new PdfPCell(new Phrase(servicio.nombreServicio ?? "N/A")));
-                        table.AddCell(new PdfPCell(new Phrase(servicio.cantidadAtendida?.ToString() ?? "0")) 
-                        { 
-                            HorizontalAlignment = Element.ALIGN_CENTER 
-                        });
-                        var monto = servicio.totalRecaudado ?? 0;
-                        table.AddCell(new PdfPCell(new Phrase(_formatter.FormatMoneda(monto)))
-                        {
-                            HorizontalAlignment = Element.ALIGN_RIGHT
-                        });
-                        totalRecaudado += monto;
-                    }
-                }
-
-                document.Add(table);
-
-                // Total recaudado
-                document.Add(new Paragraph("\n"));
-                var totalParagraph = new Paragraph(
-                    $"TOTAL RECAUDADO EN EL PERÍODO:                {_formatter.FormatMoneda(totalRecaudado)}",
-                    new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD))
-                {
-                    Alignment = Element.ALIGN_RIGHT,
-                    SpacingBefore = 10,
-                    SpacingAfter = 20
-                };
-                document.Add(totalParagraph);
-
-                // Pie de página
-                var piePagina = new Paragraph(infoAuditoria, new Font(Font.FontFamily.HELVETICA, 9))
-                {
-                    Alignment = Element.ALIGN_CENTER
-                };
-                document.Add(piePagina);
-
-                document.Close();
-                writer.Close();
-
-                _logger.LogInformation($"✅ PDF de Analítica generado exitosamente");
-                return memoryStream.ToArray();
+            // Gráfico (PDF generado por ChartService)
+            if (graficoImg != null && graficoImg.Length > 0)
+            {
+                var img = Image.GetInstance(graficoImg);
+                img.ScaleToFit(400f, 280f);
+                img.Alignment = Element.ALIGN_CENTER;
+                doc.Add(img);
+                doc.Add(new Paragraph("\n"));
             }
+
+            // Tabla
+            var table = new PdfPTable(4) { WidthPercentage = 100, SpacingBefore = 10 };
+            table.SetWidths(new float[] { 40, 18, 22, 20 });
+
+            foreach (var h in new[] { "Nombre del Servicio", "Cant. Atendida", "Total Recaudado", "Porcentaje" })
+            {
+                table.AddCell(new PdfPCell(new Phrase(h, FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 9, ColorBlanco)))
+                {
+                    BackgroundColor = ColorAzul,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 5
+                });
+            }
+
+            decimal totalRecaudado = 0;
+            int totalAtendidas = 0;
+            decimal sumaTotal = 0;
+
+            if (reporteData?.servicios != null)
+            {
+                foreach (var s in reporteData.servicios)
+                    sumaTotal += (decimal)(s.TotalRecaudado ?? s.totalRecaudado ?? 0);
+
+                bool altRow = false;
+                foreach (var servicio in reporteData.servicios)
+                {
+                    decimal monto = servicio.TotalRecaudado ?? servicio.totalRecaudado ?? 0;
+                    int cantidad = servicio.CantidadAtendida ?? servicio.cantidadAtendida ?? 0;
+                    decimal pct = sumaTotal > 0 ? Math.Round(monto / sumaTotal * 100, 2) : 0;
+                    var bg = altRow ? ColorGrisClaro : ColorBlanco;
+
+                    AddCell(table, (string?)(servicio.NombreServicio ?? servicio.nombreServicio ?? "N/A"), bg);
+                    AddCell(table, cantidad.ToString(), bg, Element.ALIGN_CENTER);
+                    AddCell(table, _formatter.FormatMoneda(monto), bg, Element.ALIGN_RIGHT);
+                    AddCell(table, $"{pct:F2}%", bg, Element.ALIGN_CENTER);
+
+                    totalRecaudado += monto;
+                    totalAtendidas += cantidad;
+                    altRow = !altRow;
+                }
+            }
+
+            // Fila total
+            var colorTeal = new BaseColor(32, 201, 151);
+            foreach (var val in new[] { "TOTAL", totalAtendidas.ToString(), _formatter.FormatMoneda(totalRecaudado), "100%" })
+            {
+                table.AddCell(new PdfPCell(new Phrase(val, FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 9, ColorBlanco)))
+                {
+                    BackgroundColor = colorTeal,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 5
+                });
+            }
+
+            doc.Add(table);
+
+            doc.Add(new Paragraph(infoAuditoria,
+                FontFactory.GetFont(FontFactory.HELVETICA_OBLIQUE, 8)) { SpacingBefore = 15, Alignment = Element.ALIGN_CENTER });
+
+            doc.Close();
+            _logger.LogInformation("PDF Analítica Servicios generado");
+            return ms.ToArray();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error generando PDF de Analítica de Servicios");
+            _logger.LogError(ex, "Error generando PDF Analítica Servicios");
             throw;
         }
+    }
+
+    private static void AddCell(PdfPTable table, string text, BaseColor bg, int alignment = Element.ALIGN_LEFT)
+    {
+        table.AddCell(new PdfPCell(new Phrase(text, FontFactory.GetFont(FontFactory.HELVETICA, 8)))
+        {
+            BackgroundColor = bg,
+            HorizontalAlignment = alignment,
+            Padding = 4
+        });
     }
 }

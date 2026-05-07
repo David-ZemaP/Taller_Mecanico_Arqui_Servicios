@@ -6,10 +6,6 @@ using Taller_Mecanico_Users.Framework.Persistence;
 
 namespace Taller_Mecanico_Users.Data.Repositories;
 
-/// <summary>
-/// Implementación de IReportRepository con queries SQL nativas (Npgsql)
-/// Ejecuta queries para generar reportes de negocio
-/// </summary>
 public class ReportRepository : IReportRepository
 {
     private readonly ISqlConnectionFactory _connectionFactory;
@@ -17,14 +13,10 @@ public class ReportRepository : IReportRepository
 
     public ReportRepository(ISqlConnectionFactory connectionFactory, ILogger<ReportRepository> logger)
     {
-        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _connectionFactory = connectionFactory;
+        _logger = logger;
     }
 
-    /// <summary>
-    /// Obtiene clientes con vehículos asociados
-    /// SQL: LEFT JOIN clientes-vehiculos con filtros opcionales
-    /// </summary>
     public async Task<Result<ClientesVehiculosReportDto>> GetClientesVehiculosAsync(
         string? nombreCliente = null,
         string? placaVehiculo = null,
@@ -32,11 +24,13 @@ public class ReportRepository : IReportRepository
     {
         try
         {
-            var connection = _connectionFactory.CreateConnection() as NpgsqlConnection
-                ?? throw new InvalidOperationException("Could not cast DbConnection to NpgsqlConnection");
+            using var connection = _connectionFactory.CreateConnection() as NpgsqlConnection
+                ?? throw new InvalidOperationException("No se pudo obtener NpgsqlConnection");
+
+            await connection.OpenAsync();
 
             var sql = @"
-SELECT 
+SELECT
     c.cliente_id,
     c.ci_nit,
     c.nombres,
@@ -52,25 +46,24 @@ SELECT
 FROM clientes c
 LEFT JOIN vehiculos v ON c.cliente_id = v.cliente_id
 WHERE c.activo = true
-    AND (c.nombres ILIKE @nombre OR @nombre IS NULL)
-    AND (v.placa ILIKE @placa OR @placa IS NULL)
-    AND (v.marca ILIKE @marca OR @marca IS NULL)
+    AND (@nombre IS NULL OR c.nombres ILIKE @nombre OR c.ci_nit ILIKE @nombre)
+    AND (@placa IS NULL OR v.placa ILIKE @placa)
+    AND (@marca IS NULL OR v.marca ILIKE @marca)
 ORDER BY c.primer_apellido, c.nombres, v.placa";
 
             using var cmd = new NpgsqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@nombre", (object?)(nombreCliente is not null ? $"%{nombreCliente}%" : DBNull.Value) ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@placa", (object?)(placaVehiculo is not null ? $"%{placaVehiculo}%" : DBNull.Value) ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@marca", (object?)(marcaVehiculo is not null ? $"%{marcaVehiculo}%" : DBNull.Value) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@nombre", (object?)(nombreCliente != null ? $"%{nombreCliente}%" : null) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@placa", (object?)(placaVehiculo != null ? $"%{placaVehiculo}%" : null) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@marca", (object?)(marcaVehiculo != null ? $"%{marcaVehiculo}%" : null) ?? DBNull.Value);
 
-            using var reader = cmd.ExecuteReader();
-            
+            using var reader = await cmd.ExecuteReaderAsync();
+
             var clientes = new Dictionary<int, ClienteReportDto>();
 
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 var clienteId = reader.GetInt32(0);
 
-                // Crear o recuperar cliente
                 if (!clientes.TryGetValue(clienteId, out var cliente))
                 {
                     cliente = new ClienteReportDto
@@ -85,10 +78,9 @@ ORDER BY c.primer_apellido, c.nombres, v.placa";
                     clientes[clienteId] = cliente;
                 }
 
-                // Agregar vehículo si existe
                 if (!reader.IsDBNull(6))
                 {
-                    var vehiculo = new VehiculoReportDto
+                    cliente.Vehiculos.Add(new VehiculoReportDto
                     {
                         VehiculoId = reader.GetInt32(6),
                         Placa = reader.GetString(7),
@@ -96,46 +88,36 @@ ORDER BY c.primer_apellido, c.nombres, v.placa";
                         Modelo = reader.GetString(9),
                         Anno = reader.GetInt32(10),
                         Activo = reader.GetBoolean(11)
-                    };
-                    cliente.Vehiculos.Add(vehiculo);
+                    });
                 }
             }
 
-            reader.Close();
-            connection.Close();
-
-            var reportData = new ClientesVehiculosReportDto
+            _logger.LogInformation("Reporte Clientes-Vehículos: {Count} clientes", clientes.Count);
+            return Result<ClientesVehiculosReportDto>.Success(new ClientesVehiculosReportDto
             {
                 Clientes = clientes.Values.ToList(),
                 GeneradoEn = DateTime.Now,
                 GeneradoPor = "Sistema"
-            };
-
-            _logger.LogInformation($"✅ Reporte Clientes-Vehículos generado: {clientes.Count} clientes");
-            return Result<ClientesVehiculosReportDto>.Success(reportData);
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"❌ Error generando Reporte Clientes-Vehículos");
+            _logger.LogError(ex, "Error en GetClientesVehiculosAsync");
             return Result<ClientesVehiculosReportDto>.Failure("REPORT_ERROR", ex.Message);
         }
     }
 
-    /// <summary>
-    /// Obtiene métricas de servicios por rango de fechas
-    /// SQL: JOIN ordentrabajo-servicios con agregación (COUNT, SUM)
-    /// </summary>
-    public async Task<Result<ServiciosOrdenesReportDto>> GetServiciosOrdenesAsync(
-        DateTime desde,
-        DateTime hasta)
+    public async Task<Result<ServiciosOrdenesReportDto>> GetServiciosOrdenesAsync(DateTime desde, DateTime hasta)
     {
         try
         {
-            var connection = _connectionFactory.CreateConnection() as NpgsqlConnection
-                ?? throw new InvalidOperationException("Could not cast DbConnection to NpgsqlConnection");
+            using var connection = _connectionFactory.CreateConnection() as NpgsqlConnection
+                ?? throw new InvalidOperationException("No se pudo obtener NpgsqlConnection");
+
+            await connection.OpenAsync();
 
             var sql = @"
-SELECT 
+SELECT
     s.servicio_id,
     s.nombre,
     COUNT(DISTINCT ot.orden_id) AS cantidad_ordenes,
@@ -152,13 +134,13 @@ ORDER BY total_bs DESC";
             cmd.Parameters.AddWithValue("@desde", desde);
             cmd.Parameters.AddWithValue("@hasta", hasta);
 
-            using var reader = cmd.ExecuteReader();
+            using var reader = await cmd.ExecuteReaderAsync();
 
             var servicios = new List<ServicioMetricaDto>();
             decimal totalMonto = 0;
             int totalOrdenes = 0;
 
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 var cantidadOrdenes = reader.GetInt32(2);
                 var totalBs = reader.GetDecimal(3);
@@ -175,30 +157,22 @@ ORDER BY total_bs DESC";
                 totalOrdenes += cantidadOrdenes;
             }
 
-            // Calcular porcentajes
-            foreach (var servicio in servicios)
-            {
-                servicio.Porcentaje = totalMonto > 0 ? (servicio.TotalBs / totalMonto) * 100 : 0;
-            }
+            foreach (var s in servicios)
+                s.Porcentaje = totalMonto > 0 ? Math.Round((s.TotalBs / totalMonto) * 100, 2) : 0;
 
-            reader.Close();
-            connection.Close();
-
-            var reportData = new ServiciosOrdenesReportDto
+            _logger.LogInformation("Reporte Servicios-Órdenes: {Count} servicios, total {Monto} Bs", servicios.Count, totalMonto);
+            return Result<ServiciosOrdenesReportDto>.Success(new ServiciosOrdenesReportDto
             {
                 Servicios = servicios,
                 TotalBsMonto = totalMonto,
                 TotalOrdenes = totalOrdenes,
                 GeneradoEn = DateTime.Now,
                 GeneradoPor = "Sistema"
-            };
-
-            _logger.LogInformation($"✅ Reporte Servicios-Órdenes generado: {servicios.Count} servicios, {totalMonto:C2} Bs");
-            return Result<ServiciosOrdenesReportDto>.Success(reportData);
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"❌ Error generando Reporte Servicios-Órdenes");
+            _logger.LogError(ex, "Error en GetServiciosOrdenesAsync");
             return Result<ServiciosOrdenesReportDto>.Failure("REPORT_ERROR", ex.Message);
         }
     }

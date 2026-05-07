@@ -5,7 +5,31 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WebService</AssemblyName>
-    <RootNamespace>WebService</RootNamespace>
+    <RootNamespace>Taller_Mecanico_WebService</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.7.12" />
+    <PackageReference Include="EPPlus" Version="7.0.7" />
+  </ItemGroup>
+
+  <!-- Excluir páginas legacy que referencian el monolito Taller_Mecanico_Arqui -->
+  <ItemGroup>
+    <Compile Remove="Pages\Clientes\Index.cshtml.cs" />
+    <Compile Remove="Pages\Clientes\Perfil.cshtml.cs" />
+    <Compile Remove="Pages\Empleados\Index.cshtml.cs" />
+    <Compile Remove="Pages\Vehiculos\Index.cshtml.cs" />
+    <Compile Remove="Pages\ServiciosProductos\Index.cshtml.cs" />
+    <Compile Remove="Pages\ordentrabajo\Index.cshtml.cs" />
+    <Compile Remove="Pages\Reportes\OrdenTrabajo.cshtml.cs" />
+    <Content Remove="Pages\Clientes\Index.cshtml" />
+    <Content Remove="Pages\Clientes\Perfil.cshtml" />
+    <Content Remove="Pages\Empleados\Index.cshtml" />
+    <Content Remove="Pages\Vehiculos\Index.cshtml" />
+    <Content Remove="Pages\ServiciosProductos\Index.cshtml" />
+    <Content Remove="Pages\ordentrabajo\Index.cshtml" />
+    <Content Remove="Pages\Reportes\OrdenTrabajo.cshtml" />
+  </ItemGroup>
 
 </Project>

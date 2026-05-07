@@ -298,7 +298,7 @@
                 <button type="submit" class="btn btn-primary">
                     🔍 Generar Reporte
                 </button>
-                <button type="button" class="btn btn-warning" onclick="location.href='@Url.Page()'">
+                <button type="button" class="btn btn-warning" onclick="location.href='@Url.Page("/Reportes/AnalyticaServicios")'">
                     🔄 Limpiar
                 </button>
                 <button type="submit" asp-page-handler="DescargarPDF" class="btn btn-success" style="flex: 1;">
@@ -321,7 +321,7 @@
         <div class="stats-section">
             <div class="stat-card">
                 <h3>Total Recaudado</h3>
-                <div class="value">Bs. @Model.TotalRecaudado:N2</div>
+                <div class="value">Bs. @Model.TotalRecaudado.ToString("N2")</div>
                 <div class="unit">Monto acumulado</div>
             </div>
             <div class="stat-card">
@@ -331,7 +331,7 @@
             </div>
             <div class="stat-card">
                 <h3>Promedio por Orden</h3>
-                <div class="value">Bs. @(Model.PromedioRecaudado:N2)</div>
+                <div class="value">Bs. @Model.PromedioRecaudado.ToString("N2")</div>
                 <div class="unit">Ingreso promedio</div>
             </div>
         </div>

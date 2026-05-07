@@ -1,5 +1,6 @@
 using Taller_Mecanico_Users.Domain.Common;
 using Taller_Mecanico_Users.Domain.Ports;
+using Taller_Mecanico_Users.Framework.DTOs.Reports;
 
 namespace Taller_Mecanico_Users.UseCases.Reports;
 
@@ -12,8 +13,10 @@ public class GetServicesMetricsUseCase
         _reportRepository = reportRepository;
     }
 
-    public async Task<Result<ServicesMetricsData>> ExecuteAsync()
+    public async Task<Result<ServiciosOrdenesReportDto>> ExecuteAsync()
     {
-        return await _reportRepository.GetServicesMetricsAsync();
+        return await _reportRepository.GetServiciosOrdenesAsync(
+            DateTime.Today.AddMonths(-1),
+            DateTime.Today);
     }
 }

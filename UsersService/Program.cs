@@ -4,23 +4,16 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
-// 1. Leer configuración JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.ASCII.GetBytes(jwtSettings["Secret"]!);
 
-// 2. Configurar Autenticación JWT
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -43,16 +36,24 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 3. Dependency Injection registrations
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Persistence.ISqlConnectionFactory, 
+// Infrastructure
+builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Persistence.ISqlConnectionFactory,
     Taller_Mecanico_Users.App.Infrastructure.SqlConnectionFactory>();
-builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IUsuarioLoginRepository, 
+
+// Repositories
+builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IUsuarioLoginRepository,
     Taller_Mecanico_Users.Data.Repositories.UsuarioLoginRepository>();
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuthenticationHelper, 
+builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IReportRepository,
+    Taller_Mecanico_Users.Data.Repositories.ReportRepository>();
+
+// Services
+builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuthenticationHelper,
     Taller_Mecanico_Users.App.Services.AuthenticationHelper>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IMailSender, 
+builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IMailSender,
     Taller_Mecanico_Users.App.Services.DummyMailSender>();
+builder.Services.AddScoped<Taller_Mecanico_Users.App.Services.UsernameGenerator>();
+
+builder.Services.AddHttpContextAccessor();
 
 // Use Cases - Usuarios
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Users.CreateUserUseCase>();
@@ -63,22 +64,18 @@ builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Users.ChangePasswordUs
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Users.ResetPasswordUseCase>();
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Users.DeleteUserUseCase>();
 
-// Reports - Use Cases
-builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IReportRepository,
-    Taller_Mecanico_Users.Data.Repositories.ReportRepository>();
-builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Reports.GetClienteReportUseCase>();
+// Use Cases - Reportes
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Reports.GetClientesVehiculosUseCase>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Reports.GetServiciosOrdenesUseCase>();
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Reports.GetServicesMetricsUseCase>();
+builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Reports.GetClienteReportUseCase>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-
-// 4. ¡IMPORTANTE! UseAuthentication debe ir ANTES de UseAuthorization
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

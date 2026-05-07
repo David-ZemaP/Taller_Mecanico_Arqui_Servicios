@@ -19,7 +19,7 @@ public class AnalyticaServiciosModel : PageModel
     private readonly AuditInfoHelper _auditHelper;
     private readonly ILogger<AnalyticaServiciosModel> _logger;
 
-    private const string API_BASE_URL = "http://localhost:5000/api/reports";
+    private const string API_BASE_URL = "http://localhost:5297/api/reports";
 
     public AnalyticaServiciosModel(
         IHttpClientFactory httpClientFactory,

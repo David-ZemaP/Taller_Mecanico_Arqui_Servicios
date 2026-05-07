@@ -9,6 +9,7 @@ namespace Taller_Mecanico_Users.Domain.Ports
     {
         Task<IEnumerable<UsuarioLogin>> GetAllAsync();
         Task<UsuarioLogin?> GetByEmailAsync(string email);
+        Task<UsuarioLogin?> GetByUsernameAsync(string username);
         Task<Result<UsuarioLogin?>> GetByIdAsync(int id);
         Task<UsuarioLogin?> GetByEmpleadoIdAsync(int empleadoId);
         Task<UsuarioLogin?> GetByClienteIdAsync(int clienteId);

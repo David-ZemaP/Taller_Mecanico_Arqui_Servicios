@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Security.Claims;
+using Taller_Mecanico_Users.Framework.DTOs;
 using Taller_Mecanico_Users.UseCases.Users;
 
 namespace Taller_Mecanico_Users.App.Controllers
@@ -40,18 +38,16 @@ namespace Taller_Mecanico_Users.App.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden crear
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        [Authorize(Roles = "Empleado")]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestDto request)
         {
-            try
-            {
-                var usuario = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);
-                return CreatedAtAction(nameof(GetUserById), new { id = usuario.UsuarioLoginId }, new { usuario.UsuarioLoginId, usuario.Email });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var result = await _createUserUseCase.ExecuteAsync(request);
+            if (result.IsFailure)
+                return BadRequest(new { message = result.ErrorMessage });
+
+            var usuario = result.Value!;
+            return CreatedAtAction(nameof(GetUserById), new { id = usuario.UsuarioLoginId },
+                new { usuario.UsuarioLoginId, usuario.Email, usuario.Username });
         }
 
         [HttpGet("{id}")]
@@ -59,18 +55,10 @@ namespace Taller_Mecanico_Users.App.Controllers
         public async Task<IActionResult> GetUserById(int id)
         {
             var result = await _getUserByIdUseCase.ExecuteAsync(id);
-            if (result.IsFailure)
-            {
-                return NotFound(new { message = result.ErrorMessage ?? "Usuario no encontrado." });
-            }
-
-            var usuario = result.Value;
-            if (usuario == null)
-            {
+            if (result.IsFailure || result.Value == null)
                 return NotFound(new { message = "Usuario no encontrado." });
-            }
 
-            return Ok(ToDto(usuario));
+            return Ok(ToDto(result.Value));
         }
 
         [HttpGet]
@@ -82,43 +70,29 @@ namespace Taller_Mecanico_Users.App.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden actualizar
+        [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
             var result = await _updateUserUseCase.ExecuteAsync(id, request.Email, request.Activo);
-
             if (result.IsFailure)
-            {
                 return BadRequest(new { message = result.ErrorMessage });
-            }
 
-            return NoContent(); 
+            return NoContent();
         }
 
         [HttpPost("{id}/change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordRequest request)
         {
-            if (!ModelState.IsValid)
-            {
-                return ValidationProblem(ModelState);
-            }
-
             if (request.NewPassword != request.ConfirmPassword)
-            {
                 return BadRequest(new { message = "Las contraseñas no coinciden." });
-            }
 
             if (!CanChangeOwnPassword(id))
-            {
                 return Forbid();
-            }
 
-            var result = await _changePasswordUseCase.ExecuteAsync(id, request.NewPassword);
+            var result = await _changePasswordUseCase.ExecuteAsync(id, request.CurrentPassword, request.NewPassword);
             if (result.IsFailure)
-            {
                 return BadRequest(new { message = result.ErrorMessage });
-            }
 
             return NoContent();
         }
@@ -129,9 +103,7 @@ namespace Taller_Mecanico_Users.App.Controllers
         {
             var result = await _resetPasswordUseCase.ExecuteAsync(id);
             if (result.IsFailure)
-            {
                 return BadRequest(new { message = result.ErrorMessage });
-            }
 
             return NoContent();
         }
@@ -142,20 +114,14 @@ namespace Taller_Mecanico_Users.App.Controllers
         {
             var result = await _deleteUserUseCase.ExecuteAsync(id);
             if (result.IsFailure)
-            {
                 return BadRequest(new { message = result.ErrorMessage });
-            }
 
             return NoContent();
         }
 
         private bool CanChangeOwnPassword(int usuarioLoginId)
         {
-            if (User.IsInRole("Empleado"))
-            {
-                return true;
-            }
-
+            if (User.IsInRole("Empleado")) return true;
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return int.TryParse(currentUserId, out var currentId) && currentId == usuarioLoginId;
         }
@@ -168,18 +134,13 @@ namespace Taller_Mecanico_Users.App.Controllers
                 EmpleadoId = usuario.EmpleadoId,
                 ClienteId = usuario.ClienteId,
                 Email = usuario.Email,
+                Username = usuario.Username,
                 UltimoAcceso = usuario.UltimoAcceso,
                 Activo = usuario.Activo,
                 RequiereCambioPassword = usuario.RequiereCambioPassword,
                 EsCliente = usuario.EsCliente
             };
         }
-    }
-
-    public class CreateUserRequest
-    {
-        public int EmpleadoId { get; set; }
-        public string Email { get; set; } = string.Empty;
     }
 
     public class UpdateUserRequest
@@ -190,6 +151,7 @@ namespace Taller_Mecanico_Users.App.Controllers
 
     public class ChangePasswordRequest
     {
+        public string CurrentPassword { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
     }
@@ -200,6 +162,7 @@ namespace Taller_Mecanico_Users.App.Controllers
         public int? EmpleadoId { get; set; }
         public int? ClienteId { get; set; }
         public string Email { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
         public DateTime? UltimoAcceso { get; set; }
         public bool Activo { get; set; }
         public bool RequiereCambioPassword { get; set; }

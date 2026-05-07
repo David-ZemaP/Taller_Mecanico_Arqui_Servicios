@@ -24,51 +24,51 @@ namespace Taller_Mecanico_Users.Data.Repositories
         public async Task<Result> AddAsync(UsuarioLogin entity)
         {
             string actor = _authHelper.GetCurrentAuditActor();
-            
+
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
             using var transaction = connection.BeginTransaction();
 
             try
             {
-                // --- A. INSERTAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
-                    INSERT INTO usuariologin (empleadoid, clienteid, email, passwordhash, activo, requierecambiopassword, escliente) 
-                    VALUES (@EmpleadoId, @ClienteId, @Email, @PasswordHash, @Activo, @RequiereCambioPassword, @EsCliente)
+                    INSERT INTO usuariologin
+                        (empleadoid, clienteid, email, username, passwordhash, activo,
+                         requierecambiopassword, escliente,
+                         usuario_creacion, fecha_creacion)
+                    VALUES
+                        (@EmpleadoId, @ClienteId, @Email, @Username, @PasswordHash, @Activo,
+                         @RequiereCambioPassword, @EsCliente,
+                         @UsuarioCreacion, NOW())
                     RETURNING usuariologinid;";
 
                 AddParameter(command, "@EmpleadoId", entity.EmpleadoId ?? (object)DBNull.Value);
                 AddParameter(command, "@ClienteId", entity.ClienteId ?? (object)DBNull.Value);
                 AddParameter(command, "@Email", entity.Email);
+                AddParameter(command, "@Username", entity.Username);
                 AddParameter(command, "@PasswordHash", entity.PasswordHash);
                 AddParameter(command, "@Activo", entity.Activo);
                 AddParameter(command, "@RequiereCambioPassword", entity.RequiereCambioPassword);
                 AddParameter(command, "@EsCliente", entity.EsCliente);
+                AddParameter(command, "@UsuarioCreacion", actor);
 
                 var result = await command.ExecuteScalarAsync();
                 if (result != null)
-                {
                     entity.UsuarioLoginId = Convert.ToInt32(result);
-                }
 
-                // --- B. INSERTAR EN BITÁCORA (AUDITORÍA) ---
                 var auditCommand = connection.CreateCommand();
                 auditCommand.Transaction = transaction;
                 auditCommand.CommandText = @"
-                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora) 
+                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora)
                     VALUES ('usuariologin', @RegistroId, 'INSERT', @Actor, @FechaHora);";
-
                 AddParameter(auditCommand, "@RegistroId", entity.UsuarioLoginId);
                 AddParameter(auditCommand, "@Actor", actor);
                 AddParameter(auditCommand, "@FechaHora", DateTime.UtcNow);
-
                 await auditCommand.ExecuteNonQueryAsync();
 
-                // Confirmamos la transacción
                 transaction.Commit();
-
                 return Result.Success();
             }
             catch (Exception ex)
@@ -81,23 +81,24 @@ namespace Taller_Mecanico_Users.Data.Repositories
         public async Task<Result> UpdateAsync(UsuarioLogin entity)
         {
             string actor = _authHelper.GetCurrentAuditActor();
-            
+
             using var connection = _connectionFactory.CreateConnection();
             await connection.OpenAsync();
             using var transaction = connection.BeginTransaction();
 
             try
             {
-                // --- A. ACTUALIZAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
-                    UPDATE usuariologin 
-                    SET email = @Email, 
-                        activo = @Activo, 
+                    UPDATE usuariologin
+                    SET email = @Email,
+                        activo = @Activo,
                         requierecambiopassword = @RequiereCambioPassword,
                         passwordhash = @PasswordHash,
-                        ultimoacceso = @UltimoAcceso
+                        ultimoacceso = @UltimoAcceso,
+                        usuario_modificacion = @Actor,
+                        fecha_modificacion = NOW()
                     WHERE usuariologinid = @UsuarioLoginId;";
 
                 AddParameter(command, "@UsuarioLoginId", entity.UsuarioLoginId);
@@ -106,30 +107,69 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 AddParameter(command, "@RequiereCambioPassword", entity.RequiereCambioPassword);
                 AddParameter(command, "@PasswordHash", entity.PasswordHash);
                 AddParameter(command, "@UltimoAcceso", entity.UltimoAcceso ?? (object)DBNull.Value);
+                AddParameter(command, "@Actor", actor);
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
-
                 if (rowsAffected == 0)
-                {
                     return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "El usuario no existe.");
-                }
 
-                // --- B. INSERTAR EN BITÁCORA (AUDITORÍA) ---
                 var auditCommand = connection.CreateCommand();
                 auditCommand.Transaction = transaction;
                 auditCommand.CommandText = @"
-                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora) 
+                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora)
                     VALUES ('usuariologin', @RegistroId, 'UPDATE', @Actor, @FechaHora);";
-
                 AddParameter(auditCommand, "@RegistroId", entity.UsuarioLoginId);
                 AddParameter(auditCommand, "@Actor", actor);
                 AddParameter(auditCommand, "@FechaHora", DateTime.UtcNow);
-
                 await auditCommand.ExecuteNonQueryAsync();
 
-                // Confirmamos la transacción
                 transaction.Commit();
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                return Result.Failure(ErrorCodes.DbError, ex.Message);
+            }
+        }
 
+        public async Task<Result> DeleteAsync(int id)
+        {
+            string actor = _authHelper.GetCurrentAuditActor();
+
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                // Soft delete: set activo = false
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = @"
+                    UPDATE usuariologin
+                    SET activo = false,
+                        usuario_modificacion = @Actor,
+                        fecha_modificacion = NOW()
+                    WHERE usuariologinid = @UsuarioLoginId;";
+                AddParameter(command, "@UsuarioLoginId", id);
+                AddParameter(command, "@Actor", actor);
+
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                if (rowsAffected == 0)
+                    return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
+
+                var auditCommand = connection.CreateCommand();
+                auditCommand.Transaction = transaction;
+                auditCommand.CommandText = @"
+                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora)
+                    VALUES ('usuariologin', @RegistroId, 'DELETE', @Actor, @FechaHora);";
+                AddParameter(auditCommand, "@RegistroId", id);
+                AddParameter(auditCommand, "@Actor", actor);
+                AddParameter(auditCommand, "@FechaHora", DateTime.UtcNow);
+                await auditCommand.ExecuteNonQueryAsync();
+
+                transaction.Commit();
                 return Result.Success();
             }
             catch (Exception ex)
@@ -150,9 +190,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
             if (await reader.ReadAsync())
-            {
                 return Result<UsuarioLogin?>.Success(MapReaderToEntity(reader));
-            }
 
             return Result<UsuarioLogin?>.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
         }
@@ -168,9 +206,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
             while (await reader.ReadAsync())
-            {
                 usuarios.Add(MapReaderToEntity(reader));
-            }
+
             return usuarios;
         }
 
@@ -184,11 +221,20 @@ namespace Taller_Mecanico_Users.Data.Repositories
             AddParameter(command, "@Email", email);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return MapReaderToEntity(reader);
-            }
-            return null;
+            return await reader.ReadAsync() ? MapReaderToEntity(reader) : null;
+        }
+
+        public async Task<UsuarioLogin?> GetByUsernameAsync(string username)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM usuariologin WHERE username = @Username LIMIT 1;";
+            AddParameter(command, "@Username", username);
+
+            using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
+            return await reader.ReadAsync() ? MapReaderToEntity(reader) : null;
         }
 
         public async Task<UsuarioLogin?> GetByEmpleadoIdAsync(int empleadoId)
@@ -201,11 +247,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
             AddParameter(command, "@EmpleadoId", empleadoId);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return MapReaderToEntity(reader);
-            }
-            return null;
+            return await reader.ReadAsync() ? MapReaderToEntity(reader) : null;
         }
 
         public async Task<UsuarioLogin?> GetByClienteIdAsync(int clienteId)
@@ -218,62 +260,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
             AddParameter(command, "@ClienteId", clienteId);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return MapReaderToEntity(reader);
-            }
-            return null;
-        }
-
-        // ==========================================
-        // MÉTODOS AUXILIARES
-        // ==========================================
-        public async Task<Result> DeleteAsync(int id)
-        {
-            string actor = _authHelper.GetCurrentAuditActor();
-
-            using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync();
-            using var transaction = connection.BeginTransaction();
-
-            try
-            {
-                // --- A. ELIMINAR EL USUARIO ---
-                var command = connection.CreateCommand();
-                command.Transaction = transaction;
-                command.CommandText = @"DELETE FROM usuariologin WHERE usuariologinid = @UsuarioLoginId;";
-                AddParameter(command, "@UsuarioLoginId", id);
-
-                var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                if (rowsAffected == 0)
-                {
-                    return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
-                }
-
-                // --- B. INSERTAR EN BITÁCORA (AUDITORÍA) ---
-                var auditCommand = connection.CreateCommand();
-                auditCommand.Transaction = transaction;
-                auditCommand.CommandText = @"
-                    INSERT INTO audit_logs (tabla_afectada, registro_id, accion, realizado_por, fecha_hora) 
-                    VALUES ('usuariologin', @RegistroId, 'DELETE', @Actor, @FechaHora);";
-
-                AddParameter(auditCommand, "@RegistroId", id);
-                AddParameter(auditCommand, "@Actor", actor);
-                AddParameter(auditCommand, "@FechaHora", DateTime.UtcNow);
-
-                await auditCommand.ExecuteNonQueryAsync();
-
-                // Confirmamos la transacción
-                transaction.Commit();
-
-                return Result.Success();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                return Result.Failure(ErrorCodes.DbError, ex.Message);
-            }
+            return await reader.ReadAsync() ? MapReaderToEntity(reader) : null;
         }
 
         private void AddParameter(IDbCommand command, string name, object value)
@@ -286,6 +273,16 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
         private UsuarioLogin MapReaderToEntity(System.Data.Common.DbDataReader reader)
         {
+            bool HasColumn(string col)
+            {
+                for (int i = 0; i < reader.FieldCount; i++)
+                    if (reader.GetName(i).Equals(col, StringComparison.OrdinalIgnoreCase)) return true;
+                return false;
+            }
+
+            string username = HasColumn("username") && !reader.IsDBNull(reader.GetOrdinal("username"))
+                ? reader.GetString(reader.GetOrdinal("username")) : "";
+
             return UsuarioLogin.Reconstituir(
                 reader.GetInt32(reader.GetOrdinal("usuariologinid")),
                 reader.IsDBNull(reader.GetOrdinal("empleadoid")) ? null : reader.GetInt32(reader.GetOrdinal("empleadoid")),
@@ -295,7 +292,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 reader.IsDBNull(reader.GetOrdinal("ultimoacceso")) ? null : reader.GetDateTime(reader.GetOrdinal("ultimoacceso")),
                 reader.GetBoolean(reader.GetOrdinal("activo")),
                 reader.GetBoolean(reader.GetOrdinal("requierecambiopassword")),
-                reader.GetBoolean(reader.GetOrdinal("escliente"))
+                reader.GetBoolean(reader.GetOrdinal("escliente")),
+                username
             );
         }
     }

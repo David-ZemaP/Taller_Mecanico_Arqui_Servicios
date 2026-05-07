@@ -1,5 +1,6 @@
 using Taller_Mecanico_Users.Domain.Common;
 using Taller_Mecanico_Users.Domain.Ports;
+using Taller_Mecanico_Users.Framework.DTOs.Reports;
 
 namespace Taller_Mecanico_Users.UseCases.Reports;
 
@@ -12,11 +13,8 @@ public class GetClienteReportUseCase
         _reportRepository = reportRepository;
     }
 
-    public async Task<Result<ClienteReportData>> ExecuteAsync(int clienteId)
+    public async Task<Result<ClientesVehiculosReportDto>> ExecuteAsync(string? nombre = null, string? marca = null)
     {
-        if (clienteId <= 0)
-            return Result<ClienteReportData>.Failure("INVALID_ID", "Cliente ID debe ser mayor a 0");
-
-        return await _reportRepository.GetClienteWithVehiculosAndOrdenesAsync(clienteId);
+        return await _reportRepository.GetClientesVehiculosAsync(nombre, null, marca);
     }
 }

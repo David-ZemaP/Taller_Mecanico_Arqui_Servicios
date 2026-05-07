@@ -1,39 +1,55 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 
-// Registrar servicios de reportes
-builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.AuditInfoHelper>();
-builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.ReportFormatter>();
-builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IPDFReportService, Taller_Mecanico_WebService.Services.Reports.PDFReportService>();
-builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IExcelReportService, Taller_Mecanico_WebService.Services.Reports.ExcelReportService>();
-builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IChartService, Taller_Mecanico_WebService.Services.Reports.ChartService>();
+// Cookie authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Login";
+        options.LogoutPath = "/Logout";
+        options.AccessDeniedPath = "/AccesoDenegado";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
 
-// Registrar HttpClient para consumir APIs
+builder.Services.AddAuthorization();
+
+// HTTP Clients para consumir APIs
+var usersServiceUrl = builder.Configuration["UsersServiceBaseUrl"] ?? "http://localhost:5297";
+builder.Services.AddHttpClient("UsersApi", c => c.BaseAddress = new Uri(usersServiceUrl));
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
+// Servicios de reportes
+builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.AuditInfoHelper>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Helpers.ReportFormatter>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IPDFReportService,
+    Taller_Mecanico_WebService.Services.Reports.PDFReportService>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IExcelReportService,
+    Taller_Mecanico_WebService.Services.Reports.ExcelReportService>();
+builder.Services.AddScoped<Taller_Mecanico_WebService.Services.Reports.IChartService,
+    Taller_Mecanico_WebService.Services.Reports.ChartService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
-app.MapRazorPages()
-   .WithStaticAssets();
+app.MapRazorPages().WithStaticAssets();
 app.MapControllers();
 
 app.Run();

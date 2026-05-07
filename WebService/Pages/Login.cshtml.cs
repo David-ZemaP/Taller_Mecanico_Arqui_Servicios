@@ -1,36 +1,26 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Http.Json;
 using System.Security.Claims;
-using BCrypt.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Entities;
 
-namespace Taller_Mecanico_Arqui.Pages
+namespace Taller_Mecanico_WebService.Pages
 {
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly IUsuarioLoginRepository _loginRepository;
-        private readonly IEmpleadoRepository _empleadoRepository;
-        private readonly IClienteRepository _clienteRepository;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<LoginModel> _logger;
+        private readonly IConfiguration _config;
 
-        public LoginModel(
-            IUsuarioLoginRepository loginRepository,
-            IEmpleadoRepository empleadoRepository,
-            IClienteRepository clienteRepository,
-            ILogger<LoginModel> logger)
+        public LoginModel(IHttpClientFactory httpClientFactory, ILogger<LoginModel> logger, IConfiguration config)
         {
-            _loginRepository = loginRepository;
-            _empleadoRepository = empleadoRepository;
-            _clienteRepository = clienteRepository;
+            _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _config = config;
         }
 
         [BindProperty]
@@ -40,118 +30,71 @@ namespace Taller_Mecanico_Arqui.Pages
 
         public void OnGet(string? returnUrl = null)
         {
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            {
-                ReturnUrl = returnUrl;
-            }
+            ReturnUrl = !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/";
         }
 
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
-            ReturnUrl = returnUrl ?? "/";
+            ReturnUrl = !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/";
 
             if (!ModelState.IsValid)
                 return Page();
 
-            UsuarioLogin? usuario;
             try
             {
-                usuario = await _loginRepository.GetByEmailAsync(Input.Email);
+                var baseUrl = _config["UsersServiceBaseUrl"] ?? "http://localhost:5297";
+                var client = _httpClientFactory.CreateClient();
+                client.BaseAddress = new Uri(baseUrl);
+
+                var response = await client.PostAsJsonAsync("/api/auth/login", new
+                {
+                    Email = Input.Email,
+                    Password = Input.Password
+                });
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    ModelState.AddModelError(string.Empty, "Correo electrónico o contraseña incorrectos.");
+                    return Page();
+                }
+
+                var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (loginResponse == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Error al procesar la respuesta del servidor.");
+                    return Page();
+                }
+
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Email, Input.Email),
+                    new Claim("Token", loginResponse.Token),
+                    new Claim("RequiereCambio", loginResponse.RequiereCambioPassword.ToString()),
+                    new Claim(ClaimTypes.Role, loginResponse.EsCliente ? "Cliente" : "Empleado"),
+                    new Claim("NivelAcceso", loginResponse.NivelAcceso ?? "Parcial")
+                };
+
+                if (!string.IsNullOrEmpty(loginResponse.Nombre))
+                    claims.Add(new Claim(ClaimTypes.Name, loginResponse.Nombre));
+
+                if (loginResponse.UsuarioLoginId > 0)
+                    claims.Add(new Claim(ClaimTypes.NameIdentifier, loginResponse.UsuarioLoginId.ToString()));
+
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var props = new AuthenticationProperties { IsPersistent = Input.RememberMe };
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), props);
+
+                if (loginResponse.RequiereCambioPassword)
+                    return RedirectToPage("/ChangePassword");
+
+                return LocalRedirect(ReturnUrl);
             }
-            catch (NpgsqlException ex)
+            catch (HttpRequestException ex)
             {
-                _logger.LogWarning(ex, "No se pudo conectar a PostgreSQL durante el inicio de sesion para {Email}.", Input.Email);
-                ModelState.AddModelError(string.Empty, "La base de datos no esta disponible en este momento. Intenta nuevamente en unos minutos.");
+                _logger.LogWarning(ex, "No se pudo conectar al servicio de autenticación");
+                ModelState.AddModelError(string.Empty, "El servicio de autenticación no está disponible. Intenta nuevamente.");
                 return Page();
             }
-
-            if (usuario == null || !BCrypt.Net.BCrypt.Verify(Input.Password, usuario.PasswordHash))
-            {
-                ModelState.AddModelError(string.Empty, "Correo electronico o contrasena incorrectos.");
-                return Page();
-            }
-
-            if (usuario.EsCliente)
-            {
-                return await HandleClienteLoginAsync(usuario);
-            }
-            else
-            {
-                return await HandleEmpleadoLoginAsync(usuario);
-            }
-        }
-
-        private async Task<IActionResult> HandleClienteLoginAsync(UsuarioLogin usuario)
-        {
-            var clienteResult = await _clienteRepository.GetByIdAsync(usuario.ClienteId!.Value);
-            if (clienteResult.IsFailure)
-            {
-                ModelState.AddModelError(string.Empty, clienteResult.ErrorMessage ?? "No se pudo validar el cliente.");
-                return Page();
-            }
-
-            var cliente = clienteResult.Value;
-            if (cliente == null)
-            {
-                ModelState.AddModelError(string.Empty, "Cliente no encontrado.");
-                return Page();
-            }
-
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.ClienteId.ToString()!),
-                new Claim(ClaimTypes.Name, cliente.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Role, "Cliente"),
-                new Claim("NivelAcceso", "Cliente"),
-                new Claim("ClienteId", usuario.ClienteId.ToString()!)
-            };
-
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
-            return RedirectToPage("/Clientes/Perfil");
-        }
-
-        private async Task<IActionResult> HandleEmpleadoLoginAsync(UsuarioLogin usuario)
-        {
-            var empleadoResult = await _empleadoRepository.GetByIdAsync(usuario.EmpleadoId!.Value);
-            if (empleadoResult.IsFailure)
-            {
-                ModelState.AddModelError(string.Empty, empleadoResult.ErrorMessage ?? "No se pudo validar el empleado.");
-                return Page();
-            }
-
-            var empleado = empleadoResult.Value;
-            if (empleado == null || empleado is not Administrador admin)
-            {
-                ModelState.AddModelError(string.Empty, "Solo los administradores pueden acceder al sistema.");
-                return Page();
-            }
-
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.EmpleadoId.ToString()!),
-                new Claim(ClaimTypes.Name, empleado.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Role, "Administrador"),
-                new Claim("NivelAcceso", admin.NivelAcceso.ToString())
-            };
-
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
-
-            if (usuario.RequiereCambioPassword && usuario.Email != "administrador.principal@taller.com")
-            {
-                return RedirectToPage("/ChangePassword");
-            }
-
-            return LocalRedirect(ReturnUrl);
         }
     }
 
@@ -165,5 +108,15 @@ namespace Taller_Mecanico_Arqui.Pages
         public string Password { get; set; } = string.Empty;
 
         public bool RememberMe { get; set; }
+    }
+
+    public class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public bool RequiereCambioPassword { get; set; }
+        public bool EsCliente { get; set; }
+        public string? NivelAcceso { get; set; }
+        public string? Nombre { get; set; }
+        public int UsuarioLoginId { get; set; }
     }
 }

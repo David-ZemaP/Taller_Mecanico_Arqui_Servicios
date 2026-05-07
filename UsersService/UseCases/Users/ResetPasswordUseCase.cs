@@ -38,8 +38,7 @@ namespace Taller_Mecanico_Users.UseCases.Users
                 return updateResult;
             }
 
-            var emailBody = $"Hola,\nTu contraseña fue restablecida exitosamente.\nTu contraseña temporal es: {temporaryPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
-            await _mailSender.SendEmailAsync(user.Email, "Restablecimiento de contraseña - Taller Mecánico", emailBody);
+            await _mailSender.SendPasswordResetAsync(user.Email, temporaryPassword);
 
             return Result.Success();
         }

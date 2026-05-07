@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Taller_Mecanico_Arqui.Pages;
+namespace Taller_Mecanico_WebService.Pages;
 
 public class AccesoDenegadoModel : PageModel
 {

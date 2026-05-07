@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(dir D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\OrdenTrabajoService *)",
+      "Bash(xargs grep -l \"class Vehiculo\\\\|class Producto\\\\|class Servicio\")",
+      "Bash(xargs grep -l \"enum EstadoPago\\\\|class EstadoPago\")"
     ]
   }
 }

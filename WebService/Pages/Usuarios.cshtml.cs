@@ -1,312 +1,192 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Application.Common;
 
-namespace Taller_Mecanico_Arqui.Pages
+namespace Taller_Mecanico_WebService.Pages
 {
-    [RequireAccessLevel(NivelAcceso.Completo, AllowedLevels = new[] { NivelAcceso.Completo, NivelAcceso.Gerente })]
+    [Authorize(Roles = "Empleado")]
     public class UsuariosModel : PageModel
     {
-        private readonly IUsuarioLoginRepository _loginRepository;
-        private readonly IEmpleadoRepository _empleadoRepository;
-        private readonly Taller_Mecanico_Arqui.Infrastructure.Services.AuthenticationHelper _authHelper;
-        private readonly ICredentialEmailSender _emailSender;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _config;
+        private readonly ILogger<UsuariosModel> _logger;
 
-        public UsuariosModel(
-            IUsuarioLoginRepository loginRepository, 
-            IEmpleadoRepository empleadoRepository,
-            Taller_Mecanico_Arqui.Infrastructure.Services.AuthenticationHelper authHelper,
-            ICredentialEmailSender emailSender)
+        public UsuariosModel(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<UsuariosModel> logger)
         {
-            _loginRepository = loginRepository;
-            _empleadoRepository = empleadoRepository;
-            _authHelper = authHelper;
-            _emailSender = emailSender;
+            _httpClientFactory = httpClientFactory;
+            _config = config;
+            _logger = logger;
         }
 
-        public List<UsuarioViewModel> Usuarios { get; set; } = new();
-        public List<SelectListItem> AdministradoresSelect { get; set; } = new();
-        public NivelAcceso CurrentUserLevel { get; set; }
-
-        public string? NuevoEmail { get; set; }
-        public string? NuevaPassword { get; set; }
+        public List<UsuarioVm> Usuarios { get; set; } = new();
+        public string? MensajeExito { get; set; }
+        public string? MensajeError { get; set; }
 
         [BindProperty]
-        public UsuarioFormDto FormDto { get; set; } = new();
+        public CreateUserForm FormCrear { get; set; } = new();
 
         public async Task OnGetAsync()
         {
-            // Recuperar credenciales del TempData si existen
-            NuevoEmail = TempData["NuevoEmail"] as string;
-            NuevaPassword = TempData["NuevaPassword"] as string;
-            
-            await CargarDatosAsync();
+            MensajeExito = TempData["Exito"] as string;
+            await CargarUsuariosAsync();
         }
 
-        public async Task<IActionResult> OnPostSaveAsync()
+        public async Task<IActionResult> OnPostCrearAsync()
         {
             if (!ModelState.IsValid)
             {
-                await CargarDatosAsync();
+                await CargarUsuariosAsync();
                 return Page();
             }
 
-            // Check if user can create/modify this admin
-            var empleadoResult = await _empleadoRepository.GetByIdAsync(FormDto.EmpleadoId);
-            if (empleadoResult.IsFailure)
+            try
             {
-                ModelState.AddModelError(string.Empty, empleadoResult.ErrorMessage ?? "No se pudo consultar el empleado seleccionado.");
-                await CargarDatosAsync();
-                return Page();
+                var client = GetClient();
+                var response = await client.PostAsJsonAsync("/api/users", new
+                {
+                    Nombres = FormCrear.Nombres,
+                    PrimerApellido = FormCrear.PrimerApellido,
+                    SegundoApellido = FormCrear.SegundoApellido,
+                    Email = FormCrear.Email,
+                    Nivel = FormCrear.Nivel,
+                    EmpleadoId = FormCrear.EmpleadoId,
+                    EsCliente = false
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["Exito"] = "Usuario creado exitosamente. Las credenciales fueron enviadas por correo.";
+                    return RedirectToPage();
+                }
+
+                var error = await response.Content.ReadFromJsonAsync<ErrorVm>();
+                MensajeError = error?.Message ?? "Error al crear usuario.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creando usuario");
+                MensajeError = "No se pudo conectar al servicio.";
             }
 
-            var empleado = empleadoResult.Value;
-            if (empleado is Administrador admin)
-            {
-                if (FormDto.UsuarioLoginId == 0)
-                {
-                    var canCreateValidation = ValidationHelper.RequireCanCreateAdmin(_authHelper.CanCreateAdmin(admin.NivelAcceso), admin.NivelAcceso);
-                    if (canCreateValidation.IsFailure)
-                    {
-                        ModelState.AddModelError(string.Empty, canCreateValidation.ErrorMessage ?? $"No tienes permisos para crear usuarios para administradores con nivel {admin.NivelAcceso}.");
-                        await CargarDatosAsync();
-                        return Page();
-                    }
-                }
-                else
-                {
-                    var canModifyValidation = ValidationHelper.RequireCanModifyAdmin(_authHelper.CanModifyAdmin(admin.NivelAcceso), admin.NivelAcceso);
-                    if (canModifyValidation.IsFailure)
-                    {
-                        ModelState.AddModelError(string.Empty, canModifyValidation.ErrorMessage ?? $"No tienes permisos para modificar usuarios de administradores con nivel {admin.NivelAcceso}.");
-                        await CargarDatosAsync();
-                        return Page();
-                    }
-                }
-            }
-
-            if (FormDto.UsuarioLoginId == 0)
-            {
-                // Guardar credenciales en TempData para mostrar en el modal
-                TempData["NuevoEmail"] = FormDto.Email;
-                TempData["NuevaPassword"] = FormDto.Password;
-                
-                var passwordHash = BCrypt.Net.BCrypt.HashPassword(FormDto.Password);
-                var nuevoLogin = UsuarioLogin.Crear(FormDto.EmpleadoId, FormDto.Email, passwordHash);
-                var addResult = await _loginRepository.AddAsync(nuevoLogin);
-                if (addResult.IsFailure)
-                {
-                    ModelState.AddModelError(string.Empty, addResult.ErrorMessage ?? "No se pudo crear el usuario.");
-                    await CargarDatosAsync();
-                    return Page();
-                }
-
-                // Enviar credenciales por correo
-                var empResult = await _empleadoRepository.GetByIdAsync(FormDto.EmpleadoId);
-                if (empResult.IsSuccess)
-                {
-                    var emailResult = await _emailSender.SendCredentialsAsync(FormDto.Email, empResult.Value!.NombreCompleto!.ToString(), FormDto.Password);
-                    if (emailResult.IsFailure)
-                    {
-                        TempData["EmailWarning"] = "Usuario creado, pero no se pudo enviar el correo: " + emailResult.ErrorMessage;
-                    }
-                }
-
-                TempData["SuccessMessage"] = "Usuario creado correctamente.";
-            }
-            else
-            {
-                var existente = await _loginRepository.GetByEmailAsync(FormDto.Email);
-                if (existente != null && existente.UsuarioLoginId != FormDto.UsuarioLoginId)
-                {
-                    ModelState.AddModelError("FormDto.Email", "Este correo electrónico ya está en uso.");
-                    await CargarDatosAsync();
-                    return Page();
-                }
-
-                var login = await GetByIdAsync(FormDto.UsuarioLoginId);
-                if (login != null)
-                {
-                    login.CambiarEmail(FormDto.Email);
-                    var updateResult = await _loginRepository.UpdateAsync(login);
-                    if (updateResult.IsFailure)
-                    {
-                        ModelState.AddModelError(string.Empty, updateResult.ErrorMessage ?? "No se pudo actualizar el usuario.");
-                        await CargarDatosAsync();
-                        return Page();
-                    }
-                    TempData["SuccessMessage"] = "Usuario actualizado correctamente.";
-                }
-            }
-
-            return RedirectToPage();
+            await CargarUsuariosAsync();
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostToggleActivoAsync(int id)
+        public async Task<IActionResult> OnPostEliminarAsync(int id)
         {
-            var login = await GetByIdAsync(id);
-            if (login != null)
+            try
             {
-                if (login.EsCliente)
-                {
-                    TempData["ErrorMessage"] = "No se puede modificar el estado de usuarios de clientes desde esta página.";
-                    return RedirectToPage();
-                }
+                var client = GetClient();
+                var response = await client.DeleteAsync($"/api/users/{id}");
 
-                var empleadoResult = await _empleadoRepository.GetByIdAsync(login.EmpleadoId!.Value);
-                if (empleadoResult.IsFailure)
+                if (response.IsSuccessStatusCode)
+                    TempData["Exito"] = "Usuario desactivado correctamente.";
+                else
                 {
-                    TempData["ErrorMessage"] = empleadoResult.ErrorMessage;
-                    return RedirectToPage();
+                    var error = await response.Content.ReadFromJsonAsync<ErrorVm>();
+                    TempData["Error"] = error?.Message ?? "Error al eliminar.";
                 }
-
-                var empleado = empleadoResult.Value;
-                if (empleado is Administrador admin)
-                {
-                    if (!_authHelper.CanModifyAdmin(admin.NivelAcceso))
-                    {
-                        TempData["ErrorMessage"] =
-                            $"No tienes permisos para modificar usuarios de administradores con nivel {admin.NivelAcceso}.";
-                        return RedirectToPage();
-                    }
-                }
-
-                if (login.Activo) login.Desactivar();
-                else login.Activar();
-                var updateResult = await _loginRepository.UpdateAsync(login);
-                if (updateResult.IsFailure)
-                {
-                    TempData["ErrorMessage"] = updateResult.ErrorMessage;
-                    return RedirectToPage();
-                }
-                TempData["SuccessMessage"] = login.Activo ? "Usuario activado." : "Usuario desactivado.";
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error eliminando usuario {Id}", id);
+                TempData["Error"] = "No se pudo conectar al servicio.";
+            }
+
             return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostResetPasswordAsync(int id)
         {
-            var login = await GetByIdAsync(id);
-            if (login != null)
+            try
             {
-                if (login.EsCliente)
-                {
-                    TempData["ErrorMessage"] = "No se puede restablecer la contraseña de clientes desde esta página.";
-                    return RedirectToPage();
-                }
+                var client = GetClient();
+                var response = await client.PostAsync($"/api/users/{id}/reset-password", null);
 
-                var empleadoResult = await _empleadoRepository.GetByIdAsync(login.EmpleadoId!.Value);
-                if (empleadoResult.IsFailure)
+                if (response.IsSuccessStatusCode)
+                    TempData["Exito"] = "Contraseña reiniciada. Credenciales enviadas al usuario.";
+                else
                 {
-                    TempData["ErrorMessage"] = empleadoResult.ErrorMessage;
-                    return RedirectToPage();
+                    var error = await response.Content.ReadFromJsonAsync<ErrorVm>();
+                    TempData["Error"] = error?.Message ?? "Error al reiniciar contraseña.";
                 }
-
-                var empleado = empleadoResult.Value;
-                if (empleado is Administrador admin)
-                {
-                    if (!_authHelper.CanModifyAdmin(admin.NivelAcceso))
-                    {
-                        TempData["ErrorMessage"] =
-                            $"No tienes permisos para restablecer contraseñas de administradores con nivel {admin.NivelAcceso}.";
-                        return RedirectToPage();
-                    }
-                }
-
-                var tempPassword = GenerateRandomPassword(10);
-                login.ResetearPassword(BCrypt.Net.BCrypt.HashPassword(tempPassword));
-                var updateResult = await _loginRepository.UpdateAsync(login);
-                if (updateResult.IsFailure)
-                {
-                    TempData["ErrorMessage"] = updateResult.ErrorMessage;
-                    return RedirectToPage();
-                }
-                TempData["NewPassword"] = tempPassword;
-                TempData["SuccessMessage"] = "Contraseña restablecida. La contraseña temporal se muestra abajo. El usuario deberá cambiarla en su primer inicio de sesión.";
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reseteando contraseña del usuario {Id}", id);
+                TempData["Error"] = "No se pudo conectar al servicio.";
+            }
+
             return RedirectToPage();
         }
 
-        private async Task CargarDatosAsync()
+        private async Task CargarUsuariosAsync()
         {
-            CurrentUserLevel = _authHelper.GetCurrentUserAccessLevel() ?? NivelAcceso.Parcial;
-
-            var logins = await _loginRepository.GetAllAsync();
-            var empleados = await _empleadoRepository.GetAllAsync();
-            var empleadosDict = empleados.ToDictionary(e => e.EmpleadoId);
-
-            Usuarios = logins.Select(l => new UsuarioViewModel
+            try
             {
-                UsuarioLoginId = l.UsuarioLoginId,
-                Email = l.Email,
-                EmpleadoId = l.EmpleadoId ?? 0,
-                EmpleadoNombre = l.EsCliente ? "CLIENTE" : (empleadosDict.TryGetValue(l.EmpleadoId!.Value, out var emp) ? emp!.NombreCompleto!.ToString() : "No disponible"),
-                UltimoAcceso = l.UltimoAcceso,
-                Activo = l.Activo,
-                AdminNivelAcceso = l.EsCliente ? NivelAcceso.Cliente : (empleadosDict.TryGetValue(l.EmpleadoId!.Value, out var e) && e is Administrador admin ? admin.NivelAcceso : NivelAcceso.Parcial)
-            }).ToList();
-
-            var currentUserLevel = _authHelper.GetCurrentUserAccessLevel();
-            var admins = empleados.OfType<Administrador>().Where(a => !a.IsDeleted);
-            
-            // Filter admins based on current user's permissions
-            if (currentUserLevel == NivelAcceso.Completo)
-            {
-                // Completo can only see and create Parcial admins
-                admins = admins.Where(a => a.NivelAcceso == NivelAcceso.Parcial);
+                var client = GetClient();
+                var response = await client.GetAsync("/api/users");
+                if (response.IsSuccessStatusCode)
+                {
+                    var lista = await response.Content.ReadFromJsonAsync<List<UsuarioVm>>();
+                    Usuarios = lista ?? new();
+                }
             }
-            // Gerente sees all admins (no filter)
-            
-            AdministradoresSelect = admins.OrderBy(a => a.NombreCompleto!.Nombres).Select(a => new SelectListItem(
-                $"{a.NombreCompleto!.Nombres} {a.NombreCompleto.PrimerApellido} ({a.NivelAcceso})",
-                a.EmpleadoId.ToString())).ToList();
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error cargando usuarios");
+                MensajeError = "No se pudieron cargar los usuarios del servicio.";
+            }
         }
 
-        private async Task<UsuarioLogin?> GetByIdAsync(int id)
+        private HttpClient GetClient()
         {
-            var loginResult = await _loginRepository.GetByIdAsync(id);
-            return loginResult.IsSuccess ? loginResult.Value : null;
-        }
-
-        private static string GenerateRandomPassword(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+            var baseUrl = _config["UsersServiceBaseUrl"] ?? "http://localhost:5297";
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(baseUrl);
+            var token = User.FindFirst("Token")?.Value ?? "";
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            return client;
         }
     }
 
-    public class UsuarioViewModel
+    public class UsuarioVm
     {
         public int UsuarioLoginId { get; set; }
         public string Email { get; set; } = string.Empty;
-        public int EmpleadoId { get; set; }
-        public string EmpleadoNombre { get; set; } = string.Empty;
-        public DateTime? UltimoAcceso { get; set; }
+        public string Username { get; set; } = string.Empty;
         public bool Activo { get; set; }
-        public NivelAcceso AdminNivelAcceso { get; set; }
+        public bool RequiereCambioPassword { get; set; }
+        public bool EsCliente { get; set; }
+        public DateTime? UltimoAcceso { get; set; }
     }
 
-    public class UsuarioFormDto
+    public class CreateUserForm
     {
-        public int UsuarioLoginId { get; set; }
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        public string Nombres { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El empleado es obligatorio.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Seleccione un empleado válido.")]
-        public int EmpleadoId { get; set; }
+        [Required(ErrorMessage = "El primer apellido es obligatorio.")]
+        public string PrimerApellido { get; set; } = string.Empty;
+
+        public string? SegundoApellido { get; set; }
 
         [Required(ErrorMessage = "El correo electrónico es obligatorio.")]
-        [EmailAddress(ErrorMessage = "El formato del correo electrónico no es válido.")]
+        [EmailAddress(ErrorMessage = "Correo inválido.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La contraseña es obligatoria.")]
-        [StringLength(20, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 20 caracteres.")]
-        public string Password { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El rol es obligatorio.")]
+        public string Nivel { get; set; } = string.Empty;
+
+        public int? EmpleadoId { get; set; }
+    }
+
+    public class ErrorVm
+    {
+        public string? Message { get; set; }
     }
 }

@@ -18,7 +18,7 @@ public class ClientesVehiculosModel : PageModel
     private readonly AuditInfoHelper _auditHelper;
     private readonly ILogger<ClientesVehiculosModel> _logger;
 
-    private const string API_BASE_URL = "http://localhost:5000/api/reports";
+    private const string API_BASE_URL = "http://localhost:5297/api/reports";
 
     public ClientesVehiculosModel(
         IHttpClientFactory httpClientFactory,
