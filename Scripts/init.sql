@@ -304,6 +304,9 @@ INSERT INTO producto (nombre, precio, stock) VALUES
 ('Mangueras de Frenos', 400.00, 8)
 ON CONFLICT (nombre) DO NOTHING;
 
+INSERT INTO cliente (nombre, primerapellido, segundoapellido, ci, telefono, email, tipocliente) VALUES
+('Juan', 'Pérez', 'Gómez', 12345678, 71234567, 'juan.perez@gmial.com', 'Particular')
+
 INSERT INTO servicio (nombre, precio, isdeleted, fechaactualizacion, creadopor) VALUES
 ('Cambio de Aceite', 350.00, FALSE, NULL, 'SYSTEM_SEED'),
 ('Cambio de Filtros', 250.00, FALSE, NULL, 'SYSTEM_SEED'),
