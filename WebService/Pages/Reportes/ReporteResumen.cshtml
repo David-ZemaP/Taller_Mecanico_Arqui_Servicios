@@ -1,0 +1,242 @@
+@page
+@model WebService.Pages.Reportes.ReporteResumenModel
+@{
+    ViewData["Title"] = "Resumen de Ingresos";
+    var labelsJson = System.Text.Json.JsonSerializer.Serialize(Model.ResumenMensual.Select(m => m.NombreMes).ToList());
+    var totalesJson = System.Text.Json.JsonSerializer.Serialize(Model.ResumenMensual.Select(m => m.Total).ToList());
+    var cantidadesJson = System.Text.Json.JsonSerializer.Serialize(Model.ResumenMensual.Select(m => m.Cantidad).ToList());
+}
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        .card { background: white !important; color: black !important; border: 1px solid #ccc !important; }
+        .text-white, .text-teal, .text-light { color: black !important; }
+        .table-dark { background: white !important; color: black !important; }
+        .table-dark td, .table-dark th { color: black !important; background: white !important; border-color: #ccc !important; }
+        body { background: white !important; }
+        header, footer, nav { display: none !important; }
+        h2 { color: #1a7a5e !important; }
+        .chart-container { page-break-inside: avoid; }
+        .print-header { display: block !important; }
+    }
+    .print-header { display: none; }
+</style>
+
+<div class="no-print mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-teal fw-bold mb-0"><i class="bi bi-bar-chart-line me-2"></i>Resumen de Ingresos</h2>
+            <p class="text-muted">Análisis estadístico mensual de ingresos del taller</p>
+        </div>
+        <a asp-page="/Reportes/Index" class="btn btn-outline-secondary text-white">
+            <i class="bi bi-arrow-left me-1"></i>Volver a Reportes
+        </a>
+    </div>
+
+    <div class="card shadow" style="background-color: var(--bg-card); border: 1px solid #2a2a3e;">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-teal">Año</label>
+                    <select name="Anio" class="form-select form-control-dark">
+                        @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 4; y--)
+                        {
+                            var isSelected = Model.Anio == y;
+                            <option value="@y" selected="@isSelected">@y</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-teal">Estado de Trabajo</label>
+                    @{
+                        var selRecibido = Model.EstadoTrabajo == "Recibido";
+                        var selEnProceso = Model.EstadoTrabajo == "EnProceso";
+                        var selCompletado = Model.EstadoTrabajo == "Completado";
+                        var selAnulado = Model.EstadoTrabajo == "Anulado";
+                    }
+                    <select name="EstadoTrabajo" class="form-select form-control-dark">
+                        <option value="">— Todos los estados —</option>
+                        <option value="Recibido" selected="@selRecibido">Recibido</option>
+                        <option value="EnProceso" selected="@selEnProceso">En Proceso</option>
+                        <option value="Completado" selected="@selCompletado">Completado</option>
+                        <option value="Anulado" selected="@selAnulado">Anulado</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-teal flex-grow-1">
+                        <i class="bi bi-funnel me-1"></i>Aplicar
+                    </button>
+                    <a asp-page="ReporteResumen" class="btn btn-outline-secondary text-white">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="print-header text-center mb-3">
+    <h3 style="color:#1a7a5e; font-weight:bold;">TALLER MECÁNICO — PITSTOP</h3>
+    <p style="color:#555;">Resumen de Ingresos @Model.Anio — Generado: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3 mb-3">
+        <div class="card shadow text-center py-3" style="background-color: rgba(32,201,151,0.15); border: 1px solid #20c997;">
+            <div class="card-body">
+                <h6 class="text-teal mb-1">Total Órdenes</h6>
+                <h3 class="text-white fw-bold mb-0">@Model.TotalOrdenes</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5 mb-3">
+        <div class="card shadow text-center py-3" style="background-color: rgba(32,201,151,0.15); border: 1px solid #20c997;">
+            <div class="card-body">
+                <h6 class="text-teal mb-1">Total Ingresos @Model.Anio</h6>
+                <h3 class="text-white fw-bold mb-0">Bs. @Model.TotalGeneral.ToString("F2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3 no-print">
+        <div class="card shadow h-100 d-flex flex-column justify-content-center align-items-center py-3" style="background-color: var(--bg-card); border: 1px solid #2a2a3e;">
+            <div class="d-flex gap-2">
+                <button onclick="window.print()" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-printer me-1"></i>Imprimir / PDF
+                </button>
+                <a asp-page="ReporteResumen" asp-page-handler="Excel"
+                   asp-route-Anio="@Model.Anio"
+                   asp-route-EstadoTrabajo="@Model.EstadoTrabajo"
+                   class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container card shadow mt-2 mb-4" style="background-color: var(--bg-card); border: 1px solid #2a2a3e; padding: 20px;">
+    <h5 class="text-teal mb-3"><i class="bi bi-bar-chart-fill me-2"></i>Ingresos Mensuales — @Model.Anio</h5>
+    <canvas id="ingresosChart" style="max-height: 320px;"></canvas>
+</div>
+
+<div class="card shadow mt-2" style="background-color: var(--bg-card); border: 1px solid #2a2a3e;">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(32,201,151,0.1); border-bottom: 1px solid #2a2a3e;">
+        <span class="text-teal fw-bold"><i class="bi bi-table me-2"></i>Detalle Mensual</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
+                <tr>
+                    <th class="text-teal pb-3">Mes</th>
+                    <th class="text-teal pb-3 text-center">Cantidad de Órdenes</th>
+                    <th class="text-teal pb-3 text-end">Total Ingresos (Bs.)</th>
+                    <th class="text-teal pb-3 text-end">Promedio por Orden (Bs.)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model.ResumenMensual)
+                {
+                    <tr class="border-bottom border-secondary @(m.Cantidad == 0 ? "opacity-50" : "")">
+                        <td class="text-white">@m.NombreMes</td>
+                        <td class="text-center">
+                            @if (m.Cantidad > 0)
+                            {
+                                <span class="badge bg-info text-dark">@m.Cantidad</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end @(m.Total > 0 ? "text-white fw-bold" : "text-muted")">
+                            @(m.Total > 0 ? $"Bs. {m.Total:F2}" : "—")
+                        </td>
+                        <td class="text-end text-light">
+                            @(m.Cantidad > 0 ? $"Bs. {(m.Total / m.Cantidad):F2}" : "—")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="border-top: 2px solid #20c997;">
+                    <td class="fw-bold text-teal py-3">TOTAL</td>
+                    <td class="text-center fw-bold text-white py-3">@Model.TotalOrdenes</td>
+                    <td class="text-end fw-bold text-white py-3 fs-5">Bs. @Model.TotalGeneral.ToString("F2")</td>
+                    <td class="text-end text-light py-3">
+                        @(Model.TotalOrdenes > 0 ? $"Bs. {(Model.TotalGeneral / Model.TotalOrdenes):F2}" : "—")
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        const labels = @Html.Raw(labelsJson);
+        const totales = @Html.Raw(totalesJson);
+        const cantidades = @Html.Raw(cantidadesJson);
+
+        const ctx = document.getElementById('ingresosChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Ingresos (Bs.)',
+                        data: totales,
+                        backgroundColor: 'rgba(32, 201, 151, 0.75)',
+                        borderColor: '#20c997',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Cantidad de Órdenes',
+                        data: cantidades,
+                        type: 'line',
+                        backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                        borderColor: '#ffc107',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ffc107',
+                        pointRadius: 5,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.datasetIndex === 0)
+                                    return ` Bs. ${ctx.parsed.y.toFixed(2)}`;
+                                return ` ${ctx.parsed.y} órdenes`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        ticks: { color: '#20c997', callback: v => 'Bs. ' + v.toFixed(0) },
+                        grid: { color: 'rgba(32,201,151,0.1)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        ticks: { color: '#ffc107' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    </script>
+}
