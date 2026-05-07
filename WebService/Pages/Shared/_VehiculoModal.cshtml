@@ -59,7 +59,7 @@
                 </div>
                 <div class="modal-footer border-secondary py-3 px-4">
                     <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-teal" onclick="validarYGuardarVehiculo()">Crear vehículo</button>
+                    <button type="button" id="modalSubmitBtn" class="btn btn-teal" onclick="validarYGuardarVehiculo()">Crear vehículo</button>
                 </div>
             </form>
         </div>
@@ -298,14 +298,17 @@
             Anio: parseInt(document.getElementById('vehiculoAnio').value || '0', 10)
         };
 
-        fetch('/Vehiculos?handler=SaveAjax', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify(obj)
-        })
+        (function(){
+            var tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+            var headers = { 'Content-Type': 'application/json' };
+            if (tokenEl && tokenEl.value) headers['RequestVerificationToken'] = tokenEl.value;
+            return fetch('?handler=SaveAjax', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: headers,
+                body: JSON.stringify(obj)
+            });
+        })()
         .then(async response => {
             const text = await response.text();
             let data;

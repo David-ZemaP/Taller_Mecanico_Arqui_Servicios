@@ -128,11 +128,19 @@ namespace WebService.Pages.Vehiculos
             if (dto is null)
                 return new JsonResult(new { success = false, message = "Datos inválidos." }) { StatusCode = 400 };
 
-            var (ok, error, vehiculoId) = await _adapter.SaveVehiculoAsync(dto);
-            if (!ok)
-                return new JsonResult(new { success = false, message = error }) { StatusCode = 500 };
+            try
+            {
+                var (ok, error, vehiculoId) = await _adapter.SaveVehiculoAsync(dto);
+                if (!ok)
+                    return new JsonResult(new { success = false, message = error }) { StatusCode = 500 };
 
-            return new JsonResult(new { success = true, vehiculo = new { vehiculoId, placa = dto.Placa } });
+                return new JsonResult(new { success = true, vehiculo = new { vehiculoId, placa = dto.Placa } });
+            }
+            catch (Exception ex)
+            {
+                // Dev-only: return exception details to help debugging the 500
+                return new JsonResult(new { success = false, message = ex.Message, detail = ex.ToString() }) { StatusCode = 500 };
+            }
         }
 
         public async Task<IActionResult> OnPostSaveAsync()
