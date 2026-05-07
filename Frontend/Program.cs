@@ -25,7 +25,7 @@ builder.Services.AddAuthentication("FrontendScheme")
 // OrdenTrabajoService (puerto 5000)
 builder.Services.AddHttpClient<IOrdenTrabajoAdapter, OrdenTrabajoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:OrdenTrabajoServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:OrdenTrabajoServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -33,7 +33,7 @@ builder.Services.AddHttpClient<IOrdenTrabajoAdapter, OrdenTrabajoAdapter>(client
 // Clientes
 builder.Services.AddHttpClient<IClienteAdapter, ClienteAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ClientesServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ClientesServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -41,7 +41,7 @@ builder.Services.AddHttpClient<IClienteAdapter, ClienteAdapter>(client =>
 // Empleados
 builder.Services.AddHttpClient<IEmpleadoAdapter, EmpleadoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:EmpleadosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:EmpleadosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -49,14 +49,14 @@ builder.Services.AddHttpClient<IEmpleadoAdapter, EmpleadoAdapter>(client =>
 // Vehiculos
 builder.Services.AddHttpClient<IVehiculoAdapter, VehiculoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
 builder.Services.AddHttpClient<ICatalogosVehiculosAdapter, CatalogosVehiculosAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -64,7 +64,7 @@ builder.Services.AddHttpClient<ICatalogosVehiculosAdapter, CatalogosVehiculosAda
 // Productos
 builder.Services.AddHttpClient<IProductoAdapter, ProductoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ProductosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ProductosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -72,7 +72,7 @@ builder.Services.AddHttpClient<IProductoAdapter, ProductoAdapter>(client =>
 // Servicios
 builder.Services.AddHttpClient<IServicioAdapter, ServicioAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ServiciosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ServiciosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
@@ -80,7 +80,7 @@ builder.Services.AddHttpClient<IServicioAdapter, ServicioAdapter>(client =>
 // UsersService (puerto 5001)
 builder.Services.AddHttpClient<IUsersServiceAdapter, UsersServiceAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:UsersServiceUrl"] ?? "http://localhost:5001";
+    var baseUrl = builder.Configuration["ApiSettings:UsersServiceUrl"] ?? "http://localhost:5297";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });

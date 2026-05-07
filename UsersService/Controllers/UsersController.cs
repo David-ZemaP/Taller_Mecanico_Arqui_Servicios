@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Security.Claims;
+using Taller_Mecanico_Users.Domain.Common;
 using Taller_Mecanico_Users.UseCases.Users;
 
 namespace Taller_Mecanico_Users.Controllers
@@ -40,10 +41,28 @@ namespace Taller_Mecanico_Users.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden crear
+        [AllowAnonymous]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
-            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);
+            if (!request.EmpleadoId.HasValue && !request.ClienteId.HasValue)
+            {
+                return BadRequest(new
+                {
+                    code = ErrorCodes.ValidationRequired,
+                    message = "Debe enviar EmpleadoId o ClienteId."
+                });
+            }
+
+            if (request.EmpleadoId.HasValue && request.ClienteId.HasValue)
+            {
+                return BadRequest(new
+                {
+                    code = ErrorCodes.ValidationInvalidValue,
+                    message = "No puede enviar EmpleadoId y ClienteId al mismo tiempo."
+                });
+            }
+
+            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.ClienteId, request.Email);
             if (usuarioResult.IsFailure || usuarioResult.Value == null)
             {
                 return ApiResultMapper.MapError(this, usuarioResult);
@@ -167,7 +186,8 @@ namespace Taller_Mecanico_Users.Controllers
 
     public class CreateUserRequest
     {
-        public int EmpleadoId { get; set; }
+        public int? EmpleadoId { get; set; }
+        public int? ClienteId { get; set; }
         public string Email { get; set; } = string.Empty;
     }
 

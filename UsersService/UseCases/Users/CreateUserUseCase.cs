@@ -37,13 +37,40 @@ namespace Taller_Mecanico_Users.UseCases.Users
             _passwordHasher = passwordHasher;
         }
 
-        public async Task<Result<UsuarioLogin>> ExecuteAsync(int empleadoId, string email)
+        public Task<Result<UsuarioLogin>> ExecuteAsync(int empleadoId, string email)
         {
-            // 0. Validar que el empleado no tenga ya un login
-            var existingByEmployee = await _repository.GetByEmpleadoIdAsync(empleadoId);
-            if (existingByEmployee != null)
+            return ExecuteAsync(empleadoId, null, email);
+        }
+
+        public async Task<Result<UsuarioLogin>> ExecuteAsync(int? empleadoId, int? clienteId, string email)
+        {
+            if (empleadoId.HasValue && clienteId.HasValue)
             {
-                return Result<UsuarioLogin>.Failure(ErrorCodes.UsuarioEmpleadoDuplicado, "El empleado ya tiene un usuario asignado.");
+                return Result<UsuarioLogin>.Failure(ErrorCodes.ValidationInvalidValue, "Un usuario no puede tener EmpleadoId y ClienteId al mismo tiempo.");
+            }
+
+            if (!empleadoId.HasValue && !clienteId.HasValue)
+            {
+                return Result<UsuarioLogin>.Failure(ErrorCodes.ValidationRequired, "Debe enviar EmpleadoId o ClienteId.");
+            }
+
+            // 0. Validar que el empleado no tenga ya un login
+            if (empleadoId.HasValue)
+            {
+                var existingByEmployee = await _repository.GetByEmpleadoIdAsync(empleadoId.Value);
+                if (existingByEmployee != null)
+                {
+                    return Result<UsuarioLogin>.Failure(ErrorCodes.UsuarioEmpleadoDuplicado, "El empleado ya tiene un usuario asignado.");
+                }
+            }
+
+            if (clienteId.HasValue)
+            {
+                var existingByClient = await _repository.GetByClienteIdAsync(clienteId.Value);
+                if (existingByClient != null)
+                {
+                    return Result<UsuarioLogin>.Failure(ErrorCodes.UsuarioClienteDuplicado, "El cliente ya tiene un usuario asignado.");
+                }
             }
 
             // 0. Validar email duplicado
@@ -60,7 +87,10 @@ namespace Taller_Mecanico_Users.UseCases.Users
             string passwordHash = _passwordHasher.HashPassword(plainPassword);
 
             // 3. Crear entidad forzando cambio de contraseña en primer acceso
-            var nuevoUsuarioResult = UsuarioLogin.Crear(empleadoId, email, passwordHash, requiereCambioPassword: true);
+            var nuevoUsuarioResult = clienteId.HasValue
+                ? UsuarioLogin.CrearParaCliente(clienteId.Value, email, passwordHash)
+                : UsuarioLogin.Crear(empleadoId!.Value, email, passwordHash, requiereCambioPassword: true);
+
             if (nuevoUsuarioResult.IsFailure)
             {
                 return Result<UsuarioLogin>.Failure(nuevoUsuarioResult.ErrorCode!, nuevoUsuarioResult.ErrorMessage!);

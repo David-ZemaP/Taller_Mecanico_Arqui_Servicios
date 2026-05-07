@@ -199,6 +199,15 @@ CREATE TABLE IF NOT EXISTS UsuarioLogin (
     EsCliente BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    tabla_afectada VARCHAR(255),
+    registro_id INT,
+    accion VARCHAR(100),
+    realizado_por VARCHAR(255),
+    fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS IX_Producto_Nombre ON Producto (Nombre);
 
 
