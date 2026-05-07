@@ -1,35 +1,32 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using BCrypt.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using Npgsql;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Entities;
+using Taller_Mecanico_Arqui.Frontend.Adapters;
 
 namespace Taller_Mecanico_Arqui.Pages
 {
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly IUsuarioLoginRepository _loginRepository;
-        private readonly IEmpleadoRepository _empleadoRepository;
-        private readonly IClienteRepository _clienteRepository;
+        private readonly IUsersServiceAdapter _usersAdapter;
+        private readonly IClienteAdapter _clienteAdapter;
+        private readonly IEmpleadoAdapter _empleadoAdapter;
         private readonly ILogger<LoginModel> _logger;
 
         public LoginModel(
-            IUsuarioLoginRepository loginRepository,
-            IEmpleadoRepository empleadoRepository,
-            IClienteRepository clienteRepository,
+            IUsersServiceAdapter usersAdapter,
+            IClienteAdapter clienteAdapter,
+            IEmpleadoAdapter empleadoAdapter,
             ILogger<LoginModel> logger)
         {
-            _loginRepository = loginRepository;
-            _empleadoRepository = empleadoRepository;
-            _clienteRepository = clienteRepository;
+            _usersAdapter = usersAdapter;
+            _clienteAdapter = clienteAdapter;
+            _empleadoAdapter = empleadoAdapter;
             _logger = logger;
         }
 
@@ -53,100 +50,69 @@ namespace Taller_Mecanico_Arqui.Pages
             if (!ModelState.IsValid)
                 return Page();
 
-            UsuarioLogin? usuario;
-            try
+            var authResult = await _usersAdapter.LoginAsync(Input.Email, Input.Password);
+
+            if (authResult == null)
             {
-                usuario = await _loginRepository.GetByEmailAsync(Input.Email);
-            }
-            catch (NpgsqlException ex)
-            {
-                _logger.LogWarning(ex, "No se pudo conectar a PostgreSQL durante el inicio de sesion para {Email}.", Input.Email);
-                ModelState.AddModelError(string.Empty, "La base de datos no esta disponible en este momento. Intenta nuevamente en unos minutos.");
+                ModelState.AddModelError(string.Empty, "Correo electrónico o contraseña incorrectos.");
                 return Page();
             }
 
-            if (usuario == null || !BCrypt.Net.BCrypt.Verify(Input.Password, usuario.PasswordHash))
+            if (authResult.EsCliente)
             {
-                ModelState.AddModelError(string.Empty, "Correo electronico o contrasena incorrectos.");
-                return Page();
-            }
-
-            if (usuario.EsCliente)
-            {
-                return await HandleClienteLoginAsync(usuario);
+                return await HandleClienteLoginAsync(authResult);
             }
             else
             {
-                return await HandleEmpleadoLoginAsync(usuario);
+                return await HandleEmpleadoLoginAsync(authResult);
             }
         }
 
-        private async Task<IActionResult> HandleClienteLoginAsync(UsuarioLogin usuario)
+        private async Task<IActionResult> HandleClienteLoginAsync(AuthResponse authResult)
         {
-            var clienteResult = await _clienteRepository.GetByIdAsync(usuario.ClienteId!.Value);
-            if (clienteResult.IsFailure)
+            if (!authResult.ClienteId.HasValue)
             {
-                ModelState.AddModelError(string.Empty, clienteResult.ErrorMessage ?? "No se pudo validar el cliente.");
-                return Page();
+                _logger.LogWarning("Login de cliente sin ClienteId en el token para {Email}", Input.Email);
             }
 
-            var cliente = clienteResult.Value;
-            if (cliente == null)
-            {
-                ModelState.AddModelError(string.Empty, "Cliente no encontrado.");
-                return Page();
-            }
-
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
+            var clienteId = authResult.ClienteId?.ToString() ?? Input.Email;
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.ClienteId.ToString()!),
-                new Claim(ClaimTypes.Name, cliente.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
+                new Claim(ClaimTypes.NameIdentifier, clienteId),
+                new Claim(ClaimTypes.Name, Input.Email),
+                new Claim(ClaimTypes.Email, Input.Email),
                 new Claim(ClaimTypes.Role, "Cliente"),
-                new Claim("NivelAcceso", "Cliente"),
-                new Claim("ClienteId", usuario.ClienteId.ToString()!)
+                new Claim("ClienteId", clienteId),
+                new Claim("NivelAcceso", "Cliente")
             };
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
+            var identity = new ClaimsIdentity(claims, "FrontendScheme");
+            await HttpContext.SignInAsync("FrontendScheme", new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
             return RedirectToPage("/Clientes/Perfil");
         }
 
-        private async Task<IActionResult> HandleEmpleadoLoginAsync(UsuarioLogin usuario)
+        private async Task<IActionResult> HandleEmpleadoLoginAsync(AuthResponse authResult)
         {
-            var empleadoResult = await _empleadoRepository.GetByIdAsync(usuario.EmpleadoId!.Value);
-            if (empleadoResult.IsFailure)
+            if (!authResult.UserId.HasValue)
             {
-                ModelState.AddModelError(string.Empty, empleadoResult.ErrorMessage ?? "No se pudo validar el empleado.");
-                return Page();
+                _logger.LogWarning("Login de empleado sin UserId en el token para {Email}", Input.Email);
             }
 
-            var empleado = empleadoResult.Value;
-            if (empleado == null || empleado is not Administrador admin)
-            {
-                ModelState.AddModelError(string.Empty, "Solo los administradores pueden acceder al sistema.");
-                return Page();
-            }
-
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
+            var userId = authResult.UserId?.ToString() ?? Input.Email;
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.EmpleadoId.ToString()!),
-                new Claim(ClaimTypes.Name, empleado.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(ClaimTypes.Name, Input.Email),
+                new Claim(ClaimTypes.Email, Input.Email),
                 new Claim(ClaimTypes.Role, "Administrador"),
-                new Claim("NivelAcceso", admin.NivelAcceso.ToString())
+                new Claim("UserId", userId),
+                new Claim("NivelAcceso", "Admin")
             };
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
+            var identity = new ClaimsIdentity(claims, "FrontendScheme");
+            await HttpContext.SignInAsync("FrontendScheme", new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
 
-            if (usuario.RequiereCambioPassword && usuario.Email != "administrador.principal@taller.com")
+            if (authResult.RequiereCambioPassword && Input.Email != "administrador.principal@taller.com")
             {
                 return RedirectToPage("/ChangePassword");
             }

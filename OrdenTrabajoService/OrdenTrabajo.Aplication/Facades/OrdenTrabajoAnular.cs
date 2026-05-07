@@ -1,6 +1,5 @@
 using Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo;
 using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Ports;
 
 namespace Taller_Mecanico_Arqui.Application.Facades
 {
@@ -8,18 +7,24 @@ namespace Taller_Mecanico_Arqui.Application.Facades
     {
         private readonly SetAnulacionOrdenTrabajoUseCase _setAnulacionUseCase;
 
-        public OrdenTrabajoAnular(
-            SetAnulacionOrdenTrabajoUseCase setAnulacionUseCase)
+        public OrdenTrabajoAnular(SetAnulacionOrdenTrabajoUseCase setAnulacionUseCase)
         {
             _setAnulacionUseCase = setAnulacionUseCase;
+        }
+
+        public async Task<Result> ExecuteAsync(int ordenTrabajoId)
+        {
+            return await _setAnulacionUseCase.ExecuteAsync(ordenTrabajoId, true);
+        }
+
+        public async Task<Result> ReactivarAsync(int ordenTrabajoId)
+        {
+            return await _setAnulacionUseCase.ExecuteAsync(ordenTrabajoId, false);
         }
 
         public async Task<Result> AnularProcesoPrincipalAsync(int ordenTrabajoId, bool anular)
         {
             return await _setAnulacionUseCase.ExecuteAsync(ordenTrabajoId, anular);
         }
-
-        public Task<Result> DeleteAsync(int id)
-            => AnularProcesoPrincipalAsync(id, anular: true);
     }
 }

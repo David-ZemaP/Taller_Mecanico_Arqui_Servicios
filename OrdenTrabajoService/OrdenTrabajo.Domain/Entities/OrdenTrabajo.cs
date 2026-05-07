@@ -19,6 +19,11 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
         public int Estado => IsDeleted ? 0 : 1;
         public DateTime? FechaActualizacion { get; private set; }
 
+        // Auditoría
+        public string? CreadoPor { get; private set; }
+        public string? ActualizadoPor { get; private set; }
+        public string? EliminadoPor { get; private set; }
+
         public Vehiculo? Vehiculo { get; private set; }
 
         private readonly List<OrdenTrabajoFoto> _fotosVehiculo = new();
@@ -156,9 +161,21 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
             _serviciosRealizados.Add(servicio);
         }
 
-        public void MarcarEliminado()
+        public void MarcarEliminado(string? eliminadoPor = null)
         {
             IsDeleted = true;
+            EliminadoPor = eliminadoPor;
+            FechaActualizacion = DateTime.UtcNow;
+        }
+
+        public void SetAuditoriaCreacion(string? creadoPor)
+        {
+            CreadoPor = creadoPor;
+        }
+
+        public void SetAuditoriaActualizacion(string? actualizadoPor)
+        {
+            ActualizadoPor = actualizadoPor;
             FechaActualizacion = DateTime.UtcNow;
         }
     }

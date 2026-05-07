@@ -1,88 +1,49 @@
-#nullable disable
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Taller_Mecanico_Arqui.Application.UseCases.Clientes;
-using Taller_Mecanico_Arqui.Application.DTOs.Clientes;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Infrastructure.Services;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
+using Taller_Mecanico_Arqui.Frontend.DTOs;
 
 namespace Taller_Mecanico_Arqui.Pages.Clientes
 {
     [RequireAccessLevel(NivelAcceso.Parcial)]
     public class IndexModel : PageModel
     {
-        private readonly GetAllClientesUseCase _getAllClientesUseCase;
-        private readonly GetClienteByIdUseCase _getClienteByIdUseCase;
-        private readonly CreateClienteUseCase _createClienteUseCase;
-        private readonly UpdateClienteUseCase _updateClienteUseCase;
-        private readonly DeleteClienteUseCase _deleteClienteUseCase;
-        private readonly IClienteRepository _clienteRepository;
-        private readonly AuthenticationHelper _authHelper;
+        private readonly IClienteAdapter _clienteAdapter;
 
-        public IndexModel(
-            GetAllClientesUseCase getAllClientesUseCase,
-            GetClienteByIdUseCase getClienteByIdUseCase,
-            CreateClienteUseCase createClienteUseCase,
-            UpdateClienteUseCase updateClienteUseCase,
-            DeleteClienteUseCase deleteClienteUseCase,
-            IClienteRepository clienteRepository,
-            AuthenticationHelper authHelper)
+        public IndexModel(IClienteAdapter clienteAdapter)
         {
-            _getAllClientesUseCase = getAllClientesUseCase;
-            _getClienteByIdUseCase = getClienteByIdUseCase;
-            _createClienteUseCase = createClienteUseCase;
-            _updateClienteUseCase = updateClienteUseCase;
-            _deleteClienteUseCase = deleteClienteUseCase;
-            _clienteRepository = clienteRepository;
-            _authHelper = authHelper;
+            _clienteAdapter = clienteAdapter;
         }
 
         public IList<ClienteListDto> Clientes { get; set; } = new List<ClienteListDto>();
-        public bool CanModify => _authHelper.GetCurrentUserAccessLevel() == NivelAcceso.Completo;
 
         [BindProperty]
         public ClienteFormDto FormDto { get; set; } = new();
 
         public async Task OnGetAsync()
         {
-            Clientes = (await _getAllClientesUseCase.ExecuteAsync())
-                .Select(c => new ClienteListDto
-                {
-                    ClienteId = c.ClienteId,
-                    NombreCompleto = c.NombreCompleto?.ToString() ?? string.Empty,
-                    Telefono = c.Telefono,
-                    Email = c.Email,
-                    FechaRegistro = c.FechaRegistro
-                })
-                .ToList();
+            Clientes = await _clienteAdapter.GetAllAsync();
         }
 
         public async Task<JsonResult> OnGetClienteAsync(int id)
         {
-            var clienteResult = await _getClienteByIdUseCase.ExecuteAsync(id);
-            if (clienteResult.IsFailure)
+            var cliente = await _clienteAdapter.GetByIdAsync(id);
+            if (cliente == null)
             {
-                if (clienteResult.ErrorCode == ErrorCodes.ClienteNotFound)
-                    return new JsonResult(new { error = "Cliente no encontrado." }) { StatusCode = 404 };
-
-                return new JsonResult(new { error = clienteResult.ErrorMessage ?? "Error al consultar cliente." }) { StatusCode = 500 };
+                return new JsonResult(new { error = "Cliente no encontrado." }) { StatusCode = 404 };
             }
 
-            var cliente = clienteResult.Value!;
             return new JsonResult(new
             {
                 clienteId = cliente.ClienteId,
-                nombres = cliente.NombreCompleto!.Nombres,
-                primerApellido = cliente.NombreCompleto!.PrimerApellido,
-                segundoApellido = cliente.NombreCompleto!.SegundoApellido,
-                ciNumero = cliente.Ci.Numero,
-                ciComplemento = cliente.Ci.Complemento,
+                nombres = cliente.Nombres,
+                primerApellido = cliente.PrimerApellido,
+                segundoApellido = cliente.SegundoApellido,
+                ciNumero = int.TryParse(cliente.Ci, out var ci) ? ci : 0,
                 telefono = cliente.Telefono,
                 email = cliente.Email
             });
@@ -98,7 +59,9 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
                 return new JsonResult(new { success = false, message = "Datos inválidos: " + errors }) { StatusCode = 400 };
             }
 
-            Result saveResult;
+            bool success;
+            string? error = null;
+
             if (dto.ClienteId == 0)
             {
                 var createDto = new CreateClienteDto
@@ -112,7 +75,7 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
                     Email = dto.Email,
                     TipoCliente = "Regular"
                 };
-                saveResult = await _createClienteUseCase.ExecuteAsync(createDto);
+                (success, _, error) = await _clienteAdapter.CreateAsync(createDto);
             }
             else
             {
@@ -128,12 +91,12 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
                     Email = dto.Email,
                     TipoCliente = "Regular"
                 };
-                saveResult = await _updateClienteUseCase.ExecuteAsync(updateDto);
+                (success, error) = await _clienteAdapter.UpdateAsync(updateDto);
             }
 
-            if (saveResult.IsFailure)
+            if (!success)
             {
-                return new JsonResult(new { success = false, message = saveResult.ErrorMessage ?? "Error al guardar el cliente" }) { StatusCode = 500 };
+                return new JsonResult(new { success = false, message = error ?? "Error al guardar el cliente" }) { StatusCode = 500 };
             }
 
             return new JsonResult(new { success = true, cliente = dto });
@@ -141,28 +104,15 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
 
         public async Task<IActionResult> OnPostSaveAsync()
         {
-            if (!CanModify)
-            {
-                TempData["ErrorMessage"] = "No tienes permisos para crear o modificar clientes.";
-                return RedirectToPage();
-            }
-
             if (!ModelState.IsValid)
             {
-                Clientes = (await _getAllClientesUseCase.ExecuteAsync())
-                    .Select(c => new ClienteListDto
-                    {
-                        ClienteId = c.ClienteId,
-                        NombreCompleto = c.NombreCompleto?.ToString() ?? string.Empty,
-                        Telefono = c.Telefono,
-                        Email = c.Email,
-                        FechaRegistro = c.FechaRegistro
-                    })
-                    .ToList();
+                Clientes = await _clienteAdapter.GetAllAsync();
                 return Page();
             }
 
-            Result saveResult;
+            bool success;
+            string? error = null;
+
             if (FormDto.ClienteId == 0)
             {
                 var createDto = new CreateClienteDto
@@ -176,7 +126,7 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
                     Email = FormDto.Email,
                     TipoCliente = "Regular"
                 };
-                saveResult = await _createClienteUseCase.ExecuteAsync(createDto);
+                (success, _, error) = await _clienteAdapter.CreateAsync(createDto);
             }
             else
             {
@@ -192,22 +142,13 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
                     Email = FormDto.Email,
                     TipoCliente = "Regular"
                 };
-                saveResult = await _updateClienteUseCase.ExecuteAsync(updateDto);
+                (success, error) = await _clienteAdapter.UpdateAsync(updateDto);
             }
 
-            if (saveResult.IsFailure)
+            if (!success)
             {
-                ModelState.AddModelError(string.Empty, saveResult.ErrorMessage ?? "No se pudo guardar el cliente.");
-                Clientes = (await _getAllClientesUseCase.ExecuteAsync())
-                    .Select(c => new ClienteListDto
-                    {
-                        ClienteId = c.ClienteId,
-                        NombreCompleto = c.NombreCompleto?.ToString() ?? string.Empty,
-                        Telefono = c.Telefono,
-                        Email = c.Email,
-                        FechaRegistro = c.FechaRegistro
-                    })
-                    .ToList();
+                ModelState.AddModelError(string.Empty, error ?? "No se pudo guardar el cliente.");
+                Clientes = await _clienteAdapter.GetAllAsync();
                 return Page();
             }
 
@@ -216,16 +157,10 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
 
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
-            if (!CanModify)
+            var (success, error) = await _clienteAdapter.DeleteAsync(id);
+            if (!success)
             {
-                TempData["ErrorMessage"] = "No tienes permisos para eliminar clientes.";
-                return RedirectToPage();
-            }
-
-            var deleteResult = await _deleteClienteUseCase.ExecuteAsync(id);
-            if (deleteResult.IsFailure)
-            {
-                TempData["ErrorMessage"] = deleteResult.ErrorMessage ?? "No se pudo eliminar el cliente.";
+                TempData["ErrorMessage"] = error ?? "No se pudo eliminar el cliente.";
             }
 
             return RedirectToPage();
@@ -236,17 +171,18 @@ namespace Taller_Mecanico_Arqui.Pages.Clientes
             if (string.IsNullOrWhiteSpace(term))
                 return new JsonResult(new List<object>());
 
+            var clientes = await _clienteAdapter.GetAllAsync();
+            
             term = term.ToLower(CultureInfo.InvariantCulture);
-            var clientes = (await _clienteRepository.GetAllAsync())
-                .Where(c => !c.IsDeleted &&
-                    ((c.NombreCompleto?.ToString() ?? string.Empty).ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                     c.Ci.Numero.ToString().Contains(term)))
-                .OrderBy(c => c.NombreCompleto?.ToString() ?? string.Empty)
-                .Select(c => new { id = c.ClienteId, text = (c.NombreCompleto?.ToString() ?? string.Empty) + " - CI: " + c.Ci.Numero })
+            var resultados = clientes
+                .Where(c => c.NombreCompleto.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                           c.Ci.Contains(term))
+                .OrderBy(c => c.NombreCompleto)
+                .Select(c => new { id = c.ClienteId, text = c.NombreCompleto + " - CI: " + c.Ci })
                 .Take(15)
                 .ToList();
 
-            return new JsonResult(clientes);
+            return new JsonResult(resultados);
         }
     }
 }

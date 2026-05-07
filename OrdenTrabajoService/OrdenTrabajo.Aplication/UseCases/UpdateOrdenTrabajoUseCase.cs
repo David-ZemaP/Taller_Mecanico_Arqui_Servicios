@@ -4,16 +4,19 @@ using Taller_Mecanico_Arqui.Domain.Enums;
 using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
 using Taller_Mecanico_Arqui.Domain.Common;
 using Taller_Mecanico_Arqui.Application.Common;
+using Taller_Mecanico_Arqui.Domain.Services;
 
 namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
 {
     public class UpdateOrdenTrabajoUseCase
     {
         private readonly IOrdenTrabajoRepository _repository;
+        private readonly ICurrentUserService _currentUser;
 
-        public UpdateOrdenTrabajoUseCase(IOrdenTrabajoRepository repository)
+        public UpdateOrdenTrabajoUseCase(IOrdenTrabajoRepository repository, ICurrentUserService currentUser)
         {
             _repository = repository;
+            _currentUser = currentUser;
         }
 
         public async Task<Result> ExecuteAsync(UpdateOrdenTrabajoDto dto)
@@ -48,6 +51,10 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
             orden.ActualizarEstadoTrabajo(estadoTrabajo);
             orden.ActualizarEstadoPago(estadoPago);
             orden.ActualizarTotal(dto.Total);
+
+            // Set auditoria
+            var currentUser = _currentUser.GetCurrentUserId() ?? _currentUser.GetCurrentUserEmail() ?? "system";
+            orden.SetAuditoriaActualizacion(currentUser);
 
             return await _repository.UpdateAsync(orden);
         }

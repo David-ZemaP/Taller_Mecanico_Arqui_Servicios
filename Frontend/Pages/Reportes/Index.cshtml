@@ -1,7 +1,6 @@
 @page
 @model Taller_Mecanico_Arqui.Pages.Reportes.IndexModel
-@using Taller_Mecanico_Arqui.Infrastructure.Authorization
-@using Taller_Mecanico_Arqui.Domain.Enums
+@using Taller_Mecanico_Arqui.Frontend.Authorization
 @attribute [RequireAccessLevel(NivelAcceso.Gerente)]
 @{
     ViewData["Title"] = "Reportes";

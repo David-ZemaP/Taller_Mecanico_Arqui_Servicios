@@ -1,100 +1,52 @@
-using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Taller_Mecanico_Arqui.Application.UseCases.Vehiculos;
-using Taller_Mecanico_Arqui.Application.DTOs.Vehiculos;
-using Taller_Mecanico_Arqui.Application.Common;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
-using Taller_Mecanico_Arqui.Domain.Enums;
+using Taller_Mecanico_Arqui.Frontend.Adapters;
+using System.Linq;
 
 namespace Taller_Mecanico_Arqui.Pages.Vehiculo
 {
-    [RequireAccessLevel(NivelAcceso.Parcial)]
+    [Authorize]
     public class IndexModel : PageModel
     {
-        private readonly GetAllVehiculosUseCase _getAllUseCase;
-        private readonly GetVehiculoByIdUseCase _getByIdUseCase;
-        private readonly CreateVehiculoUseCase _createUseCase;
-        private readonly UpdateVehiculoUseCase _updateUseCase;
-        private readonly DeleteVehiculoUseCase _deleteUseCase;
-        private readonly IVehiculoRepository _vehiculoRepository;
-        private readonly IClienteRepository _clienteRepository;
-        private readonly IRepository<Marca> _marcaRepository;
-        private readonly IRepository<Modelo> _modeloRepository;
-        private readonly IRepository<ColorVehiculo> _colorRepository;
-        private readonly Taller_Mecanico_Arqui.Infrastructure.Services.AuthenticationHelper _authHelper;
+        private readonly IVehiculoAdapter _vehiculoAdapter;
+        private readonly IClienteAdapter _clienteAdapter;
+        private readonly ICatalogosVehiculosAdapter _catalogosVehiculosAdapter;
 
         public IndexModel(
-            GetAllVehiculosUseCase getAllUseCase,
-            GetVehiculoByIdUseCase getByIdUseCase,
-            CreateVehiculoUseCase createUseCase,
-            UpdateVehiculoUseCase updateUseCase,
-            DeleteVehiculoUseCase deleteUseCase,
-            IVehiculoRepository vehiculoRepository,
-            IClienteRepository clienteRepository,
-            IRepository<Marca> marcaRepository,
-            IRepository<Modelo> modeloRepository,
-            IRepository<ColorVehiculo> colorRepository,
-            Taller_Mecanico_Arqui.Infrastructure.Services.AuthenticationHelper authHelper)
+            IVehiculoAdapter vehiculoAdapter,
+            IClienteAdapter clienteAdapter,
+            ICatalogosVehiculosAdapter catalogosVehiculosAdapter)
         {
-            _getAllUseCase = getAllUseCase;
-            _getByIdUseCase = getByIdUseCase;
-            _createUseCase = createUseCase;
-            _updateUseCase = updateUseCase;
-            _deleteUseCase = deleteUseCase;
-            _vehiculoRepository = vehiculoRepository;
-            _clienteRepository = clienteRepository;
-            _marcaRepository = marcaRepository;
-            _modeloRepository = modeloRepository;
-            _colorRepository = colorRepository;
-            _authHelper = authHelper;
+            _vehiculoAdapter = vehiculoAdapter;
+            _clienteAdapter = clienteAdapter;
+            _catalogosVehiculosAdapter = catalogosVehiculosAdapter;
         }
 
-        public IList<Domain.Entities.Vehiculo> Vehiculos { get; set; } = new List<Domain.Entities.Vehiculo>();
-        public bool CanModify => _authHelper.GetCurrentUserAccessLevel() == NivelAcceso.Completo;
+        public List<VehiculoListDto> Vehiculos { get; set; } = new();
+        public List<CatalogoMarcaDto> Marcas { get; set; } = new();
+        public List<CatalogoModeloDto> Modelos { get; set; } = new();
+        public List<CatalogoColorDto> Colores { get; set; } = new();
+        public bool CanModify => User.IsInRole("Administrador") || User.IsInRole("Completo") || User.IsInRole("Empleado");
+        public bool IsCliente => User.IsInRole("Cliente") || User.IsInRole("Parcial");
 
         [BindProperty]
         public VehiculoFormDto FormDto { get; set; } = new();
 
-        public List<SelectListItem> MarcasSelect { get; set; } = new();
-        public List<SelectListItem> ModelosSelect { get; set; } = new();
-        public List<SelectListItem> ColoresSelect { get; set; } = new();
-
         public async Task OnGetAsync()
         {
-            await CargarCatalogosAsync();
-            var result = await _getAllUseCase.ExecuteAsync();
-            Vehiculos = result.ToList();
-        }
-
-        public async Task<JsonResult> OnGetModelosPorMarcaAsync(int marcaId)
-        {
-            var modelos = (await _modeloRepository.GetAllAsync())
-                .Where(m => m.MarcaId == marcaId)
-                .OrderBy(m => m.Nombre)
-                .Select(m => new { id = m.ModeloId, nombre = m.Nombre })
-                .ToList();
-
-            return new JsonResult(modelos);
+            await LoadPageDataAsync();
         }
 
         public async Task<JsonResult> OnGetVehiculoAsync(int id)
         {
-            var vehiculoResult = await _getByIdUseCase.ExecuteAsync(id);
-            if (vehiculoResult.IsFailure)
+            var vehiculo = await _vehiculoAdapter.GetByIdAsync(id);
+            if (vehiculo == null)
             {
-                if (vehiculoResult.ErrorCode == ErrorCodes.VehiculoNotFound)
-                    return new JsonResult(new { error = "Vehículo no encontrado." }) { StatusCode = 404 };
-
-                return new JsonResult(new { error = vehiculoResult.ErrorMessage ?? "Error al consultar vehículo." }) { StatusCode = 500 };
+                return new JsonResult(new { error = "Vehículo no encontrado." }) { StatusCode = 404 };
             }
-
-            var vehiculo = vehiculoResult.Value!;
 
             return new JsonResult(new
             {
@@ -102,13 +54,13 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                 clienteId = vehiculo.ClienteId,
                 placa = vehiculo.Placa,
                 marcaId = vehiculo.MarcaId,
-                marcaNombre = vehiculo.Marca?.Nombre ?? "No disponible",
                 modeloId = vehiculo.ModeloId,
-                modeloNombre = vehiculo.Modelo?.Nombre ?? "No disponible",
                 colorVehiculoId = vehiculo.ColorVehiculoId,
-                colorNombre = vehiculo.ColorVehiculo?.Nombre ?? "No disponible",
                 anio = vehiculo.Anio,
-                clienteNombre = vehiculo.Cliente?.NombreCompleto?.ToString() ?? "No disponible"
+                clienteNombre = vehiculo.ClienteNombre,
+                marca = vehiculo.Marca,
+                modelo = vehiculo.Modelo,
+                color = vehiculo.Color
             });
         }
 
@@ -118,31 +70,14 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                 return new JsonResult(new List<object>());
 
             term = term.ToLower(CultureInfo.InvariantCulture);
-            var clientes = (await _clienteRepository.GetAllAsync())
-                .Where(c => c.NombreCompleto.Nombres.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            c.NombreCompleto.PrimerApellido.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                            c.Ci.Numero.ToString(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .Select(c => new { id = c.ClienteId, text = $"{c.Ci.Numero} - {c.NombreCompleto.Nombres} {c.NombreCompleto.PrimerApellido}" })
+            var clientes = (await _clienteAdapter.GetAllAsync())
+                .Where(c => c.NombreCompleto.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                            c.Ci.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new { id = c.ClienteId, text = $"{c.Ci} - {c.NombreCompleto}" })
                 .Take(15)
                 .ToList();
 
             return new JsonResult(clientes);
-        }
-
-        public async Task<JsonResult> OnGetBuscarMarcasAsync(string term)
-        {
-            if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
-
-            term = term.ToLower(CultureInfo.InvariantCulture);
-            var marcas = (await _marcaRepository.GetAllAsync())
-                .Where(m => m.Nombre.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(m => m.Nombre)
-                .Select(m => new { id = m.MarcaId, text = m.Nombre })
-                .Take(15)
-                .ToList();
-
-            return new JsonResult(marcas);
         }
 
         public async Task<IActionResult> OnPostSaveAjaxAsync([FromBody] VehiculoFormDto dto)
@@ -152,10 +87,9 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                 return new JsonResult(new { success = false, message = "Datos inválidos" }) { StatusCode = 400 };
             }
 
-            Result saveResult;
             if (dto.VehiculoId == 0)
             {
-                saveResult = await _createUseCase.ExecuteAsync(new CreateVehiculoDto
+                var result = await _vehiculoAdapter.CreateAsync(new CreateVehiculoDto
                 {
                     ClienteId = dto.ClienteId,
                     Placa = dto.Placa,
@@ -164,10 +98,17 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                     ColorVehiculoId = dto.ColorVehiculoId,
                     Anio = dto.Anio
                 });
+
+                if (!result.Success)
+                {
+                    return new JsonResult(new { success = false, message = result.Error ?? "Error al guardar el vehículo" }) { StatusCode = 500 };
+                }
+
+                return new JsonResult(new { success = true, vehiculo = new { vehiculoId = result.VehiculoId ?? 0, placa = dto.Placa } });
             }
             else
             {
-                saveResult = await _updateUseCase.ExecuteAsync(new UpdateVehiculoDto
+                var result = await _vehiculoAdapter.UpdateAsync(new UpdateVehiculoDto
                 {
                     VehiculoId = dto.VehiculoId,
                     ClienteId = dto.ClienteId,
@@ -177,53 +118,14 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                     ColorVehiculoId = dto.ColorVehiculoId,
                     Anio = dto.Anio
                 });
+
+                if (!result.Success)
+                {
+                    return new JsonResult(new { success = false, message = result.Error ?? "Error al actualizar el vehículo" }) { StatusCode = 500 };
+                }
+
+                return new JsonResult(new { success = true });
             }
-
-            if (saveResult.IsFailure)
-            {
-                return new JsonResult(new { success = false, message = saveResult.ErrorMessage ?? "Error al guardar el vehículo" }) { StatusCode = 500 };
-            }
-
-            var savedVehiculo = await _vehiculoRepository.GetAllAsync();
-            var vehiculoCreado = savedVehiculo
-                .Where(v => !v.IsDeleted && v.Placa == dto.Placa && v.ClienteId == dto.ClienteId)
-                .OrderByDescending(v => v.VehiculoId)
-                .FirstOrDefault();
-
-            return new JsonResult(new { success = true, vehiculo = new { vehiculoId = vehiculoCreado?.VehiculoId ?? 0, placa = dto.Placa } });
-        }
-
-        public async Task<JsonResult> OnGetBuscarModelosAsync(string term, int? marcaId)
-        {
-            if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
-
-            term = term.ToLower(CultureInfo.InvariantCulture);
-            var modelos = (await _modeloRepository.GetAllAsync())
-                .Where(m => (!marcaId.HasValue || m.MarcaId == marcaId.Value) &&
-                            m.Nombre.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(m => m.Nombre)
-                .Select(m => new { id = m.ModeloId, text = m.Nombre })
-                .Take(15)
-                .ToList();
-
-            return new JsonResult(modelos);
-        }
-
-        public async Task<JsonResult> OnGetBuscarColoresAsync(string term)
-        {
-            if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
-
-            term = term.ToLower(CultureInfo.InvariantCulture);
-            var colores = (await _colorRepository.GetAllAsync())
-                .Where(c => c.Nombre.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(c => c.Nombre)
-                .Select(c => new { id = c.ColorVehiculoId, text = c.Nombre })
-                .Take(15)
-                .ToList();
-
-            return new JsonResult(colores);
         }
 
         public async Task<IActionResult> OnPostSaveAsync()
@@ -236,72 +138,46 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
 
             if (!ModelState.IsValid)
             {
-                await CargarCatalogosAsync();
+                await LoadPageDataAsync();
                 return Page();
             }
 
-            var placaNormalizada = ValidationHelper.NormalizePlate(FormDto.Placa);
-
             if (FormDto.VehiculoId == 0)
             {
-                var placaExiste = await _vehiculoRepository.ExistsByPlacaAsync(placaNormalizada);
-                var placaValidation = ValidationHelper.ValidatePlateAvailable(placaExiste);
-                if (placaValidation.IsFailure)
-                {
-                    ModelState.AddModelError("FormDto.Placa", placaValidation.ErrorMessage ?? "Esta placa ya está registrada en el sistema.");
-                    await CargarCatalogosAsync();
-                    return Page();
-                }
-
-                var createResult = await _createUseCase.ExecuteAsync(new CreateVehiculoDto
+                var result = await _vehiculoAdapter.CreateAsync(new CreateVehiculoDto
                 {
                     ClienteId = FormDto.ClienteId,
-                    Placa = placaNormalizada,
+                    Placa = FormDto.Placa,
                     MarcaId = FormDto.MarcaId,
                     ModeloId = FormDto.ModeloId,
                     ColorVehiculoId = FormDto.ColorVehiculoId,
                     Anio = FormDto.Anio
                 });
 
-                if (createResult.IsFailure)
+                if (!result.Success)
                 {
-                    ModelState.AddModelError(string.Empty, createResult.ErrorMessage ?? "No se pudo registrar el vehículo.");
-                    await CargarCatalogosAsync();
+                    ModelState.AddModelError(string.Empty, result.Error ?? "No se pudo registrar el vehículo.");
+                    await LoadPageDataAsync();
                     return Page();
                 }
             }
             else
             {
-                var placaDuplicada = await _vehiculoRepository.ExistsByPlacaExceptAsync(placaNormalizada, FormDto.VehiculoId);
-                var placaValidation = ValidationHelper.ValidatePlateAvailable(placaDuplicada);
-                if (placaValidation.IsFailure)
-                {
-                    ModelState.AddModelError("FormDto.Placa", placaValidation.ErrorMessage ?? "Esta placa ya está registrada en el sistema.");
-                    await CargarCatalogosAsync();
-                    return Page();
-                }
-
-                var updateResult = await _updateUseCase.ExecuteAsync(new UpdateVehiculoDto
+                var result = await _vehiculoAdapter.UpdateAsync(new UpdateVehiculoDto
                 {
                     VehiculoId = FormDto.VehiculoId,
                     ClienteId = FormDto.ClienteId,
-                    Placa = placaNormalizada,
+                    Placa = FormDto.Placa,
                     MarcaId = FormDto.MarcaId,
                     ModeloId = FormDto.ModeloId,
                     ColorVehiculoId = FormDto.ColorVehiculoId,
                     Anio = FormDto.Anio
                 });
 
-                if (updateResult.IsFailure)
+                if (!result.Success)
                 {
-                    if (updateResult.ErrorCode == ErrorCodes.VehiculoNotFound)
-                    {
-                        TempData["ErrorMessage"] = updateResult.ErrorMessage;
-                        return RedirectToPage();
-                    }
-
-                    ModelState.AddModelError(string.Empty, updateResult.ErrorMessage ?? "No se pudo actualizar el vehículo.");
-                    await CargarCatalogosAsync();
+                    await LoadPageDataAsync();
+                    ModelState.AddModelError(string.Empty, result.Error ?? "No se pudo actualizar el vehículo.");
                     return Page();
                 }
             }
@@ -317,29 +193,31 @@ namespace Taller_Mecanico_Arqui.Pages.Vehiculo
                 return RedirectToPage();
             }
 
-            await _deleteUseCase.ExecuteAsync(id);
+            await _vehiculoAdapter.DeleteAsync(id);
             return RedirectToPage();
         }
 
-        private async Task CargarCatalogosAsync()
+        private async Task LoadPageDataAsync()
         {
-            MarcasSelect = (await _marcaRepository.GetAllAsync())
-                .OrderBy(m => m.Nombre)
-                .Select(m => new SelectListItem(m.Nombre, m.MarcaId.ToString()))
-                .ToList();
+            Marcas = await _catalogosVehiculosAdapter.GetMarcasAsync();
+            Modelos = await _catalogosVehiculosAdapter.GetModelosAsync();
+            Colores = await _catalogosVehiculosAdapter.GetColoresAsync();
 
-            ColoresSelect = (await _colorRepository.GetAllAsync())
-                .OrderBy(c => c.Nombre)
-                .Select(c => new SelectListItem(c.Nombre, c.ColorVehiculoId.ToString()))
-                .ToList();
-
-            if (FormDto.MarcaId > 0)
+            if (IsCliente)
             {
-                ModelosSelect = (await _modeloRepository.GetAllAsync())
-                    .Where(m => m.MarcaId == FormDto.MarcaId)
-                    .OrderBy(m => m.Nombre)
-                    .Select(m => new SelectListItem(m.Nombre, m.ModeloId.ToString()))
-                    .ToList();
+                var clienteIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(clienteIdClaim) && int.TryParse(clienteIdClaim, out var clienteId))
+                {
+                    Vehiculos = await _vehiculoAdapter.GetByClienteIdAsync(clienteId);
+                }
+                else
+                {
+                    Vehiculos = new List<VehiculoListDto>();
+                }
+            }
+            else
+            {
+                Vehiculos = await _vehiculoAdapter.GetAllAsync();
             }
         }
     }

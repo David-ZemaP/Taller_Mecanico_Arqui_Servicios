@@ -4,6 +4,7 @@ using Taller_Mecanico_Arqui.Domain.Enums;
 using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
 using Taller_Mecanico_Arqui.Domain.Common;
 using Taller_Mecanico_Arqui.Application.Common;
+using Taller_Mecanico_Arqui.Domain.Services;
 
 namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
 {
@@ -12,15 +13,18 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
         private readonly IOrdenTrabajoRepository _repository;
         private readonly IRepository<Producto> _productoRepository;
         private readonly IRepository<Servicio> _servicioRepository;
+        private readonly ICurrentUserService _currentUser;
 
         public CreateOrdenTrabajoUseCase(
             IOrdenTrabajoRepository repository,
             IRepository<Producto> productoRepository,
-            IRepository<Servicio> servicioRepository)
+            IRepository<Servicio> servicioRepository,
+            ICurrentUserService currentUser)
         {
             _repository = repository;
             _productoRepository = productoRepository;
             _servicioRepository = servicioRepository;
+            _currentUser = currentUser;
         }
 
         public async Task<Result<Domain.Entities.OrdenTrabajo>> ExecuteAsync(CreateOrdenTrabajoDto dto)
@@ -125,6 +129,10 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var asignacion = Domain.Entities.OrdenTrabajoMecanico.Crear(0, mecanicoId);
                 orden.AsignarMecanico(asignacion);
             }
+
+            // Set auditoria
+            var currentUser = _currentUser.GetCurrentUserId() ?? _currentUser.GetCurrentUserEmail() ?? "system";
+            orden.SetAuditoriaCreacion(currentUser);
 
             var addResult = await _repository.AddAsync(orden);
             if (addResult.IsFailure)

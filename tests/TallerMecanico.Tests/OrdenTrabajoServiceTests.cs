@@ -5,7 +5,7 @@ namespace TallerMecanico.Tests;
 
 public class OrdenTrabajoServiceTests
 {
-    private readonly OrdenTrabajoService _service = new();
+    private readonly Services.OrdenTrabajoService _service = new();
 
     [Fact]
     public void Crear_DebeAsignarIdEstadoPendienteYFechaCreacion()

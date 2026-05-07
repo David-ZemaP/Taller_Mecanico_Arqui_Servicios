@@ -1,5 +1,6 @@
 @page
 @model Taller_Mecanico_Arqui.Pages.Clientes.PerfilModel
+@using Taller_Mecanico_Arqui.Frontend.Adapters
 @{
     ViewData["Title"] = "Mi Perfil";
 }
@@ -7,7 +8,7 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12 mb-4">
-            <h2 class="text-teal fw-bold mb-1">Bienvenido, @Model.Cliente?.NombreCompleto?.Nombres</h2>
+            <h2 class="text-teal fw-bold mb-1">Bienvenido, @Model.Cliente?.Nombres @Model.Cliente?.PrimerApellido</h2>
             <p class="text-muted-dark">Gestiona tu información y seguimiento de tus vehículos.</p>
         </div>
     </div>
@@ -20,11 +21,11 @@
                 </h5>
                 <div class="mb-3">
                     <label class="text-muted small text-uppercase fw-bold">Nombre completo</label>
-                    <p class="text-white mb-0 fs-5">@Model.Cliente?.NombreCompleto</p>
+                    <p class="text-white mb-0 fs-5">@Model.Cliente?.Nombres @Model.Cliente?.PrimerApellido @Model.Cliente?.SegundoApellido</p>
                 </div>
                 <div class="mb-3">
                     <label class="text-muted small text-uppercase fw-bold">Documento de Identidad</label>
-                    <p class="text-white mb-0">@Model.Cliente?.Ci?.Numero@Model.Cliente?.Ci?.Complemento</p>
+                    <p class="text-white mb-0">@Model.Cliente?.Ci</p>
                 </div>
                 <div class="mb-3">
                     <label class="text-muted small text-uppercase fw-bold">Teléfono</label>
@@ -36,7 +37,7 @@
                 </div>
                 <div class="mb-0">
                     <label class="text-muted small text-uppercase fw-bold">Fecha de registro</label>
-                    <p class="text-white mb-0">@Model.Cliente?.FechaRegistro.ToShortDateString()</p>
+                    <p class="text-white mb-0">@Model.Cliente?.FechaRegistro.ToString("dd/MM/yyyy")</p>
                 </div>
             </div>
         </div>
@@ -44,24 +45,24 @@
         <div class="col-lg-8">
             <div class="card-dark p-4 shadow-sm mb-4">
                 <h5 class="text-teal fw-bold mb-3 border-bottom border-secondary pb-2">
-                    <i class="bi bi-car-front me-2"></i>Mis Vehículos (@Model.Vehiculos?.Count())
+                    <i class="bi bi-car-front me-2"></i>Mis Vehículos (@Model.Cliente?.Vehiculos?.Count())
                 </h5>
-                @if (Model.Vehiculos?.Any() == true)
+                @if (Model.Cliente?.Vehiculos?.Any() == true)
                 {
                     <div class="row g-3">
-                        @foreach (var vehiculo in Model.Vehiculos)
+                        @foreach (var vehiculo in Model.Cliente.Vehiculos)
                         {
                             <div class="col-md-6">
                                 <div class="bg-dark rounded p-3 border border-secondary">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <span class="badge bg-light text-dark px-2 py-1 border border-secondary fs-6" style="font-family: monospace; letter-spacing: 1px;">
+                                            <span class="badge bg-light text-dark px-2 py-1 border border-secondary fs-6" style="font-family: monospace;">
                                                 @vehiculo.Placa
                                             </span>
                                         </div>
-                                        <span class="badge bg-secondary">@vehiculo.ColorVehiculo?.Nombre</span>
+                                        <span class="badge bg-secondary">@vehiculo.Color</span>
                                     </div>
-                                    <p class="text-white mt-2 mb-0">@vehiculo.Marca?.Nombre @vehiculo.Modelo?.Nombre</p>
+                                    <p class="text-white mt-2 mb-0">@vehiculo.Marca @vehiculo.Modelo</p>
                                     <p class="text-muted small mb-0">Año: @vehiculo.Anio</p>
                                 </div>
                             </div>
@@ -104,8 +105,8 @@
                                                     @orden.VehiculoPlaca
                                                 </span>
                                             </td>
-                                            <td class="text-light">@orden.FechaIngreso.ToShortDateString()</td>
-                                            <td class="text-light">@orden.FechaEntrega?.ToShortDateString()</td>
+                                            <td class="text-light">@orden.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                                            <td class="text-light">@orden.FechaEntrega?.ToString("dd/MM/yyyy")</td>
                                             <td>
                                                 <span class="badge bg-info text-dark px-2 py-1">
                                                     @orden.EstadoTrabajo
@@ -131,36 +132,5 @@
     </div>
 </div>
 
-<style>
-    .text-teal { color: #20c997; }
-    .bg-teal { background-color: #20c997 !important; }
-    .btn-teal { 
-        background-color: #20c997; 
-        border-color: #20c997; 
-        color: #000;
-    }
-    .btn-teal:hover {
-        background-color: #1aa179;
-        border-color: #1aa179;
-        color: #000;
-    }
-    .btn-outline-teal {
-        border-color: #20c997;
-        color: #20c997;
-    }
-    .btn-outline-teal:hover {
-        background-color: #20c997;
-        color: #000;
-    }
-    .text-muted-dark { color: #9ca3af; }
-    .card-dark {
-        background-color: #1f2937;
-        border-radius: 0.5rem;
-        border: 1px solid #374151;
-    }
-    .table-dark {
-        --bs-table-bg: transparent;
-        --bs-table-color: #f9fafb;
-    }
-    .border-secondary { border-color: #374151 !important; }
-</style>
+@section Scripts {
+}

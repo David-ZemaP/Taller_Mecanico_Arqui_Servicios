@@ -5,6 +5,6 @@ namespace Taller_Mecanico_Arqui.Domain.Ports
 {
     public interface IOrdenTrabajoRepository : IRepository<OrdenTrabajo>
     {
-        Task<Result> SetAnuladoAsync(int id, bool anulado);
+        Task<Result> SetAnuladoAsync(int id, bool anulado, string? eliminadoPor = null);
     }
 }

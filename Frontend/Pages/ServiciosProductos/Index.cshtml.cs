@@ -1,29 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Application.DTOs.Productos;
-using Taller_Mecanico_Arqui.Application.DTOs.Servicios;
+using Taller_Mecanico_Arqui.Frontend.Adapters;
+using Taller_Mecanico_Arqui.Frontend.Authorization;
 
 namespace Taller_Mecanico_Arqui.Pages.ServiciosProductos
 {
     [RequireAccessLevel(NivelAcceso.Completo)]
     public class IndexModel : PageModel
     {
-        private readonly IRepository<Producto> _productoRepository;
-        private readonly IRepository<Servicio> _servicioRepository;
+        private readonly IProductoAdapter _productoAdapter;
+        private readonly IServicioAdapter _servicioAdapter;
 
-        public IndexModel(IRepository<Producto> productoRepository, IRepository<Servicio> servicioRepository)
+        public IndexModel(IProductoAdapter productoAdapter, IServicioAdapter servicioAdapter)
         {
-            _productoRepository = productoRepository;
-            _servicioRepository = servicioRepository;
+            _productoAdapter = productoAdapter;
+            _servicioAdapter = servicioAdapter;
         }
 
-        public IList<Producto> Productos { get; set; } = new List<Producto>();
-        public IList<Servicio> Servicios { get; set; } = new List<Servicio>();
+        public List<ProductoListDto> Productos { get; set; } = new();
+        public List<ServicioListDto> Servicios { get; set; } = new();
 
         [BindProperty]
         public ProductoFormDto ProductoForm { get; set; } = new();
@@ -33,23 +28,18 @@ namespace Taller_Mecanico_Arqui.Pages.ServiciosProductos
 
         public async Task OnGetAsync()
         {
-            await CargarCatalogosAsync();
+            Productos = await _productoAdapter.GetAllAsync();
+            Servicios = await _servicioAdapter.GetAllAsync();
         }
 
         public async Task<JsonResult> OnGetProductoAsync(int id)
         {
-            var result = await _productoRepository.GetByIdAsync(id);
-            if (result.IsFailure)
-            {
-                return new JsonResult(new { error = result.ErrorMessage ?? "Error al cargar producto." }) { StatusCode = 500 };
-            }
-
-            if (result.Value == null)
+            var producto = await _productoAdapter.GetByIdAsync(id);
+            if (producto == null)
             {
                 return new JsonResult(new { error = "Producto no encontrado." }) { StatusCode = 404 };
             }
 
-            var producto = result.Value;
             return new JsonResult(new
             {
                 productoId = producto.ProductoId,
@@ -61,18 +51,12 @@ namespace Taller_Mecanico_Arqui.Pages.ServiciosProductos
 
         public async Task<JsonResult> OnGetServicioAsync(int id)
         {
-            var result = await _servicioRepository.GetByIdAsync(id);
-            if (result.IsFailure)
-            {
-                return new JsonResult(new { error = result.ErrorMessage ?? "Error al cargar servicio." }) { StatusCode = 500 };
-            }
-
-            if (result.Value == null)
+            var servicio = await _servicioAdapter.GetByIdAsync(id);
+            if (servicio == null)
             {
                 return new JsonResult(new { error = "Servicio no encontrado." }) { StatusCode = 404 };
             }
 
-            var servicio = result.Value;
             return new JsonResult(new
             {
                 servicioId = servicio.ServicioId,
@@ -86,62 +70,53 @@ namespace Taller_Mecanico_Arqui.Pages.ServiciosProductos
             ModelState.Clear();
             if (!TryValidateModel(ProductoForm, nameof(ProductoForm)))
             {
-                await CargarCatalogosAsync();
+                await OnGetAsync();
                 return Page();
             }
 
-            try
+            if (ProductoForm.ProductoId == 0)
             {
-                if (ProductoForm.ProductoId == 0)
+                var createResult = await _productoAdapter.CreateAsync(new CreateProductoDto
                 {
-                    var nuevo = Producto.Crear(ProductoForm.Nombre, ProductoForm.Precio, ProductoForm.Stock);
-                    var addResult = await _productoRepository.AddAsync(nuevo);
-                    if (addResult.IsFailure)
-                    {
-                        TempData["ErrorMessage"] = addResult.ErrorMessage ?? "No se pudo crear el producto.";
-                        await CargarCatalogosAsync();
-                        return Page();
-                    }
+                    Nombre = ProductoForm.Nombre,
+                    Precio = ProductoForm.Precio,
+                    Stock = ProductoForm.Stock,
+                    Descripcion = ProductoForm.Descripcion,
+                    StockMinimo = ProductoForm.StockMinimo
+                });
 
-                    TempData["SuccessMessage"] = "Producto creado correctamente.";
-                    return RedirectToPage();
-                }
-
-                var getResult = await _productoRepository.GetByIdAsync(ProductoForm.ProductoId);
-                if (getResult.IsFailure)
+                if (!createResult.Success)
                 {
-                    TempData["ErrorMessage"] = getResult.ErrorMessage ?? "Error al consultar producto.";
-                    await CargarCatalogosAsync();
+                    ModelState.AddModelError(string.Empty, createResult.Error ?? "No se pudo crear el producto.");
+                    await OnGetAsync();
                     return Page();
                 }
 
-                if (getResult.Value == null)
+                TempData["SuccessMessage"] = "Producto creado correctamente.";
+            }
+            else
+            {
+                var updateResult = await _productoAdapter.UpdateAsync(new UpdateProductoDto
                 {
-                    TempData["ErrorMessage"] = "Producto no encontrado.";
-                    return RedirectToPage();
-                }
+                    ProductoId = ProductoForm.ProductoId,
+                    Nombre = ProductoForm.Nombre,
+                    Precio = ProductoForm.Precio,
+                    Stock = ProductoForm.Stock,
+                    Descripcion = ProductoForm.Descripcion,
+                    StockMinimo = ProductoForm.StockMinimo
+                });
 
-                var existente = getResult.Value;
-                existente.ActualizarDatos(ProductoForm.Nombre, ProductoForm.Precio, ProductoForm.Stock);
-
-                var updateResult = await _productoRepository.UpdateAsync(existente);
-
-                if (updateResult.IsFailure)
+                if (!updateResult.Success)
                 {
-                    TempData["ErrorMessage"] = updateResult.ErrorMessage ?? "No se pudo actualizar el producto.";
-                    await CargarCatalogosAsync();
+                    ModelState.AddModelError(string.Empty, updateResult.Error ?? "No se pudo actualizar el producto.");
+                    await OnGetAsync();
                     return Page();
                 }
 
                 TempData["SuccessMessage"] = "Producto actualizado correctamente.";
-                return RedirectToPage();
             }
-            catch (ArgumentException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await CargarCatalogosAsync();
-                return Page();
-            }
+
+            return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostSaveServicioAsync()
@@ -149,82 +124,81 @@ namespace Taller_Mecanico_Arqui.Pages.ServiciosProductos
             ModelState.Clear();
             if (!TryValidateModel(ServicioForm, nameof(ServicioForm)))
             {
-                await CargarCatalogosAsync();
+                await OnGetAsync();
                 return Page();
             }
 
-            try
+            if (ServicioForm.ServicioId == 0)
             {
-                if (ServicioForm.ServicioId == 0)
+                var createResult = await _servicioAdapter.CreateAsync(new CreateServicioDto
                 {
-                    var nuevo = Servicio.Crear(ServicioForm.Nombre, ServicioForm.Precio);
-                    var addResult = await _servicioRepository.AddAsync(nuevo);
-                    if (addResult.IsFailure)
-                    {
-                        TempData["ErrorMessage"] = addResult.ErrorMessage ?? "No se pudo crear el servicio.";
-                        await CargarCatalogosAsync();
-                        return Page();
-                    }
+                    Nombre = ServicioForm.Nombre,
+                    Precio = ServicioForm.Precio,
+                    Descripcion = ServicioForm.Descripcion
+                });
 
-                    TempData["SuccessMessage"] = "Servicio creado correctamente.";
-                    return RedirectToPage();
-                }
-
-                var getResult = await _servicioRepository.GetByIdAsync(ServicioForm.ServicioId);
-                if (getResult.IsFailure)
+                if (!createResult.Success)
                 {
-                    TempData["ErrorMessage"] = getResult.ErrorMessage ?? "Error al consultar servicio.";
-                    await CargarCatalogosAsync();
+                    ModelState.AddModelError(string.Empty, createResult.Error ?? "No se pudo crear el servicio.");
+                    await OnGetAsync();
                     return Page();
                 }
 
-                if (getResult.Value == null)
+                TempData["SuccessMessage"] = "Servicio creado correctamente.";
+            }
+            else
+            {
+                var updateResult = await _servicioAdapter.UpdateAsync(new UpdateServicioDto
                 {
-                    TempData["ErrorMessage"] = "Servicio no encontrado.";
-                    return RedirectToPage();
-                }
+                    ServicioId = ServicioForm.ServicioId,
+                    Nombre = ServicioForm.Nombre,
+                    Precio = ServicioForm.Precio,
+                    Descripcion = ServicioForm.Descripcion
+                });
 
-                var existente = getResult.Value;
-                existente.ActualizarDatos(ServicioForm.Nombre, ServicioForm.Precio);
-
-                var updateResult = await _servicioRepository.UpdateAsync(existente);
-
-                if (updateResult.IsFailure)
+                if (!updateResult.Success)
                 {
-                    TempData["ErrorMessage"] = updateResult.ErrorMessage ?? "No se pudo actualizar el servicio.";
-                    await CargarCatalogosAsync();
+                    ModelState.AddModelError(string.Empty, updateResult.Error ?? "No se pudo actualizar el servicio.");
+                    await OnGetAsync();
                     return Page();
                 }
 
                 TempData["SuccessMessage"] = "Servicio actualizado correctamente.";
-                return RedirectToPage();
             }
-            catch (ArgumentException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await CargarCatalogosAsync();
-                return Page();
-            }
+
+            return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostDeleteProductoAsync(int id)
         {
-            await _productoRepository.DeleteAsync(id);
+            await _productoAdapter.DeleteAsync(id);
             TempData["SuccessMessage"] = "Producto eliminado correctamente.";
             return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostDeleteServicioAsync(int id)
         {
-            await _servicioRepository.DeleteAsync(id);
+            await _servicioAdapter.DeleteAsync(id);
             TempData["SuccessMessage"] = "Servicio eliminado correctamente.";
             return RedirectToPage();
         }
+    }
 
-        private async Task CargarCatalogosAsync()
-        {
-            Productos = (await _productoRepository.GetAllAsync()).ToList();
-            Servicios = (await _servicioRepository.GetAllAsync()).ToList();
-        }
+    public class ProductoFormDto
+    {
+        public int ProductoId { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public int Stock { get; set; }
+        public string? Descripcion { get; set; }
+        public int StockMinimo { get; set; }
+    }
+
+    public class ServicioFormDto
+    {
+        public int ServicioId { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public string? Descripcion { get; set; }
     }
 }

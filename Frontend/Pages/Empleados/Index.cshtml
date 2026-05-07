@@ -1,9 +1,9 @@
 @page
 @model Taller_Mecanico_Arqui.Pages.Empleados.IndexModel
-@using Taller_Mecanico_Arqui.Domain.Enums
+@using Taller_Mecanico_Arqui.Frontend.Enums
+@using Taller_Mecanico_Arqui.Frontend.Adapters
 @{
     ViewData["Title"] = "Empleados";
-    var currentUserLevel = Model.CurrentUserLevel;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -62,12 +62,12 @@
                         <tr class="border-bottom border-secondary">
                             <td><span class="badge bg-secondary">@(contador++)</span></td>
                             <td class="fw-semibold text-white">@item.NombreCompleto</td>
-                            <td class="text-light">@item.GetType().Name</td>
+                            <td class="text-light">@item.Cargo</td>
                             <td class="text-light">@item.Telefono</td>
                             <td class="text-light">@item.Email</td>
-                            <td class="text-light">@item.FechaContratacion.ToString("dd/MM/yyyy")</td>
+                            <td class="text-light">@(item.FechaContratacion?.ToString("dd/MM/yyyy") ?? "")</td>
                             <td>
-                                <span class="badge @(item.EstadoLaboral == Taller_Mecanico_Arqui.Domain.Enums.EstadoLaboral.Activo ? "bg-success" : "bg-secondary")">
+                                <span class="badge @(item.EstadoLaboral == "Activo" ? "bg-success" : "bg-secondary")">
                                     @item.EstadoLaboral
                                 </span>
                             </td>
@@ -85,7 +85,7 @@
                                     </button>
                                     <button type="button" class="btn btn-icon btn-sm btn-outline-danger border-secondary"
                                             title="Eliminar" data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                            onclick="prepararEliminar(@item.EmpleadoId, '@Html.Raw(item.NombreCompleto.ToString().Replace("'", "\\'"))')">
+                                            onclick="prepararEliminar(@item.EmpleadoId, '@Html.Raw(item.NombreCompleto.Replace("'", "\\'"))')">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -116,131 +116,72 @@
                     <h5 class="modal-title" id="empleadoModalLabel">Crear empleado</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body py-4 px-4">
-                    <input type="hidden" asp-for="FormDto.EmpleadoId" id="formEmpleadoId" value="0" />
+        <div class="modal-body py-4 px-4">
+            <input type="hidden" asp-for="FormDto.EmpleadoId" id="formEmpleadoId" value="0" />
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label asp-for="FormDto.TipoEmpleado" class="form-label text-teal">Tipo de empleado *</label>
-                            <select asp-for="FormDto.TipoEmpleado" class="form-select form-control-dark" id="formTipoEmpleado" onchange="toggleCamposTipo()">
-                                <option value="Mecanico">Mecánico</option>
-                                <option value="Administrador">Administrador</option>
-                            </select>
-                            <span asp-validation-for="FormDto.TipoEmpleado" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="FormDto.EstadoLaboral" class="form-label text-teal">Estado laboral *</label>
-                            <select asp-for="FormDto.EstadoLaboral" class="form-select form-control-dark" id="formEstadoLaboral">
-                                <option value="Activo">Activo</option>
-                                <option value="Inactivo">Inactivo</option>
-                                <option value="Licencia">Licencia</option>
-                                <option value="Despedido">Despedido</option>
-                            </select>
-                            <span asp-validation-for="FormDto.EstadoLaboral" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label asp-for="FormDto.Nombres" class="form-label text-teal">Nombre *</label>
-                            <input asp-for="FormDto.Nombres" class="form-control form-control-dark" id="formNombres" />
-                            <span asp-validation-for="FormDto.Nombres" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label asp-for="FormDto.PrimerApellido" class="form-label text-teal">Primer apellido *</label>
-                            <input asp-for="FormDto.PrimerApellido" class="form-control form-control-dark" id="formPrimerApellido" />
-                            <span asp-validation-for="FormDto.PrimerApellido" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="FormDto.SegundoApellido" class="form-label text-teal">Segundo apellido</label>
-                            <input asp-for="FormDto.SegundoApellido" class="form-control form-control-dark" id="formSegundoApellido" />
-                            <span asp-validation-for="FormDto.SegundoApellido" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label asp-for="FormDto.CiNumero" class="form-label text-teal">CI *</label>
-                            <input asp-for="FormDto.CiNumero" class="form-control form-control-dark" id="formCiNumero" />
-                            <span asp-validation-for="FormDto.CiNumero" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="FormDto.CiComplemento" class="form-label text-teal">Complemento CI</label>
-                            <input asp-for="FormDto.CiComplemento" class="form-control form-control-dark" id="formCiComplemento" />
-                            <span asp-validation-for="FormDto.CiComplemento" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label asp-for="FormDto.Telefono" class="form-label text-teal">Teléfono *</label>
-                            <input asp-for="FormDto.Telefono" class="form-control form-control-dark" id="formTelefono" />
-                            <span asp-validation-for="FormDto.Telefono" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="FormDto.Email" class="form-label text-teal">Correo electrónico <span id="emailRequired" style="display:none;">*</span></label>
-                            <input asp-for="FormDto.Email" class="form-control form-control-dark" id="formEmail" />
-                            <span asp-validation-for="FormDto.Email" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label asp-for="FormDto.FechaContratacion" class="form-label text-teal">Fecha de contratación *</label>
-                            <input asp-for="FormDto.FechaContratacion" type="date" class="form-control form-control-dark" id="formFechaContratacion" />
-                            <span asp-validation-for="FormDto.FechaContratacion" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <!-- Campos Mecánico -->
-                    <div id="camposMecanico">
-                        <div class="row mb-3">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <label asp-for="FormDto.Especialidad" class="form-label text-teal">Especialidad</label>
-                                <input asp-for="FormDto.Especialidad" class="form-control form-control-dark" id="formEspecialidad" />
-                                <span asp-validation-for="FormDto.Especialidad" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="FormDto.SalarioPorHora" class="form-label text-teal">Salario por hora en Bs</label>
-                                <input asp-for="FormDto.SalarioPorHora" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioPorHora" />
-                                <span asp-validation-for="FormDto.SalarioPorHora" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campos Administrador -->
-                    <div id="camposAdministrador" style="display: none;">
-                        <div class="row mb-3">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <label asp-for="FormDto.SalarioMensual" class="form-label text-teal">Salario mensual en Bs</label>
-                                <input asp-for="FormDto.SalarioMensual" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioMensual" />
-                                <span asp-validation-for="FormDto.SalarioMensual" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="FormDto.NivelAcceso" class="form-label text-teal">Nivel de acceso</label>
-                                @if (currentUserLevel == NivelAcceso.Gerente)
-                                {
-                                    <select asp-for="FormDto.NivelAcceso" class="form-select form-control-dark" id="formNivelAcceso">
-                                        <option value="">Seleccione un nivel...</option>
-                                        <option value="Completo">Completo</option>
-                                        <option value="Parcial">Parcial</option>
-                                    </select>
-                                }
-                                else if (currentUserLevel == NivelAcceso.Completo)
-                                {
-                                    <select asp-for="FormDto.NivelAcceso" class="form-select form-control-dark" id="formNivelAcceso">
-                                        <option value="Parcial">Parcial</option>
-                                    </select>
-                                }
-                                else
-                                {
-                                    <input asp-for="FormDto.NivelAcceso" class="form-control form-control-dark" id="formNivelAcceso" readonly />
-                                }
-                                <span asp-validation-for="FormDto.NivelAcceso" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label asp-for="FormDto.Cargo" class="form-label text-teal">Tipo de empleado *</label>
+                    <select asp-for="FormDto.Cargo" class="form-select form-control-dark" id="formCargo">
+                        <option value="Mecanico">Mecánico</option>
+                        <option value="Administrador">Administrador</option>
+                    </select>
+                    <span asp-validation-for="FormDto.Cargo" class="text-danger"></span>
                 </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label asp-for="FormDto.Nombres" class="form-label text-teal">Nombre *</label>
+                    <input asp-for="FormDto.Nombres" class="form-control form-control-dark" id="formNombres" />
+                    <span asp-validation-for="FormDto.Nombres" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label asp-for="FormDto.PrimerApellido" class="form-label text-teal">Primer apellido *</label>
+                    <input asp-for="FormDto.PrimerApellido" class="form-control form-control-dark" id="formPrimerApellido" />
+                    <span asp-validation-for="FormDto.PrimerApellido" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FormDto.SegundoApellido" class="form-label text-teal">Segundo apellido</label>
+                    <input asp-for="FormDto.SegundoApellido" class="form-control form-control-dark" id="formSegundoApellido" />
+                    <span asp-validation-for="FormDto.SegundoApellido" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <label asp-for="FormDto.CiNumero" class="form-label text-teal">CI *</label>
+                    <input asp-for="FormDto.CiNumero" class="form-control form-control-dark" id="formCiNumero" />
+                    <span asp-validation-for="FormDto.CiNumero" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="FormDto.CiComplemento" class="form-label text-teal">Complemento CI</label>
+                    <input asp-for="FormDto.CiComplemento" class="form-control form-control-dark" id="formCiComplemento" />
+                    <span asp-validation-for="FormDto.CiComplemento" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <label asp-for="FormDto.Telefono" class="form-label text-teal">Teléfono *</label>
+                    <input asp-for="FormDto.Telefono" class="form-control form-control-dark" id="formTelefono" />
+                    <span asp-validation-for="FormDto.Telefono" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="FormDto.Email" class="form-label text-teal">Correo electrónico</label>
+                    <input asp-for="FormDto.Email" class="form-control form-control-dark" id="formEmail" />
+                    <span asp-validation-for="FormDto.Email" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <label asp-for="FormDto.FechaContratacion" class="form-label text-teal">Fecha de contratación *</label>
+                    <input asp-for="FormDto.FechaContratacion" type="date" class="form-control form-control-dark" id="formFechaContratacion" />
+                    <span asp-validation-for="FormDto.FechaContratacion" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
                 <div class="modal-footer border-secondary py-3 px-4">
                     <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-teal" id="modalSubmitBtn">Crear empleado</button>
@@ -296,95 +237,6 @@
     </div>
 </div>
 
-<!-- MODAL 4: Credenciales de acceso -->
-<div class="modal fade" id="credencialesModal" tabindex="-1" aria-labelledby="credencialesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark text-light">
-            <div class="modal-header border-secondary bg-gradient">
-                <div>
-                    <h5 class="modal-title text-teal fw-bold" id="credencialesModalLabel">
-                        <i class="bi bi-key me-2"></i>Credenciales de Acceso
-                    </h5>
-                    <p class="text-muted small mb-0">Guarda estas credenciales en un lugar seguro</p>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Nuevo administrador creado exitosamente.</strong> Las credenciales de acceso se muestran a continuación.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label text-teal fw-semibold">Correo electrónico:</label>
-                    <div class="input-group">
-                        <input type="email" class="form-control form-control-dark" id="email_credential" value="@Model.NuevoEmail" readonly>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('email_credential')" title="Copiar">
-                            <i class="bi bi-clipboard me-1"></i>Copiar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label text-teal fw-semibold">Contraseña:</label>
-                    <div class="input-group">
-                        <input type="password" class="form-control form-control-dark" id="password_credential" value="@Model.NuevaPassword" readonly>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="mostrarOcultarPassword('password_credential')" title="Mostrar/Ocultar">
-                            <i class="bi bi-eye me-1"></i>Mostrar
-                        </button>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('password_credential')" title="Copiar">
-                            <i class="bi bi-clipboard me-1"></i>Copiar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Importante:</strong> El usuario deberá cambiar su contraseña en el primer inicio de sesión.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL 5: Usuario Existente -->
-<div class="modal fade" id="usuarioExistenteModal" tabindex="-1" aria-labelledby="usuarioExistenteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content bg-dark text-light">
-            <div class="modal-header border-secondary bg-gradient">
-                <div>
-                    <h5 class="modal-title text-warning fw-bold" id="usuarioExistenteModalLabel">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Usuario Ya Existente
-                    </h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Administrador creado exitosamente.</strong> Sin embargo, este empleado ya tiene credenciales de acceso asignadas.
-                </div>
-                
-                <p class="text-light">El empleado ya tiene un usuario de acceso registrado con el correo:</p>
-                <p class="text-teal fw-bold fs-5">@Model.EmailExistente</p>
-                
-                <div class="alert alert-info" role="alert">
-                    <i class="bi bi-lightbulb me-2"></i>
-                    <strong>Recomendación:</strong> Si necesitas cambiar las credenciales, puedes hacerlo desde la sección de Usuarios.
-                </div>
-            </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Entendido</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -392,14 +244,6 @@
             window.location.href = '?filtro=' + filtro;
         }
 
-        function toggleCamposTipo() {
-            var tipo = document.getElementById('formTipoEmpleado').value;
-            document.getElementById('camposMecanico').style.display = tipo === 'Mecanico' ? '' : 'none';
-            document.getElementById('camposAdministrador').style.display = tipo === 'Administrador' ? '' : 'none';
-            
-            // Mostrar u ocultar el asterisco de email requerido para administradores
-            document.getElementById('emailRequired').style.display = tipo === 'Administrador' ? '' : 'none';
-        }
         function limpiarFormulario()
         {
             document.getElementById('formEmpleadoId').value = '0';
@@ -411,20 +255,9 @@
             document.getElementById('formTelefono').value = '';
             document.getElementById('formEmail').value = '';
             document.getElementById('formFechaContratacion').value = '';
-            document.getElementById('formTipoEmpleado').value = 'Mecanico';
-            document.getElementById('formEstadoLaboral').value = 'Activo';
-            document.getElementById('formEspecialidad').value = '';
-            document.getElementById('formSalarioPorHora').value = '';
-            document.getElementById('formSalarioMensual').value = '';
-            var nivelSelect = document.getElementById('formNivelAcceso');
-            if (nivelSelect.tagName === 'SELECT') {
-                nivelSelect.selectedIndex = 0;
-            } else {
-                nivelSelect.value = '';
-            }
+            document.getElementById('formCargo').value = 'Mecanico';
             document.getElementById('empleadoModalLabel').textContent = 'Crear empleado';
             document.getElementById('modalSubmitBtn').textContent = 'Crear empleado';
-            toggleCamposTipo();
         }
 
         function editarEmpleado(id) {
@@ -441,20 +274,9 @@
                     document.getElementById('formTelefono').value = data.telefono;
                     document.getElementById('formEmail').value = data.email || '';
                     document.getElementById('formFechaContratacion').value = data.fechaContratacion;
-                    document.getElementById('formTipoEmpleado').value = data.tipoEmpleado;
-                    document.getElementById('formEstadoLaboral').value = data.estadoLaboral;
-                    document.getElementById('formEspecialidad').value = data.especialidad || '';
-                    document.getElementById('formSalarioPorHora').value = data.salarioPorHora || '';
-                    document.getElementById('formSalarioMensual').value = data.salarioMensual || '';
-                    var nivelSelect = document.getElementById('formNivelAcceso');
-                    if (nivelSelect.tagName === 'SELECT') {
-                        nivelSelect.value = data.nivelAcceso || '';
-                    } else {
-                        nivelSelect.value = data.nivelAcceso || '';
-                    }
+                    document.getElementById('formCargo').value = data.cargo;
                     document.getElementById('empleadoModalLabel').textContent = 'Editar empleado';
                     document.getElementById('modalSubmitBtn').textContent = 'Actualizar empleado';
-                    toggleCamposTipo();
                 })
                 .catch(() => alert('Error al cargar los datos del empleado'));
         }
@@ -468,7 +290,7 @@
                         document.getElementById('detailsContent').innerHTML = '<p class="text-danger text-center">' + data.error + '</p>';
                         return;
                     }
-                    var tipoBadge = data.tipoEmpleado === 'Mecanico' ? 'bg-warning text-dark' : 'bg-info';
+                    var tipoBadge = data.cargo === 'Mecanico' ? 'bg-warning text-dark' : 'bg-info';
                     var estadoBadge = data.estadoLaboral === 'Activo' ? 'bg-success' : 'bg-secondary';
                     var html = '<div class="card-dark p-3 mb-3" style="border-top: 4px solid #20c997;">' +
                         '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-person-vcard text-teal me-2"></i>Información Personal</h6>' +
@@ -484,30 +306,10 @@
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Fecha Contratación</dt>' +
                         '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-calendar3 text-teal me-2"></i>' + new Date(data.fechaContratacion).toLocaleDateString('es-ES') + '</dd>' +
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Tipo</dt>' +
-                        '<dd class="col-sm-8 text-white mb-2"><span class="badge ' + tipoBadge + '">' + data.tipoEmpleado + '</span></dd>' +
+                        '<dd class="col-sm-8 text-white mb-2"><span class="badge ' + tipoBadge + '">' + data.cargo + '</span></dd>' +
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Estado Laboral</dt>' +
                         '<dd class="col-sm-8 text-white mb-2"><span class="badge ' + estadoBadge + '">' + data.estadoLaboral + '</span></dd>' +
                         '</dl></div>';
-
-                    if (data.tipoEmpleado === 'Mecanico') {
-                        html += '<div class="card-dark p-3" style="border-top: 4px solid #20c997;">' +
-                            '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-tools text-teal me-2"></i>Datos del Mecánico</h6>' +
-                            '<dl class="row mb-0">' +
-                            '<dt class="col-sm-3 text-muted-dark fw-normal mb-2">Especialidad</dt>' +
-                            '<dd class="col-sm-9 text-white mb-2">' + (data.especialidad || 'No especificada') + '</dd>' +
-                            '<dt class="col-sm-3 text-muted-dark fw-normal mb-2">Salario por Hora</dt>' +
-                            '<dd class="col-sm-9 text-white mb-2">' + (data.salarioPorHora ? parseFloat(data.salarioPorHora).toFixed(2) : 'No especificado') + '</dd>' +
-                            '</dl></div>';
-                    } else if (data.tipoEmpleado === 'Administrador') {
-                        html += '<div class="card-dark p-3" style="border-top: 4px solid #20c997;">' +
-                            '<h6 class="text-white border-bottom border-secondary pb-2 mb-3"><i class="bi bi-shield-check text-teal me-2"></i>Datos del Administrador</h6>' +
-                            '<dl class="row mb-0">' +
-                            '<dt class="col-sm-3 text-muted-dark fw-normal mb-2">Salario Mensual</dt>' +
-                            '<dd class="col-sm-9 text-white mb-2">' + (data.salarioMensual ? parseFloat(data.salarioMensual).toFixed(2) : 'No especificado') + '</dd>' +
-                            '<dt class="col-sm-3 text-muted-dark fw-normal mb-2">Nivel de Acceso</dt>' +
-                            '<dd class="col-sm-9 text-white mb-2">' + (data.nivelAcceso || 'No especificado') + '</dd>' +
-                            '</dl></div>';
-                    }
 
                     document.getElementById('detailsContent').innerHTML = html;
                 })
@@ -520,61 +322,5 @@
             document.getElementById('deleteEmpleadoId').value = id;
             document.getElementById('deleteEmpleadoNombre').textContent = nombre;
         }
-
-        // Funciones para el modal de credenciales
-        function mostrarOcultarPassword(inputId) {
-            const input = document.getElementById(inputId);
-            const button = input.nextElementSibling;
-            const icon = button.querySelector('i');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.className = 'bi bi-eye-slash me-1';
-                button.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Ocultar';
-            } else {
-                input.type = 'password';
-                icon.className = 'bi bi-eye me-1';
-                button.innerHTML = '<i class="bi bi-eye me-1"></i>Mostrar';
-            }
-        }
-
-        function copiarAlPortapapeles(inputId) {
-            const input = document.getElementById(inputId);
-            const button = input.parentElement.querySelector('[onclick*="' + inputId + '"][title="Copiar"]');
-            
-            input.select();
-            input.setSelectionRange(0, 99999); // Para móviles
-            
-            try {
-                document.execCommand('copy');
-                const originalContent = button.innerHTML;
-                button.innerHTML = '<i class="bi bi-check me-1"></i>Copiado';
-                button.classList.add('btn-success');
-                button.classList.remove('btn-outline-secondary');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalContent;
-                    button.classList.remove('btn-success');
-                    button.classList.add('btn-outline-secondary');
-                }, 2000);
-            } catch (err) {
-                console.error('Error al copiar: ', err);
-            }
-        }
-
-        // Mostrar modal de credenciales automáticamente si hay credenciales
-        document.addEventListener('DOMContentLoaded', function() {
-            const email = document.getElementById('email_credential')?.value;
-            const password = document.getElementById('password_credential')?.value;
-            
-            if (email && password) {
-                const credencialesModal = new bootstrap.Modal(document.getElementById('credencialesModal'));
-                credencialesModal.show();
-            }
-            else if (@Model.UsuarioExistente.ToString().ToLower()) {
-                const usuarioExistenteModal = new bootstrap.Modal(document.getElementById('usuarioExistenteModal'));
-                usuarioExistenteModal.show();
-            }
-        });
     </script>
 }

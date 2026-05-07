@@ -12,6 +12,6 @@ namespace Taller_Mecanico_Arqui.Domain.Ports
         Task<Result<T?>> GetByIdAsync(int id);
         Task<Result<int>> AddAsync(T entity);
         Task<Result> UpdateAsync(T entity);
-        Task DeleteAsync(int id);
+        Task DeleteAsync(int id, string? eliminadoPor = null);
     }
 }
