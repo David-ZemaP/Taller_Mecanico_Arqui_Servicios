@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +14,7 @@
     <ProjectReference Include="..\Framework\Framework.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Incluir controladores ubicados en la carpeta raíz Controllers/ -->
+    <!--Incluir controladores ubicados en la carpeta raíz Controllers/ -->
     <Compile Include="..\\Controllers\\**\\*.cs">
       <Link>Controllers\\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>

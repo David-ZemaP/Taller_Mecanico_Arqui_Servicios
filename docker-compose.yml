@@ -1,0 +1,16 @@
+services:
+  postgres_db:
+    image: postgres:17 
+    container_name: TallerMecanico_PG
+    environment:
+      POSTGRES_USER: admin 
+      POSTGRES_PASSWORD: tallermecanico2026 
+      POSTGRES_DB: TallerMecanico 
+    ports:
+      - "5433:5432" 
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+      - ./Scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:Z
+
+volumes:
+  pgdata:
