@@ -1,5 +1,8 @@
 using Taller_Mecanico_Users.Domain.Common;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using Taller_Mecanico_Users.Domain.Entities;
 using Taller_Mecanico_Users.Domain.Ports;
@@ -11,11 +14,13 @@ namespace Taller_Mecanico_Users.UseCases.Users
     {
         public UsuarioLogin User { get; init; } = null!;
         public string PlainPassword { get; init; } = string.Empty;
+        public IReadOnlyList<string> NotificationRecipients { get; init; } = Array.Empty<string>();
     }
 
     public class CreateUserUseCase
     {
         private readonly IUsuarioLoginRepository _repository;
+        private readonly IEmpleadoRepository _empleadoRepository;
         private readonly Domain.Ports.IMailSender _mailSender;
         private readonly Domain.Ports.IPasswordSecurity _passwordSecurity;
         private readonly Domain.Ports.IPasswordHasher _passwordHasher;
@@ -23,12 +28,14 @@ namespace Taller_Mecanico_Users.UseCases.Users
 
         public CreateUserUseCase(
             IUsuarioLoginRepository repository,
+            IEmpleadoRepository empleadoRepository,
             Domain.Ports.IMailSender mailSender,
             Domain.Ports.IPasswordSecurity passwordSecurity,
             Domain.Ports.IPasswordHasher passwordHasher,
             ILogger<CreateUserUseCase> logger)
         {
             _repository = repository;
+            _empleadoRepository = empleadoRepository;
             _mailSender = mailSender;
             _passwordSecurity = passwordSecurity;
             _passwordHasher = passwordHasher;
@@ -37,6 +44,29 @@ namespace Taller_Mecanico_Users.UseCases.Users
 
         public async Task<Result<UserCreationResult>> ExecuteAsync(int empleadoId, string email, string? plainPasswordProvided = null)
         {
+            var empleado = await _empleadoRepository.GetByIdAsync(empleadoId);
+            if (empleado is null)
+            {
+                return Result<UserCreationResult>.Failure(ErrorCodes.EmpleadoNotFound, "El empleado no existe.");
+            }
+
+            if (string.IsNullOrWhiteSpace(empleado.Email))
+            {
+                return Result<UserCreationResult>.Failure(ErrorCodes.ValidationAdminEmailRequired, "El empleado seleccionado no tiene un correo configurado.");
+            }
+
+            var loginEmail = email.Trim();
+            if (!IsValidEmail(loginEmail))
+            {
+                return Result<UserCreationResult>.Failure(ErrorCodes.ValidationInvalidValue, "El correo del usuario no es válido.");
+            }
+
+            var empleadoEmail = empleado.Email.Trim();
+            if (!IsValidEmail(empleadoEmail))
+            {
+                return Result<UserCreationResult>.Failure(ErrorCodes.ValidationInvalidValue, "El correo del empleado no es válido.");
+            }
+
             // 0. Validar que el empleado no tenga ya un login
             var existingByEmployee = await _repository.GetByEmpleadoIdAsync(empleadoId);
             if (existingByEmployee != null)
@@ -45,7 +75,7 @@ namespace Taller_Mecanico_Users.UseCases.Users
             }
 
             // 0. Validar email duplicado
-            var existing = await _repository.GetByEmailAsync(email);
+            var existing = await _repository.GetByEmailAsync(loginEmail);
             if (existing != null)
             {
                 return Result<UserCreationResult>.Failure(ErrorCodes.UsuarioEmailDuplicado, "El email ya está registrado.");
@@ -60,7 +90,7 @@ namespace Taller_Mecanico_Users.UseCases.Users
             string passwordHash = _passwordHasher.HashPassword(plainPassword);
 
             // 3. Crear entidad forzando cambio de contraseña en primer acceso
-            var nuevoUsuarioResult = UsuarioLogin.Crear(empleadoId, email, passwordHash, requiereCambioPassword: true);
+            var nuevoUsuarioResult = UsuarioLogin.Crear(empleadoId, loginEmail, passwordHash, requiereCambioPassword: true);
             if (nuevoUsuarioResult.IsFailure)
             {
                 return Result<UserCreationResult>.Failure(nuevoUsuarioResult.ErrorCode!, nuevoUsuarioResult.ErrorMessage!);
@@ -77,16 +107,49 @@ namespace Taller_Mecanico_Users.UseCases.Users
 
             // 5. Enviar credenciales por correo (fallo de correo no cancela la creación)
             string mailBody = $"Hola,\nTu cuenta ha sido creada exitosamente.\nTu contraseña temporal es: {plainPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
+            var recipients = BuildRecipients(empleadoEmail, loginEmail);
             try
             {
-                await _mailSender.SendEmailAsync(email, "Credenciales de Acceso - Taller Mecánico", mailBody);
+                foreach (var recipient in recipients)
+                {
+                    await _mailSender.SendEmailAsync(recipient, "Credenciales de Acceso - Taller Mecánico", mailBody);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "No se pudo enviar el correo de bienvenida a {Email}", email);
+                _logger.LogError(ex, "No se pudo enviar el correo de bienvenida. EmpleadoId={EmpleadoId} Destinatarios={Recipients}", empleadoId, string.Join(", ", recipients));
             }
 
-            return Result<UserCreationResult>.Success(new UserCreationResult { User = nuevoUsuario, PlainPassword = plainPassword });
+            return Result<UserCreationResult>.Success(new UserCreationResult
+            {
+                User = nuevoUsuario,
+                PlainPassword = plainPassword,
+                NotificationRecipients = recipients
+            });
+        }
+
+        private static bool IsValidEmail(string value)
+        {
+            try
+            {
+                _ = new MailAddress(value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static IReadOnlyList<string> BuildRecipients(string empleadoEmail, string loginEmail)
+        {
+            var recipients = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                empleadoEmail
+            };
+
+            recipients.Add(loginEmail);
+            return recipients.ToList();
         }
     }
 }

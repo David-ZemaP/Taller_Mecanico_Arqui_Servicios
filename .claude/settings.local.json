@@ -18,7 +18,9 @@
       "PowerShell(cd \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\\\\OrdenTrabajoService\" && Get-ChildItem -Recurse -File | Where-Object { $_.Extension -in '.cs', '.csproj' } | Select-Object -ExpandProperty FullName | Sort-Object)",
       "Bash(dotnet restore *)",
       "Bash(dir \"%USERPROFILE%\\\\.nuget\\\\packages\\\\closedxml\" /b)",
-      "PowerShell(Get-ChildItem *)"
+      "PowerShell(Get-ChildItem *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\uni\\\\Arquitectura de Software\\\\Servicios\\\\Taller_Mecanico_Arqui_Servicios\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

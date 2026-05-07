@@ -108,7 +108,7 @@ namespace WebService.Pages.Empleados
                 // Crear automáticamente el acceso al sistema si se proporcionó email
                 if (!string.IsNullOrWhiteSpace(FormDto.Email) && empleadoId.HasValue)
                 {
-                    var (userOk, plainPassword, _) = await _adapter.CreateUsuarioAsync(
+                    var (userOk, plainPassword, _, _) = await _adapter.CreateUsuarioAsync(
                         empleadoId.Value, FormDto.Email, null);
 
                     if (userOk && !string.IsNullOrWhiteSpace(plainPassword))

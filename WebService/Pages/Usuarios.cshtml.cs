@@ -47,7 +47,7 @@ namespace WebService.Pages
 
             if (FormDto.UsuarioLoginId == 0)
             {
-                var (ok, password, error) = await _adapter.CreateUsuarioAsync(FormDto.EmpleadoId, FormDto.Email, FormDto.Password);
+                var (ok, password, notificationRecipients, error) = await _adapter.CreateUsuarioAsync(FormDto.EmpleadoId, FormDto.Email, FormDto.Password);
                 if (!ok)
                 {
                     ModelState.AddModelError(string.Empty, error ?? "No se pudo crear el usuario.");
@@ -59,7 +59,10 @@ namespace WebService.Pages
                     TempData["NuevoEmail"] = FormDto.Email;
                     TempData["NuevaPassword"] = password;
                 }
-                TempData["SuccessMessage"] = "Usuario creado correctamente.";
+                var recipientsMessage = notificationRecipients is { Count: > 0 }
+                    ? string.Join(", ", notificationRecipients)
+                    : FormDto.Email;
+                TempData["SuccessMessage"] = $"Usuario creado correctamente. Credenciales enviadas a: {recipientsMessage}.";
             }
             else
             {
