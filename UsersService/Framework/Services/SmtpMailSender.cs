@@ -30,7 +30,7 @@ namespace Taller_Mecanico_Users.App.Services
             message.To.Add(new MailAddress(to));
             message.Subject = subject;
             message.Body = body ?? string.Empty;
-            message.IsBodyHtml = true;
+            message.IsBodyHtml = false; // Enviar como texto plano
             message.From = new MailAddress(_settings.From);
 
             using var client = new SmtpClient(_settings.Host, _settings.Port) {

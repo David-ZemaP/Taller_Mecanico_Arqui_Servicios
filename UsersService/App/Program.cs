@@ -1,7 +1,24 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.IO;
 using Taller_Mecanico_Users.App.Middleware;
+
+// Cargar variables de entorno desde .env
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env");
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx > 0)
+        {
+            Environment.SetEnvironmentVariable(trimmed[..idx], trimmed[(idx + 1)..]);
+        }
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,7 +60,8 @@ builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuthenticat
 builder.Services.AddHttpContextAccessor();
 
 
-builder.Services.AddSingleton<Taller_Mecanico_Users.Framework.Services.SmtpSettings>();
+builder.Services.AddSingleton<Taller_Mecanico_Users.Framework.Services.SmtpSettings>(sp =>
+    new Taller_Mecanico_Users.Framework.Services.SmtpSettings(builder.Configuration));
 var smtpEnabled = builder.Configuration.GetValue<bool>("Smtp:Enabled");
 if (smtpEnabled)
 {

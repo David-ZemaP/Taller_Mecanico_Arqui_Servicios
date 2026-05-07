@@ -23,6 +23,19 @@ namespace WebService.Pages.Clientes
             Clientes = await _adapter.GetAllClientesAsync();
         }
 
+        public async Task<JsonResult> OnGetBuscarClientesAsync(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return new JsonResult(Array.Empty<object>());
+
+            var clientes = await _adapter.BuscarClientesAsync(term);
+            var result = clientes
+                .Select(c => new { id = c.ClienteId, text = $"{c.Nombres} {c.PrimerApellido} {c.SegundoApellido} - CI: {c.CiNumero}{c.CiComplemento}" })
+                .Take(15)
+                .ToList();
+            return new JsonResult(result);
+        }
+
         public async Task<JsonResult> OnGetClienteAsync(int id)
         {
             var cliente = await _adapter.GetClienteAsync(id);
