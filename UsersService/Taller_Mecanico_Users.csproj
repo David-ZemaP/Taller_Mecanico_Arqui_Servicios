@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Library</OutputType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="App\App.csproj" />
+    <None Include="Data\Data.csproj" />
+    <None Include="Domain\Domain.csproj" />
+    <None Include="Framework\Framework.csproj" />
+    <None Include="Taller_Mecanico_Users.sln" />
+    <None Include="UseCases\UseCases.csproj" />
+  </ItemGroup>
+
+</Project>

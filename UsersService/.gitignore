@@ -1,0 +1,28 @@
+# Build results
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+packages/
+*.nupkg
+
+# Environment
+*.local.json
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application
+appsettings.Development.json

@@ -1,0 +1,17 @@
+services:
+  taller_users:
+    build:
+      context: .
+      dockerfile: App/Dockerfile
+    image: taller_users:local
+    environment:
+      # Connect to the existing Postgres instance from the other project.
+      # That compose exposes Postgres on host port 5433 (see Taller_Mecanico_Arqui/docker-compose.yml).
+      # When both composes are running on the same machine, the container can reach the DB
+      # via host.docker.internal:5433. Ensure the other compose is already running.
+      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5433;Database=TallerMecanico;Username=admin;Password=tallermecanico2026"
+    ports:
+      - "5005:80"
+    restart: on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
