@@ -4,6 +4,70 @@
     ViewData["Title"] = "Empleados";
 }
 <div class="container mt-4">
-    <h2>Empleados</h2>
-    <p class="text-muted">Módulo en desarrollo — pendiente conexión con UsersService (S2).</p>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h2>Empleados</h2>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Model.Empleados.Any())
+    {
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Empleado ID</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th>Último Acceso</th>
+                    <th>Requiere Cambio Clave</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var emp in Model.Empleados)
+                {
+                    <tr>
+                        <td>@emp.UsuarioLoginId</td>
+                        <td>@(emp.EmpleadoId?.ToString() ?? "—")</td>
+                        <td>@emp.Email</td>
+                        <td>
+                            @if (emp.Activo)
+                            {
+                                <span class="badge bg-success">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactivo</span>
+                            }
+                        </td>
+                        <td>@(emp.UltimoAcceso?.ToString("g") ?? "Nunca")</td>
+                        <td>
+                            @if (emp.RequiereCambioPassword)
+                            {
+                                <span class="badge bg-warning text-dark">Sí</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            <strong>Sin empleados</strong> No hay empleados registrados en el sistema.
+        </div>
+    }
 </div>

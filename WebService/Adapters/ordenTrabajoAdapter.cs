@@ -28,8 +28,8 @@ namespace WebService.Adapters
 
         // ─── Órdenes de Trabajo ───────────────────────────────────────────────
 
-        public Task<List<OrdenTrabajoListDto>> GetAllOrdenesAsync()
-            => GetAsync<List<OrdenTrabajoListDto>>("api/ordenestrabajo") ?? Task.FromResult(new List<OrdenTrabajoListDto>());
+        public async Task<List<OrdenTrabajoListDto>> GetAllOrdenesAsync()
+            => await GetAsync<List<OrdenTrabajoListDto>>("api/ordenestrabajo") ?? new List<OrdenTrabajoListDto>();
 
         public Task<OrdenTrabajoDetalleDto?> GetOrdenDetalleAsync(int id)
             => GetAsync<OrdenTrabajoDetalleDto>($"api/ordenestrabajo/{id}");
@@ -106,8 +106,8 @@ namespace WebService.Adapters
 
         // ─── Productos ────────────────────────────────────────────────────────
 
-        public Task<List<ProductoDto>> GetAllProductosAsync()
-            => GetAsync<List<ProductoDto>>("api/productos") ?? Task.FromResult(new List<ProductoDto>());
+        public async Task<List<ProductoDto>> GetAllProductosAsync()
+            => await GetAsync<List<ProductoDto>>("api/productos") ?? new List<ProductoDto>();
 
         public Task<ProductoDto?> GetProductoAsync(int id)
             => GetAsync<ProductoDto>($"api/productos/{id}");
@@ -135,8 +135,8 @@ namespace WebService.Adapters
 
         // ─── Servicios ────────────────────────────────────────────────────────
 
-        public Task<List<ServicioDto>> GetAllServiciosAsync()
-            => GetAsync<List<ServicioDto>>("api/servicios") ?? Task.FromResult(new List<ServicioDto>());
+        public async Task<List<ServicioDto>> GetAllServiciosAsync()
+            => await GetAsync<List<ServicioDto>>("api/servicios") ?? new List<ServicioDto>();
 
         public Task<ServicioDto?> GetServicioAsync(int id)
             => GetAsync<ServicioDto>($"api/servicios/{id}");
@@ -164,8 +164,8 @@ namespace WebService.Adapters
 
         // ─── Vehículos ────────────────────────────────────────────────────────
 
-        public Task<List<VehiculoListDto>> GetAllVehiculosAsync()
-            => GetAsync<List<VehiculoListDto>>("api/vehiculos") ?? Task.FromResult(new List<VehiculoListDto>());
+        public async Task<List<VehiculoListDto>> GetAllVehiculosAsync()
+            => await GetAsync<List<VehiculoListDto>>("api/vehiculos") ?? new List<VehiculoListDto>();
 
         public Task<List<VehiculoLookupDto>> BuscarVehiculosPorPlacaAsync(string term, int? clienteId = null)
         {
@@ -208,23 +208,30 @@ namespace WebService.Adapters
 
         // ─── Catálogos ────────────────────────────────────────────────────────
 
-        public Task<List<MarcaDto>> GetAllMarcasAsync()
-            => GetAsync<List<MarcaDto>>("api/marcas") ?? Task.FromResult(new List<MarcaDto>());
+        public async Task<List<MarcaDto>> GetAllMarcasAsync()
+            => await GetAsync<List<MarcaDto>>("api/marcas") ?? new List<MarcaDto>();
 
-        public Task<List<ModeloDto>> GetAllModelosAsync()
-            => GetAsync<List<ModeloDto>>("api/modelos") ?? Task.FromResult(new List<ModeloDto>());
+        public async Task<List<ModeloDto>> GetAllModelosAsync()
+            => await GetAsync<List<ModeloDto>>("api/modelos") ?? new List<ModeloDto>();
 
-        public Task<List<ColorVehiculoDto>> GetAllColoresAsync()
-            => GetAsync<List<ColorVehiculoDto>>("api/coloresvehiculo") ?? Task.FromResult(new List<ColorVehiculoDto>());
+        public async Task<List<ColorVehiculoDto>> GetAllColoresAsync()
+            => await GetAsync<List<ColorVehiculoDto>>("api/coloresvehiculo") ?? new List<ColorVehiculoDto>();
 
         // ─── Helpers privados ─────────────────────────────────────────────────
 
         private async Task<T?> GetAsync<T>(string url)
         {
-            var request = BuildRequest(HttpMethod.Get, url);
-            var response = await _http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return default;
-            return await DeserializeAsync<T>(response);
+            try
+            {
+                var request = BuildRequest(HttpMethod.Get, url);
+                var response = await _http.SendAsync(request);
+                if (!response.IsSuccessStatusCode) return default;
+                return await DeserializeAsync<T>(response);
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         private Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, object? body = null)

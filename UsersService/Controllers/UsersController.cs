@@ -16,6 +16,7 @@ namespace Taller_Mecanico_Users.Controllers
         private readonly CreateUserUseCase _createUserUseCase;
         private readonly GetUserByIdUseCase _getUserByIdUseCase;
         private readonly GetUsersUseCase _getUsersUseCase;
+        private readonly GetClientesUseCase _getClientesUseCase;
         private readonly UpdateUserUseCase _updateUserUseCase;
         private readonly ChangePasswordUseCase _changePasswordUseCase;
         private readonly ResetPasswordUseCase _resetPasswordUseCase;
@@ -25,6 +26,7 @@ namespace Taller_Mecanico_Users.Controllers
             CreateUserUseCase createUserUseCase,
             GetUserByIdUseCase getUserByIdUseCase,
             GetUsersUseCase getUsersUseCase,
+            GetClientesUseCase getClientesUseCase,
             UpdateUserUseCase updateUserUseCase,
             ChangePasswordUseCase changePasswordUseCase,
             ResetPasswordUseCase resetPasswordUseCase,
@@ -33,6 +35,7 @@ namespace Taller_Mecanico_Users.Controllers
             _createUserUseCase = createUserUseCase;
             _getUserByIdUseCase = getUserByIdUseCase;
             _getUsersUseCase = getUsersUseCase;
+            _getClientesUseCase = getClientesUseCase;
             _updateUserUseCase = updateUserUseCase;
             _changePasswordUseCase = changePasswordUseCase;
             _resetPasswordUseCase = resetPasswordUseCase;
@@ -78,6 +81,14 @@ namespace Taller_Mecanico_Users.Controllers
         {
             var usuarios = await _getUsersUseCase.ExecuteAsync();
             return Ok(usuarios.Select(ToDto));
+        }
+
+        [HttpGet("clientes")]
+        [Authorize(Roles = "Empleado")]
+        public async Task<IActionResult> GetClientes()
+        {
+            var clientes = await _getClientesUseCase.ExecuteAsync();
+            return Ok(clientes.Select(ToDto));
         }
 
         [HttpPut("{id}")]

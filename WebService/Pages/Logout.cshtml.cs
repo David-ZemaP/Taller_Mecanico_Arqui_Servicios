@@ -12,12 +12,14 @@ namespace WebService.Pages
         public async Task<IActionResult> OnGetAsync()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Remove("JwtToken");
             return RedirectToPage("/Login");
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Remove("JwtToken");
             return RedirectToPage("/Login");
         }
     }
