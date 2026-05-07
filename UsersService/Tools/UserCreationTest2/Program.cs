@@ -40,9 +40,10 @@ class Program
             var passwordHasher = new BcryptPasswordHasher();
 
             var createUserUseCase = new CreateUserUseCase(repository, mailSender, passwordSecurity, passwordHasher);
-
-            // Test email address
-            var testEmail = "testuser" + DateTime.Now.Ticks + "@example.com";
+            
+            // Pon tu correo real aquí (y borramos la otra línea)
+            var testEmail = "joaquinmateoes@gmail.com"; 
+            
             Console.WriteLine($"\nCreating user with email: {testEmail}");
             
             var result = await createUserUseCase.ExecuteAsync(10, testEmail);
