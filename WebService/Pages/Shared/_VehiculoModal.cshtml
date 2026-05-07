@@ -81,7 +81,7 @@
         }
 
         vehiculoClienteSearchTimeout = setTimeout(function() {
-            fetch('/Clientes?handler=BuscarClientes&term=' + encodeURIComponent(term))
+            fetch('/OrdenTrabajo?handler=BuscarClientes&term=' + encodeURIComponent(term))
                 .then(r => r.json())
                 .then(data => {
                     var container = document.getElementById('vehiculoClienteResults');
