@@ -58,7 +58,7 @@ public class UsersServiceAdapter : IUsersServiceAdapter
                     authResponse.UserId = int.TryParse(jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : null;
                     authResponse.EmpleadoId = int.TryParse(jwt.Claims.FirstOrDefault(c => c.Type == "EmpleadoId")?.Value, out var eid) ? eid : null;
                     authResponse.ClienteId = int.TryParse(jwt.Claims.FirstOrDefault(c => c.Type == "ClienteId")?.Value, out var cid) ? cid : null;
-                    authResponse.NivelAcceso = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                    authResponse.NivelAcceso = jwt.Claims.FirstOrDefault(c => c.Type == "NivelAcceso")?.Value;
                 }
             }
             catch (Exception ex)

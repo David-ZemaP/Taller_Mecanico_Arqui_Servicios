@@ -15,6 +15,7 @@ namespace Taller_Mecanico_Users.Domain.Entities
         public bool Activo { get; private set; }
         public bool RequiereCambioPassword { get; private set; }
         public bool EsCliente { get; private set; }
+        public string? NivelAcceso { get; set; }
 
         private UsuarioLogin() { }
 

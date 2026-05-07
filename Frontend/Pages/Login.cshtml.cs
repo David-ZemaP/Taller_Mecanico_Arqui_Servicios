@@ -99,6 +99,8 @@ namespace Taller_Mecanico_Arqui.Pages
             }
 
             var userId = authResult.UserId?.ToString() ?? Input.Email;
+            var nivelAcceso = authResult.NivelAcceso ?? "Empleado"; // Default si no viene en el token
+            
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, userId),
@@ -106,7 +108,7 @@ namespace Taller_Mecanico_Arqui.Pages
                 new Claim(ClaimTypes.Email, Input.Email),
                 new Claim(ClaimTypes.Role, "Administrador"),
                 new Claim("UserId", userId),
-                new Claim("NivelAcceso", "Admin")
+                new Claim("NivelAcceso", nivelAcceso)
             };
 
             var identity = new ClaimsIdentity(claims, "FrontendScheme");

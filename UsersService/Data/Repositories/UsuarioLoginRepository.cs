@@ -173,13 +173,31 @@ namespace Taller_Mecanico_Users.Data.Repositories
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM usuariologin WHERE email = @Email LIMIT 1;";
+            command.CommandText = @"
+                SELECT u.*, e.nivelacceso 
+                FROM usuariologin u 
+                LEFT JOIN empleado e ON e.empleadoid = u.empleadoid 
+                WHERE u.email = @Email 
+                LIMIT 1;";
             AddParameter(command, "@Email", email);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                return MapReaderToEntity(reader);
+                var usuario = MapReaderToEntity(reader);
+                try
+                {
+                    var nivelAccesoOrdinal = reader.GetOrdinal("nivelacceso");
+                    if (!reader.IsDBNull(nivelAccesoOrdinal))
+                    {
+                        usuario.NivelAcceso = reader.GetString(nivelAccesoOrdinal);
+                    }
+                }
+                catch
+                {
+                    // Si no puede leer nivelacceso, simplemente lo deja null (puede ser cliente sin empleado)
+                }
+                return usuario;
             }
             return null;
         }

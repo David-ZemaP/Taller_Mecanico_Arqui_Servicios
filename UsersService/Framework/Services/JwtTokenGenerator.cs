@@ -41,6 +41,12 @@ namespace Taller_Mecanico_Users.Framework.Services
                 claims.Add(new Claim("ClienteId", usuario.ClienteId.Value.ToString()));
             }
 
+            // Incluir nivelacceso si está disponible
+            if (!string.IsNullOrEmpty(usuario.NivelAcceso))
+            {
+                claims.Add(new Claim("NivelAcceso", usuario.NivelAcceso));
+            }
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),

@@ -11,13 +11,13 @@ namespace Taller_Mecanico_Arqui.Pages
     {
         public async Task<IActionResult> OnGetAsync()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignOutAsync("FrontendScheme");
             return RedirectToPage("/Login");
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignOutAsync("FrontendScheme");
             return RedirectToPage("/Login");
         }
     }
