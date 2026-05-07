@@ -76,6 +76,7 @@ namespace Taller_Mecanico_Arqui.Pages
             }
 
             var clienteId = authResult.ClienteId?.ToString() ?? Input.Email;
+            var userId = authResult.UserId?.ToString() ?? clienteId;
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, clienteId),
@@ -83,7 +84,9 @@ namespace Taller_Mecanico_Arqui.Pages
                 new Claim(ClaimTypes.Email, Input.Email),
                 new Claim(ClaimTypes.Role, "Cliente"),
                 new Claim("ClienteId", clienteId),
-                new Claim("NivelAcceso", "Cliente")
+                new Claim("UserId", userId),
+                new Claim("NivelAcceso", "Cliente"),
+                new Claim("JwtToken", authResult.Token)
             };
 
             var identity = new ClaimsIdentity(claims, "FrontendScheme");
@@ -106,7 +109,8 @@ namespace Taller_Mecanico_Arqui.Pages
                 new Claim(ClaimTypes.Email, Input.Email),
                 new Claim(ClaimTypes.Role, "Administrador"),
                 new Claim("UserId", userId),
-                new Claim("NivelAcceso", "Admin")
+                new Claim("NivelAcceso", "Completo"),
+                new Claim("JwtToken", authResult.Token)
             };
 
             var identity = new ClaimsIdentity(claims, "FrontendScheme");

@@ -7,25 +7,196 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="text-teal fw-bold mb-0">Usuarios del Sistema</h2>
-        <p class="text-muted-dark">Gestiona los accesos al sistema.</p>
+        <p class="text-muted-dark">Gestiona los accesos y credenciales del sistema.</p>
     </div>
+    <button type="button" class="btn btn-teal px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#usuarioModal">
+        <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+    </button>
 </div>
 
-<div class="card-dark p-4 shadow-sm">
-    <div class="alert alert-info text-center mb-0">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Funcionalidad en desarrollo.</strong> La gestión de usuarios está siendo migrada a endpoints de API.
-        Esta página estará disponible una vez que los endpoints de UsersService estén implementados.
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-</div>
-
+}
 @if (TempData["ErrorMessage"] != null)
 {
-    <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
-        @TempData["ErrorMessage"]
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
+<div class="card-dark p-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background-color: transparent;">
+            <thead class="border-bottom border-secondary">
+                <tr>
+                    <th class="text-teal pb-3">#</th>
+                    <th class="text-teal pb-3">Correo / Usuario</th>
+                    <th class="text-teal pb-3">Tipo</th>
+                    <th class="text-teal pb-3">Último Acceso</th>
+                    <th class="text-teal pb-3">Estado</th>
+                    <th class="text-teal pb-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Usuarios.Any())
+                {
+                    int i = 1;
+                    @foreach (var u in Model.Usuarios)
+                    {
+                        <tr class="border-bottom border-secondary">
+                            <td><span class="badge bg-secondary">@(i++)</span></td>
+                            <td>
+                                <div class="fw-semibold text-light">@u.Email</div>
+                                @if (u.RequiereCambioPassword)
+                                {
+                                    <small class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Requiere cambio de contraseña</small>
+                                }
+                            </td>
+                            <td>
+                                @if (u.EsCliente)
+                                {
+                                    <span class="badge bg-info text-dark">Cliente</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-teal text-dark" style="background-color:#20c997!important">Empleado</span>
+                                }
+                            </td>
+                            <td class="text-light small">
+                                @(u.UltimoAcceso.HasValue ? u.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm") : "Nunca")
+                            </td>
+                            <td>
+                                @if (u.Activo)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    @if (u.Activo)
+                                    {
+                                        <form method="post" asp-page-handler="ToggleActivo" style="display:inline">
+                                            <input type="hidden" name="id" value="@u.UsuarioLoginId" />
+                                            <input type="hidden" name="activo" value="false" />
+                                            <button type="submit" class="btn btn-icon btn-sm btn-outline-secondary border-secondary" title="Desactivar usuario"
+                                                    onclick="return confirm('¿Desactivar al usuario @u.Email?')">
+                                                <i class="bi bi-person-dash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-page-handler="ToggleActivo" style="display:inline">
+                                            <input type="hidden" name="id" value="@u.UsuarioLoginId" />
+                                            <input type="hidden" name="activo" value="true" />
+                                            <button type="submit" class="btn btn-icon btn-sm btn-outline-success border-secondary" title="Activar usuario"
+                                                    onclick="return confirm('¿Activar al usuario @u.Email?')">
+                                                <i class="bi bi-person-check"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    <form method="post" asp-page-handler="ResetPassword" style="display:inline">
+                                        <input type="hidden" name="id" value="@u.UsuarioLoginId" />
+                                        <button type="submit" class="btn btn-icon btn-sm btn-outline-warning border-secondary" title="Restablecer contraseña"
+                                                onclick="return confirm('¿Restablecer la contraseña de @u.Email? Se enviará una nueva contraseña temporal al correo.')">
+                                            <i class="bi bi-key"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <input type="hidden" name="id" value="@u.UsuarioLoginId" />
+                                        <button type="submit" class="btn btn-icon btn-sm btn-outline-danger border-secondary" title="Eliminar usuario"
+                                                onclick="return confirm('¿Eliminar permanentemente al usuario @u.Email?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted-dark py-5">
+                            <i class="bi bi-people fs-2 d-block mb-2 text-secondary"></i>
+                            No hay usuarios registrados en el sistema.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Crear Usuario -->
+<div class="modal fade" id="usuarioModal" tabindex="-1" aria-labelledby="usuarioModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <form method="post" asp-page-handler="Save">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="usuarioModalLabel">
+                        <i class="bi bi-person-plus me-2 text-teal"></i>Crear Nuevo Usuario
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label asp-for="FormDto.EmpleadoId" class="form-label text-teal">Empleado *</label>
+                        <select asp-for="FormDto.EmpleadoId" class="form-select form-control-dark" id="selectEmpleado"
+                                onchange="autoFillEmail(this)">
+                            <option value="0">— Seleccione un empleado —</option>
+                            @foreach (var emp in Model.Empleados)
+                            {
+                                <option value="@emp.EmpleadoId"
+                                        data-email="@emp.Email">
+                                    @emp.NombreCompleto (@emp.Cargo)
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="FormDto.EmpleadoId" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="FormDto.Email" class="form-label text-teal">Correo Electrónico *</label>
+                        <input asp-for="FormDto.Email" type="email" class="form-control form-control-dark"
+                               id="inputEmail" placeholder="correo@ejemplo.com" />
+                        <span asp-validation-for="FormDto.Email" class="text-danger small"></span>
+                        <div class="form-text text-muted-dark">
+                            Se enviará una contraseña temporal a este correo.
+                        </div>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 mb-0" style="font-size:12px; background:rgba(32,201,151,.1); border-color:rgba(32,201,151,.3); color:rgba(255,255,255,.8);">
+                        <i class="bi bi-info-circle me-2"></i>
+                        La contraseña temporal será generada automáticamente y enviada al correo del usuario. Al primer inicio de sesión deberá cambiarla.
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-teal">
+                        <i class="bi bi-send me-2"></i>Crear y Enviar Credenciales
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script>
+        function autoFillEmail(select) {
+            var option = select.options[select.selectedIndex];
+            var email = option.getAttribute('data-email');
+            if (email) {
+                document.getElementById('inputEmail').value = email;
+            }
+        }
+    </script>
 }

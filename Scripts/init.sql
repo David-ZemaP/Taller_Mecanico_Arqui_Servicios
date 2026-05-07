@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS Empleado (
     IsDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     FechaContratacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     EstadoLaboral VARCHAR(30) NOT NULL DEFAULT 'Activo',
-    tipoempleado VARCHAR(50) NOT NULL, 
+    tipoempleado VARCHAR(50) NOT NULL DEFAULT 'Mecanico',
     Especialidad VARCHAR(100) NULL,
     SalarioPorHora DECIMAL(10,2) NULL,
     SalarioMensual DECIMAL(10,2) NULL,
@@ -196,10 +196,24 @@ CREATE TABLE IF NOT EXISTS UsuarioLogin (
     EliminadoPor VARCHAR(150) NULL,
     Activo BOOLEAN NOT NULL DEFAULT TRUE,
     RequiereCambioPassword BOOLEAN NOT NULL DEFAULT TRUE,
-    EsCliente BOOLEAN NOT NULL DEFAULT FALSE
+    EsCliente BOOLEAN NOT NULL DEFAULT FALSE,
+    IsDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS IX_Producto_Nombre ON Producto (Nombre);
+
+-- Tabla de auditoría para el UsersService
+CREATE TABLE IF NOT EXISTS audit_logs (
+    audit_log_id    SERIAL PRIMARY KEY,
+    tabla_afectada  VARCHAR(100) NOT NULL,
+    registro_id     INT NOT NULL,
+    accion          VARCHAR(50) NOT NULL,
+    realizado_por   VARCHAR(150) NOT NULL,
+    fecha_hora      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS IX_audit_logs_tabla ON audit_logs (tabla_afectada);
+CREATE INDEX IF NOT EXISTS IX_audit_logs_fecha ON audit_logs (fecha_hora);
 
 
 INSERT INTO ColorVehiculo (Nombre) VALUES 
@@ -310,3 +324,28 @@ INSERT INTO servicio (nombre, precio, isdeleted, fechaactualizacion, creadopor) 
 ('Pintura General', 15000.00, FALSE, NULL, 'SYSTEM_SEED'),
 ('Pulido y Encerado', 400.00, FALSE, NULL, 'SYSTEM_SEED')
 ON CONFLICT (nombre) DO NOTHING;
+
+-- ============================================================
+-- EMPLEADO ADMINISTRADOR INICIAL (seed)
+-- ============================================================
+INSERT INTO Empleado (Nombre, PrimerApellido, CI, Telefono, Email, TipoEmpleado, NivelAcceso, EstadoLaboral, CreadoPor)
+VALUES ('Administrador', 'Principal', 0, 0, 'admin@taller.com', 'Administrador', 'Completo', 'Activo', 'SYSTEM_SEED')
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- USUARIO ADMINISTRADOR INICIAL (seed)
+-- Email: admin@taller.com  /  Password: Admin123!
+-- Hash BCrypt generado con work factor 11
+-- ============================================================
+INSERT INTO UsuarioLogin (EmpleadoId, ClienteId, Email, PasswordHash, Activo, RequiereCambioPassword, EsCliente, CreadoPor)
+VALUES (
+    (SELECT EmpleadoId FROM Empleado WHERE Email = 'admin@taller.com' LIMIT 1),
+    NULL,
+    'admin@taller.com',
+    '$2a$11$1HHUEEC0KSzbfjuDz0dJfenolJvPKSKPTNCRDLLIaAjaqcourzyFK',
+    TRUE,
+    FALSE,
+    FALSE,
+    'SYSTEM_SEED'
+)
+ON CONFLICT (Email) DO NOTHING;

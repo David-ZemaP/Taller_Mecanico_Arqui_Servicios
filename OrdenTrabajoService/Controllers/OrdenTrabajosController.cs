@@ -70,7 +70,7 @@ namespace OrdenTrabajoService.Controllers
             if (result.IsFailure)
                 return BadRequest(new { message = result.ErrorMessage });
 
-            return Ok(new { message = "Orden de trabajo guardada correctamente." });
+            return Ok(new { message = "Orden de trabajo guardada correctamente.", ordenTrabajoId = result.Value });
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace OrdenTrabajoService.Controllers
             if (result.IsFailure)
                 return BadRequest(new { message = result.ErrorMessage });
 
-            return NoContent();
+            return Ok(new { message = "Orden de trabajo actualizada correctamente.", ordenTrabajoId = result.Value });
         }
 
         /// <summary>

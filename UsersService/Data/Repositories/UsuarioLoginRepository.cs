@@ -157,7 +157,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM usuariologin;";
+            command.CommandText = "SELECT * FROM usuariologin WHERE isdeleted = FALSE;";
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -173,7 +173,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM usuariologin WHERE email = @Email LIMIT 1;";
+            command.CommandText = "SELECT * FROM usuariologin WHERE email = @Email AND isdeleted = FALSE LIMIT 1;";
             AddParameter(command, "@Email", email);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
@@ -230,10 +230,10 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. ELIMINAR EL USUARIO ---
+                // --- A. BAJA LÓGICA DEL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                command.CommandText = @"DELETE FROM usuariologin WHERE usuariologinid = @UsuarioLoginId;";
+                command.CommandText = @"UPDATE usuariologin SET isdeleted = TRUE WHERE usuariologinid = @UsuarioLoginId AND isdeleted = FALSE;";
                 AddParameter(command, "@UsuarioLoginId", id);
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();

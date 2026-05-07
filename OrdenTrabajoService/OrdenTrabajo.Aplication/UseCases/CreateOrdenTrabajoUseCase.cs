@@ -27,7 +27,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
             _currentUser = currentUser;
         }
 
-        public async Task<Result<Domain.Entities.OrdenTrabajo>> ExecuteAsync(CreateOrdenTrabajoDto dto)
+        public async Task<Result<int>> ExecuteAsync(CreateOrdenTrabajoDto dto)
         {
             var estadoTrabajoResult = ValidationHelper.ParseEnum<EstadoTrabajo>(
                 dto.EstadoTrabajo,
@@ -35,14 +35,14 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 removeSpaces: true);
 
             if (estadoTrabajoResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(estadoTrabajoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoTrabajoResult.ErrorMessage ?? "Estado de trabajo no válido.");
+                return Result<int>.Failure(estadoTrabajoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoTrabajoResult.ErrorMessage ?? "Estado de trabajo no válido.");
 
             var estadoPagoResult = ValidationHelper.ParseEnum<EstadoPago>(
                 dto.EstadoPago,
                 "Estado de pago no válido.");
 
             if (estadoPagoResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(estadoPagoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoPagoResult.ErrorMessage ?? "Estado de pago no válido.");
+                return Result<int>.Failure(estadoPagoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoPagoResult.ErrorMessage ?? "Estado de pago no válido.");
 
             var estadoTrabajo = estadoTrabajoResult.Value;
             var estadoPago = estadoPagoResult.Value;
@@ -59,7 +59,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var productoResult = await _productoRepository.GetByIdAsync(productoDto.ProductoId);
                 if (productoResult.IsFailure)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         productoResult.ErrorCode ?? ErrorCodes.DbError,
                         productoResult.ErrorMessage ?? "Error al consultar producto.");
                 }
@@ -67,14 +67,14 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var producto = productoResult.Value;
                 if (producto == null)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         ErrorCodes.ValidationInvalidValue,
                         $"Producto con ID {productoDto.ProductoId} no encontrado.");
                 }
 
                 if (producto.Stock < productoDto.Cantidad)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         ErrorCodes.ValidationInvalidValue,
                         $"Stock insuficiente para el producto '{producto.Nombre}'. Stock actual: {producto.Stock}.");
                 }
@@ -82,7 +82,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var precioUnitario = productoDto.PrecioUnitario.GetValueOrDefault(producto.Precio);
                 if (precioUnitario < 0)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         ErrorCodes.ValidationInvalidValue,
                         "El precio del producto (Bs.) no puede ser negativo.");
                 }
@@ -95,7 +95,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var servicioResult = await _servicioRepository.GetByIdAsync(servicioDto.ServicioId);
                 if (servicioResult.IsFailure)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         servicioResult.ErrorCode ?? ErrorCodes.DbError,
                         servicioResult.ErrorMessage ?? "Error al consultar servicio.");
                 }
@@ -103,7 +103,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var servicio = servicioResult.Value;
                 if (servicio == null)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         ErrorCodes.ValidationInvalidValue,
                         $"Servicio con ID {servicioDto.ServicioId} no encontrado.");
                 }
@@ -111,7 +111,7 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
                 var precioUnitario = servicioDto.PrecioUnitario.GetValueOrDefault(servicio.Precio);
                 if (precioUnitario < 0)
                 {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
+                    return Result<int>.Failure(
                         ErrorCodes.ValidationInvalidValue,
                         "El precio del servicio (Bs.) no puede ser negativo.");
                 }
@@ -136,9 +136,9 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
 
             var addResult = await _repository.AddAsync(orden);
             if (addResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(addResult.ErrorCode ?? ErrorCodes.DbError, addResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
+                return Result<int>.Failure(addResult.ErrorCode ?? ErrorCodes.DbError, addResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
 
-            return Result<Domain.Entities.OrdenTrabajo>.Success(orden);
+            return Result<int>.Success(addResult.Value);
         }
     }
 }

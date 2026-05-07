@@ -73,24 +73,26 @@ namespace Taller_Mecanico_Arqui.Application.Facades
                 .ToList();
         }
 
-        public async Task<Result> RegistrarProcesoPrincipalAsync(OrdenTrabajoFormDto dto)
+        public async Task<Result<int>> RegistrarProcesoPrincipalAsync(OrdenTrabajoFormDto dto)
         {
             if (dto.OrdenTrabajoId == 0)
             {
                 var createDto = ToCreateDto(dto);
                 var createResult = await _createUseCase.ExecuteAsync(createDto);
                 if (createResult.IsFailure)
-                {
-                    return Result.Failure(createResult.ErrorCode ?? ErrorCodes.DbError, createResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
-                }
+                    return Result<int>.Failure(createResult.ErrorCode ?? ErrorCodes.DbError, createResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
 
-                return Result.Success();
+                return Result<int>.Success(createResult.Value);
             }
 
-            return await _updateUseCase.ExecuteAsync(ToUpdateDto(dto));
+            var updateResult = await _updateUseCase.ExecuteAsync(ToUpdateDto(dto));
+            if (updateResult.IsFailure)
+                return Result<int>.Failure(updateResult.ErrorCode ?? ErrorCodes.DbError, updateResult.ErrorMessage ?? "No se pudo actualizar la orden de trabajo.");
+
+            return Result<int>.Success(dto.OrdenTrabajoId);
         }
 
-        public Task<Result> SaveAsync(OrdenTrabajoFormDto dto)
+        public Task<Result<int>> SaveAsync(OrdenTrabajoFormDto dto)
             => RegistrarProcesoPrincipalAsync(dto);
 
         public List<string> GetEstadoTrabajoOptions()

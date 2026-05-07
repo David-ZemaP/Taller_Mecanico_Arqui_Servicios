@@ -14,7 +14,7 @@ public interface IOrdenTrabajoAdapter
     Task<List<VehiculoLookupDto>> BuscarVehiculosAsync(string? term, int? clienteId);
     Task<List<string>> GetEstadoTrabajoOptionsAsync();
     Task<List<string>> GetEstadoPagoOptionsAsync();
-    Task<bool> SaveAsync(OrdenTrabajoFormDto dto);
+    Task<int?> SaveAsync(OrdenTrabajoFormDto dto);
     Task<bool> AnularAsync(int id);
     Task<bool> ReactivarAsync(int id);
     Task<bool> ActualizarStockAsync(List<CreateOrdenTrabajoProductoDto> productos);

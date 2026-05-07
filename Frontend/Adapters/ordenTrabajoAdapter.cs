@@ -133,7 +133,7 @@ public class OrdenTrabajoAdapter : IOrdenTrabajoAdapter
         }
     }
 
-    public async Task<bool> SaveAsync(OrdenTrabajoFormDto dto)
+    public async Task<int?> SaveAsync(OrdenTrabajoFormDto dto)
     {
         try
         {
@@ -142,17 +142,20 @@ public class OrdenTrabajoAdapter : IOrdenTrabajoAdapter
             {
                 var error = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("SaveAsync falló: {StatusCode} - {Error}", response.StatusCode, error);
-                return false;
+                return null;
             }
 
-            return true;
+            var body = await response.Content.ReadFromJsonAsync<SaveOrdenResponse>();
+            return body?.OrdenTrabajoId;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error en SaveAsync");
-            return false;
+            return null;
         }
     }
+
+    private record SaveOrdenResponse(int OrdenTrabajoId, string Message);
 
     public async Task<bool> AnularAsync(int id)
     {

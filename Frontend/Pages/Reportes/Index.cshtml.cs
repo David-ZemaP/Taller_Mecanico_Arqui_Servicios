@@ -4,11 +4,8 @@ using Taller_Mecanico_Arqui.Frontend.Authorization;
 
 namespace Taller_Mecanico_Arqui.Pages.Reportes;
 
-[RequireAccessLevel(NivelAcceso.Gerente)]
+[RequireAccessLevel(NivelAcceso.Completo)]
 public class IndexModel : PageModel
 {
-    public void OnGet()
-    {
-        // Placeholder - no logic needed yet for the construction page
-    }
+    public void OnGet() { }
 }

@@ -2,6 +2,7 @@ namespace Taller_Mecanico_Arqui.Frontend.Authorization;
 
 public enum NivelAcceso
 {
+    Cliente = 0,
     Parcial = 1,
     Completo = 2,
     Gerente = 3

@@ -16,11 +16,12 @@ services:
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: taller-mecanico-pgadmin
+    user: root
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@taller.local
+      PGADMIN_DEFAULT_EMAIL: admin@taller.com
       PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_SERVER_MODE: "True"
     ports:
       - "5050:80"
     depends_on:

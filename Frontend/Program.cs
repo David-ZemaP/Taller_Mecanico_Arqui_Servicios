@@ -7,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<JwtAuthHandler>();
 
 // ============================================
 // Authentication (Cookie-based for session)
@@ -22,65 +24,65 @@ builder.Services.AddAuthentication("FrontendScheme")
 // HttpClient Factories para los servicios
 // ============================================
 
-// OrdenTrabajoService (puerto 5000)
+// OrdenTrabajoService
 builder.Services.AddHttpClient<IOrdenTrabajoAdapter, OrdenTrabajoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:OrdenTrabajoServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:OrdenTrabajoServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 // Clientes
 builder.Services.AddHttpClient<IClienteAdapter, ClienteAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ClientesServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ClientesServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 // Empleados
 builder.Services.AddHttpClient<IEmpleadoAdapter, EmpleadoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:EmpleadosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:EmpleadosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 // Vehiculos
 builder.Services.AddHttpClient<IVehiculoAdapter, VehiculoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 builder.Services.AddHttpClient<ICatalogosVehiculosAdapter, CatalogosVehiculosAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:VehiculosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 // Productos
 builder.Services.AddHttpClient<IProductoAdapter, ProductoAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ProductosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ProductosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
 // Servicios
 builder.Services.AddHttpClient<IServicioAdapter, ServicioAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:ServiciosServiceUrl"] ?? "http://localhost:5000";
+    var baseUrl = builder.Configuration["ApiSettings:ServiciosServiceUrl"] ?? "http://localhost:5229";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+}).AddHttpMessageHandler<JwtAuthHandler>();
 
-// UsersService (puerto 5001)
+// UsersService
 builder.Services.AddHttpClient<IUsersServiceAdapter, UsersServiceAdapter>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:UsersServiceUrl"] ?? "http://localhost:5001";
+    var baseUrl = builder.Configuration["ApiSettings:UsersServiceUrl"] ?? "http://localhost:5297";
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });

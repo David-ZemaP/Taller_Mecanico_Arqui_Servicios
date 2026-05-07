@@ -10,10 +10,20 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
     public class IndexModel : PageModel
     {
         private readonly IOrdenTrabajoAdapter _ordenTrabajoAdapter;
+        private readonly IClienteAdapter _clienteAdapter;
+        private readonly IProductoAdapter _productoAdapter;
+        private readonly IServicioAdapter _servicioAdapter;
 
-        public IndexModel(IOrdenTrabajoAdapter ordenTrabajoAdapter)
+        public IndexModel(
+            IOrdenTrabajoAdapter ordenTrabajoAdapter,
+            IClienteAdapter clienteAdapter,
+            IProductoAdapter productoAdapter,
+            IServicioAdapter servicioAdapter)
         {
             _ordenTrabajoAdapter = ordenTrabajoAdapter;
+            _clienteAdapter = clienteAdapter;
+            _productoAdapter = productoAdapter;
+            _servicioAdapter = servicioAdapter;
         }
 
         public IList<OrdenTrabajoListDto> OrdenesTrabajo { get; set; } = new List<OrdenTrabajoListDto>();
@@ -24,10 +34,14 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
         public List<SelectListItem> EstadoTrabajoOptions { get; private set; } = new();
         public List<SelectListItem> EstadoPagoOptions { get; private set; } = new();
 
+        public int? NewOrderId { get; set; }
+
         public async Task OnGetAsync()
         {
             CargarOpcionesEstado();
             OrdenesTrabajo = await _ordenTrabajoAdapter.GetAllAsync();
+            if (TempData.TryGetValue("NewOrderId", out var val) && val is int id)
+                NewOrderId = id;
         }
 
         public async Task<JsonResult> OnGetOrdenAsync(int id)
@@ -49,31 +63,50 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
 
         public async Task<JsonResult> OnGetBuscarClientesAsync(string term)
         {
-            // TODO: Implementar cuando esté el adapter de Clientes o usar endpoint del OrdenTrabajoService
             if (string.IsNullOrWhiteSpace(term))
                 return new JsonResult(new List<object>());
 
-            // Placeholder: buscar clientes via OrdenTrabajoService si tiene endpoint
-            // Por ahora retornar lista vacía hasta tener el endpoint
-            return new JsonResult(new List<object>());
+            var clientes = await _clienteAdapter.GetAllAsync();
+            var lower = term.ToLowerInvariant();
+            var resultados = clientes
+                .Where(c => c.NombreCompleto.ToLowerInvariant().Contains(lower) || c.Ci.Contains(term))
+                .OrderBy(c => c.NombreCompleto)
+                .Take(15)
+                .Select(c => new { id = c.ClienteId, text = $"{c.NombreCompleto} — CI: {c.Ci}" });
+
+            return new JsonResult(resultados);
         }
 
         public async Task<JsonResult> OnGetBuscarProductosAsync(string term)
         {
-            // TODO: Implementar cuando esté el adapter de Productos o endpoint en API
             if (string.IsNullOrWhiteSpace(term))
                 return new JsonResult(new List<object>());
 
-            return new JsonResult(new List<object>());
+            var productos = await _productoAdapter.GetAllAsync();
+            var lower = term.ToLowerInvariant();
+            var resultados = productos
+                .Where(p => p.Activo && p.Nombre.ToLowerInvariant().Contains(lower))
+                .OrderBy(p => p.Nombre)
+                .Take(15)
+                .Select(p => new { id = p.ProductoId, text = p.Nombre, precio = p.Precio, stock = p.Stock });
+
+            return new JsonResult(resultados);
         }
 
         public async Task<JsonResult> OnGetBuscarServiciosAsync(string term)
         {
-            // TODO: Implementar cuando esté el adapter de Servicios o endpoint en API
             if (string.IsNullOrWhiteSpace(term))
                 return new JsonResult(new List<object>());
 
-            return new JsonResult(new List<object>());
+            var servicios = await _servicioAdapter.GetAllAsync();
+            var lower = term.ToLowerInvariant();
+            var resultados = servicios
+                .Where(s => s.Activo && s.Nombre.ToLowerInvariant().Contains(lower))
+                .OrderBy(s => s.Nombre)
+                .Take(15)
+                .Select(s => new { id = s.ServicioId, text = s.Nombre, precio = s.Precio });
+
+            return new JsonResult(resultados);
         }
 
         public async Task<IActionResult> OnPostSaveAsync()
@@ -86,26 +119,17 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
                 return Page();
             }
 
-            // Parsear los JSON de productos y servicios
-            if (!string.IsNullOrEmpty(FormDto.ProductosJson))
-            {
-                try
-                {
-                    // Los productos ya vienen en el DTO, no necesita parseo adicional
-                }
-                catch
-                {
-                    // Si falla el parsing, continuar sin productos
-                }
-            }
-
-            var success = await _ordenTrabajoAdapter.SaveAsync(FormDto);
-            if (!success)
+            var isNew = FormDto.OrdenTrabajoId == 0;
+            var newId = await _ordenTrabajoAdapter.SaveAsync(FormDto);
+            if (newId == null)
             {
                 ModelState.AddModelError(string.Empty, "No se pudo registrar la orden de trabajo.");
                 OrdenesTrabajo = await _ordenTrabajoAdapter.GetAllAsync();
                 return Page();
             }
+
+            if (isNew && newId > 0)
+                TempData["NewOrderId"] = newId;
 
             return RedirectToPage();
         }

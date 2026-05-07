@@ -25,7 +25,7 @@
     var canViewOrdenes = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Parcial;
     var canViewEmpleados = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Gerente;
     var canViewUsuarios = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Gerente;
-    var canViewReportes = userLevel == NivelAcceso.Gerente;
+    var canViewReportes = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Gerente;
 }
 
 <!DOCTYPE html>

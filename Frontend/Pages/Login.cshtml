@@ -205,7 +205,20 @@
             <button type="submit" class="btn">Iniciar sesión</button>
 
             <div class="register-link">
-                <p>¿No tiene una cuenta? <a href="#">Registrarse</a></p>
+                <p>¿No tiene una cuenta? <a href="#" onclick="mostrarInfoRegistro(event)">Registrarse</a></p>
+            </div>
+
+            <!-- Modal informativo de registro -->
+            <div id="modalRegistro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+                <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:32px 36px; max-width:380px; width:90%; color:#fff; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                    <div style="font-size:48px; margin-bottom:12px;">🔧</div>
+                    <h2 style="margin-bottom:12px; font-size:20px;">Registro de cuenta</h2>
+                    <p style="color:#94a3b8; font-size:14px; line-height:1.6;">
+                        Para registrarse como cliente del taller, debe solicitar su cuenta a un <strong style="color:#20c997;">administrador o empleado</strong> del taller.<br><br>
+                        Ellos crearán su usuario y le enviarán sus credenciales de acceso por correo electrónico.
+                    </p>
+                    <button onclick="cerrarModal()" style="margin-top:20px; background:#20c997; border:none; color:#fff; padding:10px 28px; border-radius:40px; font-size:15px; cursor:pointer; font-weight:600;">Entendido</button>
+                </div>
             </div>
         </form>
     </div>
@@ -230,6 +243,22 @@
                 eye.style.display = "none";
             }
         }
+
+        function mostrarInfoRegistro(e) {
+            e.preventDefault();
+            var modal = document.getElementById("modalRegistro");
+            modal.style.display = "flex";
+        }
+
+        function cerrarModal() {
+            var modal = document.getElementById("modalRegistro");
+            modal.style.display = "none";
+        }
+
+        // Cerrar modal al hacer click fuera
+        document.getElementById("modalRegistro").addEventListener("click", function(e) {
+            if (e.target === this) cerrarModal();
+        });
     </script>
 </body>
 </html>

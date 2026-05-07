@@ -23,11 +23,11 @@ namespace OrdenTrabajoService.Infrastructure.Repositories
             await connection.OpenAsync();
 
             const string sql = @"
-SELECT e.empleadoid, e.nombres, e.primerapellido, e.segundoapellido, e.cinumero, e.cicomplemento,
+SELECT e.empleadoid, e.nombre, e.primerapellido, e.segundoapellido, e.ci, e.cicomplemento,
        e.telefono, e.email, e.fechacontratacion, e.estadolaboral, e.fechaactualizacion, e.isdeleted
 FROM empleado e
 WHERE e.isdeleted = FALSE
-ORDER BY e.primerapellido, e.nombres;";
+ORDER BY e.primerapellido, e.nombre;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             await using var reader = await command.ExecuteReaderAsync();
@@ -69,7 +69,7 @@ ORDER BY e.primerapellido, e.nombres;";
             await connection.OpenAsync();
 
             const string sql = @"
-SELECT e.empleadoid, e.nombres, e.primerapellido, e.segundoapellido, e.cinumero, e.cicomplemento,
+SELECT e.empleadoid, e.nombre, e.primerapellido, e.segundoapellido, e.ci, e.cicomplemento,
        e.telefono, e.email, e.fechacontratacion, e.estadolaboral, e.fechaactualizacion, e.isdeleted
 FROM empleado e
 WHERE e.empleadoid = @id AND e.isdeleted = FALSE;";
@@ -114,10 +114,10 @@ WHERE e.empleadoid = @id AND e.isdeleted = FALSE;";
             await connection.OpenAsync();
 
             const string sql = @"
-SELECT e.empleadoid, e.nombres, e.primerapellido, e.segundoapellido, e.cinumero, e.cicomplemento,
+SELECT e.empleadoid, e.nombre, e.primerapellido, e.segundoapellido, e.ci, e.cicomplemento,
        e.telefono, e.email, e.fechacontratacion, e.estadolaboral, e.fechaactualizacion, e.isdeleted
 FROM empleado e
-WHERE e.cinumero = @ci AND e.isdeleted = FALSE;";
+WHERE e.ci = @ci AND e.isdeleted = FALSE;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("ci", ci);
@@ -157,17 +157,17 @@ WHERE e.cinumero = @ci AND e.isdeleted = FALSE;";
             await connection.OpenAsync();
 
             const string sql = @"
-INSERT INTO empleado (nombres, primerapellido, segundoapellido, cinumero, cicomplemento,
+INSERT INTO empleado (nombre, primerapellido, segundoapellido, ci, cicomplemento,
                       telefono, email, fechacontratacion, estadolaboral, isdeleted, creadopor)
-VALUES (@nombres, @primerapellido, @segundoapellido, @cinumero, @cicomplemento,
+VALUES (@nombre, @primerapellido, @segundoapellido, @ci, @cicomplemento,
         @telefono, @email, @fechacontratacion, @estadolaboral, FALSE, @creadopor)
 RETURNING empleadoid;";
 
             await using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("nombres", entity.NombreCompleto.Nombres);
+            command.Parameters.AddWithValue("nombre", entity.NombreCompleto.Nombres);
             command.Parameters.AddWithValue("primerapellido", entity.NombreCompleto.PrimerApellido);
             command.Parameters.AddWithValue("segundoapellido", (object?)entity.NombreCompleto.SegundoApellido ?? DBNull.Value);
-            command.Parameters.AddWithValue("cinumero", entity.Ci.Numero);
+            command.Parameters.AddWithValue("ci", entity.Ci.Numero);
             command.Parameters.AddWithValue("cicomplemento", (object?)entity.Ci.Complemento ?? DBNull.Value);
             command.Parameters.AddWithValue("telefono", entity.Telefono);
             command.Parameters.AddWithValue("email", (object?)entity.Email ?? DBNull.Value);
@@ -189,10 +189,10 @@ RETURNING empleadoid;";
 
             const string sql = @"
 UPDATE empleado
-SET nombres = @nombres,
+SET nombre = @nombre,
     primerapellido = @primerapellido,
     segundoapellido = @segundoapellido,
-    cinumero = @cinumero,
+    ci = @ci,
     cicomplemento = @cicomplemento,
     telefono = @telefono,
     email = @email,
@@ -203,10 +203,10 @@ WHERE empleadoid = @empleadoid;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("empleadoid", entity.EmpleadoId);
-            command.Parameters.AddWithValue("nombres", entity.NombreCompleto.Nombres);
+            command.Parameters.AddWithValue("nombre", entity.NombreCompleto.Nombres);
             command.Parameters.AddWithValue("primerapellido", entity.NombreCompleto.PrimerApellido);
             command.Parameters.AddWithValue("segundoapellido", (object?)entity.NombreCompleto.SegundoApellido ?? DBNull.Value);
-            command.Parameters.AddWithValue("cinumero", entity.Ci.Numero);
+            command.Parameters.AddWithValue("ci", entity.Ci.Numero);
             command.Parameters.AddWithValue("cicomplemento", (object?)entity.Ci.Complemento ?? DBNull.Value);
             command.Parameters.AddWithValue("telefono", entity.Telefono);
             command.Parameters.AddWithValue("email", (object?)entity.Email ?? DBNull.Value);

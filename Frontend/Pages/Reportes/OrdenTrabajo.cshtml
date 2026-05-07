@@ -234,6 +234,17 @@
             <div class="amount">Bs. @Model.Orden.Total.ToString("F2")</div>
         </div>
 
+        <div class="info-row" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #2a4a6e; border-bottom: none; margin-bottom: 0;">
+            <div class="info-item">
+                <label>Generado por</label><br>
+                <span style="font-size: 0.95rem;">@(User.Identity?.Name ?? "Sistema")</span>
+            </div>
+            <div class="info-item">
+                <label>Fecha de generación</label><br>
+                <span style="font-size: 0.95rem;">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+        </div>
+
         <div class="no-print">
             <button onclick="window.print()">
                 <i class="bi bi-printer me-2"></i>Imprimir

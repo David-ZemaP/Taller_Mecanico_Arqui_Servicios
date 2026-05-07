@@ -2,6 +2,7 @@
 @model Taller_Mecanico_Arqui.Pages.ordentrabajo.IndexModel
 @{
     ViewData["Title"] = "Listado de Órdenes";
+    var newOrderId = Model.NewOrderId;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -260,9 +261,28 @@
                 </div>
                 <div class="modal-footer border-secondary py-3 px-4">
                     <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-teal" id="modalSubmitBtn">Crear Orden</button>
+                    <button type="button" class="btn btn-teal" id="modalSubmitBtn" onclick="mostrarConfirmacionGuardar()">Crear Orden</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Confirmación de guardar -->
+<div class="modal fade" id="confirmSaveModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light p-3">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="bi bi-question-circle text-teal me-2"></i>Confirmar guardar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4 px-4 text-center">
+                <p class="mb-0">¿Confirma guardar la orden de trabajo con los datos ingresados?</p>
+            </div>
+            <div class="modal-footer border-secondary py-3 px-4">
+                <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">No, volver</button>
+                <button type="button" class="btn btn-teal" id="btnConfirmarGuardar">Sí, guardar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -894,6 +914,25 @@
 
         function imprimirReporte(id) {
             window.open('/Reportes/OrdenTrabajo?id=' + id, '_blank');
+        }
+
+        function mostrarConfirmacionGuardar() {
+            var confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmSaveModal'), { backdrop: 'static' });
+            confirmModal.show();
+        }
+
+        document.getElementById('btnConfirmarGuardar').addEventListener('click', function () {
+            bootstrap.Modal.getInstance(document.getElementById('confirmSaveModal')).hide();
+            document.querySelector('#ordenModal form').submit();
+        });
+
+        @if (newOrderId.HasValue)
+        {
+            <text>
+            window.addEventListener('load', function () {
+                window.open('/Reportes/OrdenTrabajo?id=@newOrderId', '_blank');
+            });
+            </text>
         }
     </script>
 }
