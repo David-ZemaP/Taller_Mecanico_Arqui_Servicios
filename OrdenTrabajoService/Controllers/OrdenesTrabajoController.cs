@@ -78,6 +78,30 @@ namespace OrdenTrabajoService.Controllers
                 return BadRequest(new { error = result.ErrorMessage });
             return NoContent();
         }
+
+        [HttpGet("mecanico/{mecanicoId}")]
+        public async Task<IActionResult> GetByMecanicoId(int mecanicoId)
+        {
+            var result = await _facade.GetAllAsync();
+            
+            // Filtrar órdenes donde el mecánico está asignado
+            var ordenesDelMecanico = result
+                .Where(o => o.MecanicosAsignados.Contains(mecanicoId))
+                .Select(o => new
+                {
+                    o.OrdenTrabajoId,
+                    o.VehiculoId,
+                    o.VehiculoPlaca,
+                    o.FechaIngreso,
+                    o.FechaEntrega,
+                    o.EstadoTrabajo,
+                    o.EstadoPago,
+                    o.Total
+                })
+                .ToList();
+            
+            return Ok(ordenesDelMecanico);
+        }
     }
 }
 

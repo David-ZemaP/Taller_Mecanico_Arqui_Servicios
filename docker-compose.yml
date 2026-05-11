@@ -50,6 +50,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       # Dentro de Docker el host es el nombre del servicio, puerto interno 5432
       ConnectionStrings__DefaultConnection: "Host=postgres_db;Port=5432;Database=TallerMecanico;Username=admin;Password=tallermecanico2026"
+      JwtSettings__Secret: "SuperSecretaClaveDePruebaParaTallerMecanico2026!!!"
+      JwtSettings__Issuer: "TallerMecanicoUsersApi"
+      JwtSettings__Audience: "TallerMecanicoClients"
     ports:
       - "51029:80"
     depends_on:

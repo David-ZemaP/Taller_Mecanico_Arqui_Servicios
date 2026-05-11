@@ -12,6 +12,7 @@ namespace OrdenTrabajoService.Application.DTOs.OrdenTrabajo
         public string EstadoVehiculo { get; set; } = string.Empty;
         public double Total { get; set; }
         public bool IsDeleted { get; set; }
+        public List<int> MecanicosAsignados { get; set; } = new();
     }
 }
 

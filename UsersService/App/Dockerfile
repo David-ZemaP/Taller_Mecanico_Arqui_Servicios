@@ -14,5 +14,5 @@ WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 COPY --from=build /app/publish ./
-COPY ./.env ./.env
+COPY --from=build /src/App/.env ./.env
 ENTRYPOINT ["dotnet", "App.dll"]

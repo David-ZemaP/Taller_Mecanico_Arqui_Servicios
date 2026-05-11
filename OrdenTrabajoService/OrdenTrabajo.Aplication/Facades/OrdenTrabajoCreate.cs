@@ -43,7 +43,8 @@ namespace OrdenTrabajoService.Application.Facades
                 EstadoPago = o.EstadoPago.ToString(),
                 EstadoVehiculo = o.EstadoVehiculo,
                 Total = o.ProductosUsados.Sum(p => p.Subtotal) + o.ServiciosRealizados.Sum(s => s.Subtotal),
-                IsDeleted = o.IsDeleted
+                IsDeleted = o.IsDeleted,
+                MecanicosAsignados = o.MecanicosAsignados.Select(m => m.MecanicoId).ToList()
             }).ToList();
         }
 

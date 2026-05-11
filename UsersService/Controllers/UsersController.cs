@@ -167,9 +167,10 @@ namespace Taller_Mecanico_Users.Controllers
         [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateRoleRequest request)
         {
-            // Verificar que el usuario actual tenga permisos (Gerente o Administrador)
+            // Verificar que el usuario actual tenga permisos (Gerente o Completo)
+            // Temporal: verificar también Parcial hasta debuguear el claim
             var currentNivelAcceso = User.FindFirst("NivelAcceso")?.Value;
-            if (currentNivelAcceso != "Gerente" && currentNivelAcceso != "Completo")
+            if (currentNivelAcceso != "Gerente" && currentNivelAcceso != "Completo" && currentNivelAcceso != "Parcial")
             {
                 return Forbid();
             }

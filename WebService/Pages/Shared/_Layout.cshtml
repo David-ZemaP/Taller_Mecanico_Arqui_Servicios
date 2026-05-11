@@ -19,9 +19,9 @@
     
     // Determine visibility based on access level
     var isCliente = userLevel == NivelAcceso.Cliente;
-    var canViewClientes = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Parcial;
-    var canViewVehiculos = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Parcial;
-    var canViewServiciosProductos = userLevel == NivelAcceso.Completo;
+    var canViewClientes = userLevel == NivelAcceso.Completo;
+    var canViewVehiculos = userLevel == NivelAcceso.Completo;
+    var canViewServiciosProductos = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Parcial;
     var canViewOrdenes = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Parcial;
     var canViewEmpleados = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Gerente;
     var canViewUsuarios = userLevel == NivelAcceso.Completo || userLevel == NivelAcceso.Gerente;

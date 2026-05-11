@@ -53,7 +53,8 @@ namespace WebService.Pages
             var inboundMap = JwtSecurityTokenHandler.DefaultInboundClaimTypeMap;
             foreach (var c in jwt.Claims)
             {
-                var type = inboundMap.TryGetValue(c.Type, out var mapped) ? mapped : c.Type;
+                // Preservar "NivelAcceso" tal cual, no aplicar mapeo
+                var type = c.Type == "NivelAcceso" ? "NivelAcceso" : (inboundMap.TryGetValue(c.Type, out var mapped) ? mapped : c.Type);
                 claims.Add(new Claim(type, c.Value, c.ValueType, c.Issuer, c.OriginalIssuer));
             }
             // Store the raw JWT as a claim so adapters can recover it if the session is lost

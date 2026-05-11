@@ -59,11 +59,10 @@
                             </td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
-                                    <button type="button" class="btn btn-icon btn-sm btn-outline-info border-secondary"
-                                            title="Detalles" data-bs-toggle="modal" data-bs-target="#detailsModal"
-                                            onclick="verDetalles(@item.EmpleadoId)">
+                                    <a href="/Empleados/@item.EmpleadoId" class="btn btn-icon btn-sm btn-outline-info border-secondary"
+                                            title="Detalles">
                                         <i class="bi bi-eye"></i>
-                                    </button>
+                                    </a>
                                     <button type="button" class="btn btn-icon btn-sm btn-outline-secondary text-teal border-secondary"
                                             title="Editar" data-bs-toggle="modal" data-bs-target="#empleadoModal"
                                             onclick="editarEmpleado(@item.EmpleadoId)">
@@ -104,6 +103,7 @@
                 </div>
                 <div class="modal-body py-4 px-4">
                     <input type="hidden" asp-for="FormDto.EmpleadoId" id="formEmpleadoId" value="0" />
+                    <input type="hidden" asp-for="FormDto.RolNombre" id="formRolNombre" value="Mecanico" />
 
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -167,57 +167,25 @@
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <label asp-for="FormDto.FechaContratacion" class="form-label text-teal">Fecha de contratación *</label>
-                            <input asp-for="FormDto.FechaContratacion" type="date" class="form-control form-control-dark" id="formFechaContratacion" />
+                            <input asp-for="FormDto.FechaContratacion" type="date" class="form-control form-control-dark" 
+                                   id="formFechaContratacion" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
                             <span asp-validation-for="FormDto.FechaContratacion" class="text-danger"></span>
                         </div>
-                    </div>
-
-                    <!-- Campos Mecánico -->
-                    <div id="camposMecanico">
-                        <div class="row mb-3">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <label asp-for="FormDto.Especialidad" class="form-label text-teal">Especialidad</label>
-                                <input asp-for="FormDto.Especialidad" class="form-control form-control-dark" id="formEspecialidad" />
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="FormDto.SalarioPorHora" class="form-label text-teal">Salario por hora en Bs</label>
-                                <input asp-for="FormDto.SalarioPorHora" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioPorHora" />
-                            </div>
+                        <div class="col-md-4 mb-3 mb-md-0" id="campoSalarioMecanico">
+                            <label asp-for="FormDto.SalarioPorHora" class="form-label text-teal">Salario por hora (Bs)</label>
+                            <input asp-for="FormDto.SalarioPorHora" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioPorHora" placeholder="0.00" />
+                        </div>
+                        <div class="col-md-4" id="campoSalarioAdmin" style="display: none;">
+                            <label asp-for="FormDto.SalarioMensual" class="form-label text-teal">Salario mensual (Bs)</label>
+                            <input asp-for="FormDto.SalarioMensual" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioMensual" placeholder="0.00" />
                         </div>
                     </div>
 
-                    <!-- Campos Administrador -->
-                    <div id="camposAdministrador" style="display: none;">
-                        <div class="row mb-3">
-                            <div class="col-md-6 mb-3 mb-md-0">
-                                <label asp-for="FormDto.SalarioMensual" class="form-label text-teal">Salario mensual en Bs</label>
-                                <input asp-for="FormDto.SalarioMensual" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioMensual" />
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="FormDto.RolNombre" class="form-label text-teal">Rol en el sistema</label>
-                                @if (currentUserLevel == NivelAcceso.Gerente)
-                                {
-                                    <select asp-for="FormDto.RolNombre" class="form-select form-control-dark" id="formRolNombre">
-                                        <option value="">Seleccione un rol...</option>
-                                        <option value="Gerente">Gerente</option>
-                                        <option value="Administrador">Administrador</option>
-                                    </select>
-                                }
-                                else if (currentUserLevel == NivelAcceso.Completo)
-                                {
-                                    <select asp-for="FormDto.RolNombre" class="form-select form-control-dark" id="formRolNombre">
-                                        <option value="Administrador">Administrador</option>
-                                    </select>
-                                }
-                                else
-                                {
-                                    <input type="text" class="form-control form-control-dark" value="Sin permisos" readonly />
-                                }
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Campos ocultos para rol (referencia para JS, no se envían) -->
+                    <input type="hidden" id="formRolNombreMecanico" value="Mecanico" />
+                    <input type="hidden" id="formRolNombreAdmin" value="Administrador" />
                 </div>
                 <div class="modal-footer border-secondary py-3 px-4">
                     <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
@@ -344,28 +312,31 @@
 
         function toggleCamposTipo() {
             var tipo = document.getElementById('formTipoEmpleado').value;
-            var camposMecanico = document.getElementById('camposMecanico');
-            var camposAdministrador = document.getElementById('camposAdministrador');
+            var campoSalarioMecanico = document.getElementById('campoSalarioMecanico');
+            var campoSalarioAdmin = document.getElementById('campoSalarioAdmin');
 
             if (tipo === 'Mecanico') {
-                camposMecanico.style.display = '';
-                camposMecanico.removeAttribute('hidden');
-                camposAdministrador.style.display = 'none';
-                camposAdministrador.setAttribute('hidden', 'hidden');
-                // Establecer rol por defecto para mecánico
-                var rolMecanico = document.getElementById('formRolNombreMecanico');
-                if (rolMecanico) rolMecanico.value = 'Mecanico';
+                campoSalarioMecanico.style.display = '';
+                campoSalarioAdmin.style.display = 'none';
             } else {
-                camposMecanico.style.display = 'none';
-                camposMecanico.setAttribute('hidden', 'hidden');
-                camposAdministrador.style.display = '';
-                camposAdministrador.removeAttribute('hidden');
-                // Establecer rol por defecto para administrador
-                var rolAdmin = document.getElementById('formRolNombre');
-                if (rolAdmin) rolAdmin.value = 'Administrador';
+                campoSalarioMecanico.style.display = 'none';
+                campoSalarioAdmin.style.display = '';
             }
 
             document.getElementById('emailRequired').style.display = tipo === 'Administrador' ? '' : 'none';
+            
+            // Sincronizar el valor del campo RolNombre según el tipo
+            sincronizarRol();
+        }
+
+        function sincronizarRol() {
+            var tipo = document.getElementById('formTipoEmpleado').value;
+            var rolInput = tipo === 'Mecanico' 
+                ? document.getElementById('formRolNombreMecanico') 
+                : document.getElementById('formRolNombreAdmin');
+            if (rolInput) {
+                document.getElementById('formRolNombre').value = rolInput.value;
+            }
         }
 
         function limpiarFormulario() {
@@ -377,19 +348,13 @@
             document.getElementById('formCiComplemento').value = '';
             document.getElementById('formTelefono').value = '';
             document.getElementById('formEmail').value = '';
-            document.getElementById('formFechaContratacion').value = '';
+            document.getElementById('formFechaContratacion').value = new Date().toISOString().split('T')[0];
             document.getElementById('formTipoEmpleado').value = 'Mecanico';
             document.getElementById('formEstadoLaboral').value = 'Activo';
-            document.getElementById('formEspecialidad').value = '';
             document.getElementById('formSalarioPorHora').value = '';
             document.getElementById('formSalarioMensual').value = '';
-            // Limpiar campos de rol
-            var rolMecanico = document.getElementById('formRolNombreMecanico');
-            if (rolMecanico) rolMecanico.value = 'Mecanico';
-            var rolAdmin = document.getElementById('formRolNombre');
-            if (rolAdmin && rolAdmin.tagName === 'SELECT') {
-                rolAdmin.selectedIndex = 0;
-            }
+            // Sincronizar rol inicial
+            setTimeout(sincronizarRol, 0);
             document.getElementById('empleadoModalLabel').textContent = 'Crear empleado';
             document.getElementById('modalSubmitBtn').textContent = 'Crear empleado';
             toggleCamposTipo();

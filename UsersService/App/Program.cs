@@ -193,17 +193,30 @@ static async Task SeedDefaultAdminAsync(IServiceProvider services)
 
         // Ensure admin login user exists
         var checkCmd = conn.CreateCommand();
-        checkCmd.CommandText = "SELECT COUNT(1) FROM usuariologin WHERE email = @Email;";
+        checkCmd.CommandText = "SELECT usuariologinid FROM usuariologin WHERE email = @Email;";
         var p = checkCmd.CreateParameter(); p.ParameterName = "@Email"; p.Value = adminEmail;
         checkCmd.Parameters.Add(p);
-        var count = Convert.ToInt64(await ((System.Data.Common.DbCommand)checkCmd).ExecuteScalarAsync());
-        if (count > 0) return;
+        var existingUserId = await ((System.Data.Common.DbCommand)checkCmd).ExecuteScalarAsync();
 
         // Get rolId for "Gerente"
         var getRolCmd = conn.CreateCommand();
         getRolCmd.CommandText = "SELECT rolid FROM rol WHERE LOWER(nombre) = 'gerente' LIMIT 1;";
         var rolIdObj = await ((System.Data.Common.DbCommand)getRolCmd).ExecuteScalarAsync();
         var gerenteRolId = rolIdObj != null ? Convert.ToInt32(rolIdObj) : (int?)null;
+
+        if (existingUserId != null)
+        {
+            // Update existing user with rol de Gerente
+            var updateCmd = conn.CreateCommand();
+            updateCmd.CommandText = "UPDATE usuariologin SET rolid = @RolId WHERE usuariologinid = @UserId;";
+            var up = updateCmd.CreateParameter(); up.ParameterName = "@RolId"; up.Value = gerenteRolId ?? (object)DBNull.Value;
+            var uid = updateCmd.CreateParameter(); uid.ParameterName = "@UserId"; uid.Value = existingUserId;
+            updateCmd.Parameters.Add(up);
+            updateCmd.Parameters.Add(uid);
+            await ((System.Data.Common.DbCommand)updateCmd).ExecuteNonQueryAsync();
+            Console.WriteLine("[Seed] Usuario administrador actualizado con rol de Gerente.");
+            return;
+        }
 
         // Create admin login user with rol de Gerente
         var passwordHash = passwordHasher.HashPassword(adminPassword);

@@ -34,6 +34,10 @@ namespace WebService.Adapters
         public Task<OrdenTrabajoDetalleDto?> GetOrdenDetalleAsync(int id)
             => GetAsync<OrdenTrabajoDetalleDto>($"api/ordenestrabajo/{id}");
 
+        public async Task<List<OrdenTrabajoListDto>> GetOrdenesByMecanicoAsync(int mecanicoId)
+            => await GetAsync<List<OrdenTrabajoListDto>>($"api/ordenestrabajo/mecanico/{mecanicoId}") 
+               ?? new List<OrdenTrabajoListDto>();
+
         public async Task<(bool ok, string? error, int id)> RegistrarOrdenAsync(OrdenTrabajoFormDto form)
         {
             var body = new

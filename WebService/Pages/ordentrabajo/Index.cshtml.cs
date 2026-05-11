@@ -1,13 +1,16 @@
 using System.Globalization;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using WebService.Adapters;
 using WebService.DTOs;
+using WebService.Models;
 
 namespace WebService.Pages.OrdenTrabajo
 {
+    [Authorize]
     public class IndexModel : PageModel
     {
         private readonly OrdenTrabajoAdapter _adapter;
@@ -18,6 +21,7 @@ namespace WebService.Pages.OrdenTrabajo
         }
 
         public IList<OrdenTrabajoListDto> OrdenesTrabajo { get; set; } = new List<OrdenTrabajoListDto>();
+        public bool EsMecanico { get; private set; }
 
         [BindProperty]
         public OrdenTrabajoFormDto FormDto { get; set; } = new();
@@ -28,7 +32,32 @@ namespace WebService.Pages.OrdenTrabajo
         public async Task OnGetAsync()
         {
             CargarOpcionesEstado();
-            OrdenesTrabajo = await _adapter.GetAllOrdenesAsync();
+            
+            var userLevel = GetCurrentLevel();
+            EsMecanico = userLevel == NivelAcceso.Parcial;
+            
+            if (EsMecanico)
+            {
+                var empleadoIdClaim = User.FindFirst("EmpleadoId");
+                if (empleadoIdClaim != null && int.TryParse(empleadoIdClaim.Value, out int empleadoId))
+                {
+                    OrdenesTrabajo = await _adapter.GetOrdenesByMecanicoAsync(empleadoId);
+                }
+                else
+                {
+                    OrdenesTrabajo = new List<OrdenTrabajoListDto>();
+                }
+            }
+            else
+            {
+                OrdenesTrabajo = await _adapter.GetAllOrdenesAsync();
+            }
+        }
+
+        private NivelAcceso GetCurrentLevel()
+        {
+            var claim = User.FindFirst("NivelAcceso");
+            return claim != null && Enum.TryParse<NivelAcceso>(claim.Value, out var lvl) ? lvl : NivelAcceso.Parcial;
         }
 
         public async Task<JsonResult> OnGetOrdenAsync(int id)
