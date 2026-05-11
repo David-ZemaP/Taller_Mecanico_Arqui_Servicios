@@ -8,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 Env.Load(Path.Combine(AppContext.BaseDirectory, ".env"));
 
+// Add environment variables to configuration (after loading .env)
+builder.Configuration.AddEnvironmentVariables();
+
 builder.Services.AddControllers();
 
 

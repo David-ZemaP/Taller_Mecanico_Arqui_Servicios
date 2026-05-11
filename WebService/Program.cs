@@ -1,7 +1,12 @@
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using WebService.Adapters;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file
+Env.Load(Path.Combine(AppContext.BaseDirectory, ".env"));
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddRazorPages();
 builder.Services.AddAuthorization();

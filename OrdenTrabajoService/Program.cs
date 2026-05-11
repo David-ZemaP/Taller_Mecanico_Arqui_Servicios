@@ -1,4 +1,5 @@
 using System.Text;
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OrdenTrabajoService.Application.Facades;
@@ -12,6 +13,10 @@ using Taller_Mecanico_Users.Application.Persistence;
 using Taller_Mecanico_Users.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file
+Env.Load(Path.Combine(AppContext.BaseDirectory, ".env"));
+builder.Configuration.AddEnvironmentVariables();
 
 // JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
