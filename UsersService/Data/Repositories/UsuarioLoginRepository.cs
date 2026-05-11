@@ -6,8 +6,8 @@ using Npgsql;
 using Taller_Mecanico_Users.Domain.Common;
 using Taller_Mecanico_Users.Domain.Entities;
 using Taller_Mecanico_Users.Domain.Ports;
-using Taller_Mecanico_Users.Framework.Persistence;
-using Taller_Mecanico_Users.Framework.Services;
+using Taller_Mecanico_Users.Application.Persistence;
+using Taller_Mecanico_Users.Application.Services;
 
 namespace Taller_Mecanico_Users.Data.Repositories
 {
@@ -34,8 +34,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
-                    INSERT INTO usuariologin (empleadoid, clienteid, email, passwordhash, activo, requierecambiopassword, escliente) 
-                    VALUES (@EmpleadoId, @ClienteId, @Email, @PasswordHash, @Activo, @RequiereCambioPassword, @EsCliente)
+                    INSERT INTO usuariologin (empleadoid, clienteid, email, passwordhash, activo, requierecambiopassword, escliente, creadopor) 
+                    VALUES (@EmpleadoId, @ClienteId, @Email, @PasswordHash, @Activo, @RequiereCambioPassword, @EsCliente, @CreadoPor)
                     RETURNING usuariologinid;";
 
                 AddParameter(command, "@EmpleadoId", entity.EmpleadoId ?? (object)DBNull.Value);
@@ -45,6 +45,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 AddParameter(command, "@Activo", entity.Activo);
                 AddParameter(command, "@RequiereCambioPassword", entity.RequiereCambioPassword);
                 AddParameter(command, "@EsCliente", entity.EsCliente);
+                AddParameter(command, "@CreadoPor", entity.CreadoPor ?? (object)DBNull.Value);
 
                 var result = await command.ExecuteScalarAsync();
                 if (result != null)
@@ -90,7 +91,10 @@ namespace Taller_Mecanico_Users.Data.Repositories
                         activo = @Activo, 
                         requierecambiopassword = @RequiereCambioPassword,
                         passwordhash = @PasswordHash,
-                        ultimoacceso = @UltimoAcceso
+                        ultimoacceso = @UltimoAcceso,
+                        inactivadopor = @InactivadoPor,
+                        actualizadopor = @ActualizadoPor,
+                        fechaactualizacion = @FechaActualizacion
                     WHERE usuariologinid = @UsuarioLoginId;";
 
                 AddParameter(command, "@UsuarioLoginId", entity.UsuarioLoginId);
@@ -99,6 +103,9 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 AddParameter(command, "@RequiereCambioPassword", entity.RequiereCambioPassword);
                 AddParameter(command, "@PasswordHash", entity.PasswordHash);
                 AddParameter(command, "@UltimoAcceso", entity.UltimoAcceso ?? (object)DBNull.Value);
+                AddParameter(command, "@InactivadoPor", entity.InactivadoPor ?? (object)DBNull.Value);
+                AddParameter(command, "@ActualizadoPor", entity.ActualizadoPor ?? (object)DBNull.Value);
+                AddParameter(command, "@FechaActualizacion", entity.FechaActualizacion ?? (object)DBNull.Value);
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
@@ -268,6 +275,27 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
         private UsuarioLogin MapReaderToEntity(System.Data.Common.DbDataReader reader, string? nivelAcceso = null)
         {
+            string? creadoPor = null;
+            string? actualizadoPor = null;
+            string? inactivadoPor = null;
+            DateTime? fechaActualizacion = null;
+
+            var ordinalCreado = reader.GetOrdinal("creadopor");
+            if (!reader.IsDBNull(ordinalCreado))
+                creadoPor = reader.GetString(ordinalCreado);
+
+            var ordinalActualizado = reader.GetOrdinal("actualizadopor");
+            if (!reader.IsDBNull(ordinalActualizado))
+                actualizadoPor = reader.GetString(ordinalActualizado);
+
+            var ordinalInactivado = reader.GetOrdinal("inactivadopor");
+            if (!reader.IsDBNull(ordinalInactivado))
+                inactivadoPor = reader.GetString(ordinalInactivado);
+
+            var ordinalFecha = reader.GetOrdinal("fechaactualizacion");
+            if (!reader.IsDBNull(ordinalFecha))
+                fechaActualizacion = reader.GetDateTime(ordinalFecha);
+
             var result = UsuarioLogin.Reconstituir(
                 reader.GetInt32(reader.GetOrdinal("usuariologinid")),
                 reader.IsDBNull(reader.GetOrdinal("empleadoid")) ? null : reader.GetInt32(reader.GetOrdinal("empleadoid")),
@@ -278,7 +306,11 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 reader.GetBoolean(reader.GetOrdinal("activo")),
                 reader.GetBoolean(reader.GetOrdinal("requierecambiopassword")),
                 reader.GetBoolean(reader.GetOrdinal("escliente")),
-                nivelAcceso
+                nivelAcceso,
+                creadoPor,
+                actualizadoPor,
+                fechaActualizacion,
+                inactivadoPor
             );
 
             if (result.IsFailure)

@@ -32,21 +32,10 @@ namespace Taller_Mecanico_Users.UseCases.Users
 
         public async Task<Result> ExecuteAsync(int usuarioLoginId, string currentPassword, string nuevoPassword, string confirmarPassword)
         {
+            // 1. Validar que la contraseña actual es obligatoria
             if (string.IsNullOrWhiteSpace(currentPassword))
             {
                 return Result.Failure(ErrorCodes.ValidationRequired, "La contraseña actual es obligatoria.");
-            }
-
-            if (nuevoPassword != confirmarPassword)
-            {
-                return Result.Failure(ErrorCodes.ValidationInvalidValue, "Las contraseñas no coinciden.");
-            }
-
-            // 1. Validar que la nueva contraseña cumple requisitos
-            var validationResult = _passwordSecurity.ValidatePassword(nuevoPassword);
-            if (validationResult.IsFailure)
-            {
-                return validationResult;
             }
 
             // 2. Obtener usuario del repositorio
@@ -58,23 +47,33 @@ namespace Taller_Mecanico_Users.UseCases.Users
             if (user == null)
                 return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
 
-            // 3. Verificar contraseña actual
+            // 3. Verificar contraseña actual PRIMERO (antes de cualquier otra validación)
             if (!_passwordHasher.VerifyPassword(currentPassword, user.PasswordHash))
             {
                 return Result.Failure(ErrorCodes.ValidationInvalidValue, "La contraseña actual es incorrecta.");
             }
 
-            // 3. Hashear nueva contraseña
+            // 4. Validar que la nueva contraseña cumple requisitos
+            var validationResult = _passwordSecurity.ValidatePassword(nuevoPassword);
+            if (validationResult.IsFailure)
+            {
+                return validationResult;
+            }
+
+            // 5. Verificar que la nueva contraseña coincide con la confirmación
+            if (nuevoPassword != confirmarPassword)
+            {
+                return Result.Failure(ErrorCodes.ValidationInvalidValue, "Las contraseñas no coinciden.");
+            }
+
+            // 6. Hashear nueva contraseña y persistir
             var passwordHash = _passwordHasher.HashPassword(nuevoPassword);
-            
-            // 4. Cambiar contraseña en la entidad
             var changeResult = user.CambiarPassword(passwordHash);
             if (changeResult.IsFailure)
             {
                 return changeResult;
             }
             
-            // 5. Persistir cambios
             return await _loginRepository.UpdateAsync(user);
         }
     }

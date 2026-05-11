@@ -16,6 +16,10 @@ namespace Taller_Mecanico_Users.Domain.Entities
         public bool RequiereCambioPassword { get; private set; }
         public bool EsCliente { get; private set; }
         public string? NivelAcceso { get; private set; }
+        public string? CreadoPor { get; private set; }
+        public string? ActualizadoPor { get; private set; }
+        public DateTime? FechaActualizacion { get; private set; }
+        public string? InactivadoPor { get; private set; }
 
         private UsuarioLogin() { }
 
@@ -47,7 +51,7 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 usuarioLoginId: 0);
         }
 
-        public static Result<UsuarioLogin> Reconstituir(int usuarioLoginId, int? empleadoId, int? clienteId, string email, string passwordHash, DateTime? ultimoAcceso, bool activo, bool requiereCambioPassword = false, bool esCliente = false, string? nivelAcceso = null)
+        public static Result<UsuarioLogin> Reconstituir(int usuarioLoginId, int? empleadoId, int? clienteId, string email, string passwordHash, DateTime? ultimoAcceso, bool activo, bool requiereCambioPassword = false, bool esCliente = false, string? nivelAcceso = null, string? creadoPor = null, string? actualizadoPor = null, DateTime? fechaActualizacion = null, string? inactivadoPor = null)
         {
             return CreateInternal(
                 empleadoId: empleadoId,
@@ -59,7 +63,11 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 esCliente: esCliente,
                 ultimoAcceso: ultimoAcceso,
                 usuarioLoginId: usuarioLoginId,
-                nivelAcceso: nivelAcceso);
+                nivelAcceso: nivelAcceso,
+                creadoPor: null,
+                actualizadoPor: null,
+                fechaActualizacion: null,
+                inactivadoPor: null);
         }
 
         public Result RegistrarAcceso()
@@ -71,6 +79,23 @@ namespace Taller_Mecanico_Users.Domain.Entities
 
             UltimoAcceso = DateTime.UtcNow;
             return Result.Success();
+        }
+
+        public void RegistrarActualizacion(string? actor)
+        {
+            ActualizadoPor = actor;
+            FechaActualizacion = DateTime.UtcNow;
+        }
+
+        public void RegistrarCreacion(string? actor)
+        {
+            CreadoPor = actor;
+        }
+
+        public void RegistrarEliminacion(string? actor)
+        {
+            InactivadoPor = actor;
+            FechaActualizacion = DateTime.UtcNow;
         }
 
         public Result AsignarIdentificador(int usuarioLoginId)
@@ -167,7 +192,11 @@ namespace Taller_Mecanico_Users.Domain.Entities
             bool esCliente,
             DateTime? ultimoAcceso,
             int usuarioLoginId,
-            string? nivelAcceso = null)
+            string? nivelAcceso = null,
+            string? creadoPor = null,
+            string? actualizadoPor = null,
+            DateTime? fechaActualizacion = null,
+            string? inactivadoPor = null)
         {
             var normalizedEmailResult = ValidateEmail(email);
             if (normalizedEmailResult.IsFailure)
@@ -221,7 +250,11 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 Activo = activo,
                 RequiereCambioPassword = requiereCambioPassword,
                 EsCliente = esCliente,
-                NivelAcceso = nivelAcceso
+                NivelAcceso = nivelAcceso,
+                CreadoPor = creadoPor,
+                ActualizadoPor = actualizadoPor,
+                FechaActualizacion = fechaActualizacion,
+                InactivadoPor = inactivadoPor
             });
         }
 

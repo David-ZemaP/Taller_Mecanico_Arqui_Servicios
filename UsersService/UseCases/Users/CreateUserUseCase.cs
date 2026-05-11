@@ -6,6 +6,7 @@ using System.Net.Mail;
 using System.Threading.Tasks;
 using Taller_Mecanico_Users.Domain.Entities;
 using Taller_Mecanico_Users.Domain.Ports;
+using Taller_Mecanico_Users.Application.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Taller_Mecanico_Users.UseCases.Users
@@ -25,6 +26,7 @@ namespace Taller_Mecanico_Users.UseCases.Users
         private readonly Domain.Ports.IPasswordSecurity _passwordSecurity;
         private readonly Domain.Ports.IPasswordHasher _passwordHasher;
         private readonly ILogger<CreateUserUseCase> _logger;
+        private readonly IAuthenticationHelper _authHelper;
 
         public CreateUserUseCase(
             IUsuarioLoginRepository repository,
@@ -32,7 +34,8 @@ namespace Taller_Mecanico_Users.UseCases.Users
             Domain.Ports.IMailSender mailSender,
             Domain.Ports.IPasswordSecurity passwordSecurity,
             Domain.Ports.IPasswordHasher passwordHasher,
-            ILogger<CreateUserUseCase> logger)
+            ILogger<CreateUserUseCase> logger,
+            IAuthenticationHelper authHelper)
         {
             _repository = repository;
             _empleadoRepository = empleadoRepository;
@@ -40,6 +43,7 @@ namespace Taller_Mecanico_Users.UseCases.Users
             _passwordSecurity = passwordSecurity;
             _passwordHasher = passwordHasher;
             _logger = logger;
+            _authHelper = authHelper;
         }
 
         public async Task<Result<UserCreationResult>> ExecuteAsync(int empleadoId, string email, string? plainPasswordProvided = null)
@@ -98,15 +102,53 @@ namespace Taller_Mecanico_Users.UseCases.Users
 
             var nuevoUsuario = nuevoUsuarioResult.Value!;
 
-            // 4. Persistir en el repositorio
+            // 4. Registrar auditoría de creación
+            var actor = _authHelper.GetCurrentAuditActor();
+            nuevoUsuario.RegistrarCreacion(actor);
+
+            // 5. Persistir en el repositorio
             var addResult = await _repository.AddAsync(nuevoUsuario);
             if (addResult.IsFailure)
             {
                 return Result<UserCreationResult>.Failure(addResult.ErrorCode ?? ErrorCodes.DbError, addResult.ErrorMessage ?? "Error al crear usuario.");
             }
 
-            // 5. Enviar credenciales por correo (fallo de correo no cancela la creación)
-            string mailBody = $"Hola,\nTu cuenta ha sido creada exitosamente.\nTu contraseña temporal es: {plainPassword}\nPor favor, cámbiala al iniciar sesión por primera vez.";
+            // 6. Enviar credenciales por correo (fallo de correo no cancela la creación)
+            string mailBody = $@"
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+</head>
+<body style='margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;'>
+    <div style='max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
+        <div style='background: linear-gradient(135deg, #2c3e50, #34495e); padding: 30px; text-align: center;'>
+            <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>Taller Mecánico</h1>
+            <p style='color: #bdc3c7; margin: 10px 0 0; font-size: 14px;'>Sistema de Gestión</p>
+        </div>
+        <div style='padding: 30px;'>
+            <h2 style='color: #2c3e50; margin-top: 0;'>Credenciales de Acceso</h2>
+            <p style='color: #555; line-height: 1.6;'>Su cuenta ha sido creada exitosamente. A continuación encontrará sus datos de acceso:</p>
+            <div style='background-color: #f8f9fa; border-left: 4px solid #27ae60; padding: 15px 20px; margin: 20px 0;'>
+                <p style='margin: 5px 0;'><strong style='color: #2c3e50;'>Correo electrónico:</strong></p>
+                <p style='margin: 0; font-size: 16px; color: #2980b9;'>{loginEmail}</p>
+                <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 15px 0;'>
+                <p style='margin: 5px 0;'><strong style='color: #2c3e50;'>Contraseña temporal:</strong></p>
+                <p style='margin: 0; font-size: 18px; font-weight: bold; color: #27ae60; letter-spacing: 2px;'>{plainPassword}</p>
+            </div>
+            <div style='background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 20px 0;'>
+                <p style='margin: 0; color: #856404; font-size: 14px;'>
+                    <strong>⚠️ Importante:</strong> Por su seguridad, debe cambiar su contraseña al iniciar sesión por primera vez.
+                </p>
+            </div>
+            <p style='color: #7f8c8d; font-size: 12px; text-align: center; margin-top: 30px;'>
+                Este es un mensaje automático. No responda directamente a este correo.
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
             var recipients = BuildRecipients(empleadoEmail, loginEmail);
             try
             {
