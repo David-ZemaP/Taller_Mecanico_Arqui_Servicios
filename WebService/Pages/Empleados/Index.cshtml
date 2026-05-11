@@ -6,29 +6,7 @@
     var currentUserLevel = Model.CurrentUserLevel;
 }
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
-@if (TempData["EmailWarning"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
-        <i class="bi bi-exclamation-triangle me-2"></i>@TempData["EmailWarning"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999; max-width: 420px;">
-        <i class="bi bi-x-circle me-2"></i>@TempData["ErrorMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -296,58 +274,7 @@
     </div>
 </div>
 
-<!-- MODAL 4: Credenciales de acceso -->
-<div class="modal fade" id="credencialesModal" tabindex="-1" aria-labelledby="credencialesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark text-light">
-            <div class="modal-header border-secondary bg-gradient">
-                <div>
-                    <h5 class="modal-title text-teal fw-bold" id="credencialesModalLabel">
-                        <i class="bi bi-key me-2"></i>Credenciales de Acceso
-                    </h5>
-                    <p class="text-muted small mb-0">Guarda estas credenciales en un lugar seguro</p>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Nuevo administrador creado exitosamente.</strong> Las credenciales de acceso se muestran a continuación.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label text-teal fw-semibold">Correo electrónico:</label>
-                    <div class="input-group">
-                        <input type="email" class="form-control form-control-dark" id="email_credential" value="@Model.NuevoEmail" readonly>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('email_credential')" title="Copiar">
-                            <i class="bi bi-clipboard me-1"></i>Copiar
-                        </button>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label text-teal fw-semibold">Contraseña:</label>
-                    <div class="input-group">
-                        <input type="password" class="form-control form-control-dark" id="password_credential" value="@Model.NuevaPassword" readonly>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="mostrarOcultarPassword('password_credential')" title="Mostrar/Ocultar">
-                            <i class="bi bi-eye me-1"></i>Mostrar
-                        </button>
-                        <button class="btn btn-outline-secondary text-teal border-secondary" type="button" onclick="copiarAlPortapapeles('password_credential')" title="Copiar">
-                            <i class="bi bi-clipboard me-1"></i>Copiar
-                        </button>
-                    </div>
-                </div>
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Importante:</strong> El usuario deberá cambiar su contraseña en el primer inicio de sesión.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            </div>
-            <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- MODAL 5: Usuario Existente -->
 <div class="modal fade" id="usuarioExistenteModal" tabindex="-1" aria-labelledby="usuarioExistenteModalLabel" aria-hidden="true">
@@ -380,6 +307,34 @@
     </div>
 </div>
 
+@if (!string.IsNullOrEmpty(Model.NotificationMessage))
+{
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-teal">
+                        <i class="bi @Model.NotificationIcon me-2"></i>@Model.NotificationTitle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">@Html.Raw(Model.NotificationMessage)</p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = new bootstrap.Modal(document.getElementById('notificationModal'));
+            modal.show();
+        });
+    </script>
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -389,8 +344,21 @@
 
         function toggleCamposTipo() {
             var tipo = document.getElementById('formTipoEmpleado').value;
-            document.getElementById('camposMecanico').style.display = tipo === 'Mecanico' ? '' : 'none';
-            document.getElementById('camposAdministrador').style.display = tipo === 'Administrador' ? '' : 'none';
+            var camposMecanico = document.getElementById('camposMecanico');
+            var camposAdministrador = document.getElementById('camposAdministrador');
+
+            if (tipo === 'Mecanico') {
+                camposMecanico.style.display = '';
+                camposMecanico.removeAttribute('hidden');
+                camposAdministrador.style.display = 'none';
+                camposAdministrador.setAttribute('hidden', 'hidden');
+            } else {
+                camposMecanico.style.display = 'none';
+                camposMecanico.setAttribute('hidden', 'hidden');
+                camposAdministrador.style.display = '';
+                camposAdministrador.removeAttribute('hidden');
+            }
+
             document.getElementById('emailRequired').style.display = tipo === 'Administrador' ? '' : 'none';
         }
 
@@ -551,15 +519,6 @@
                 });
             });
 
-            const email = document.getElementById('email_credential')?.value;
-            const password = document.getElementById('password_credential')?.value;
-            if (email && password) {
-                const credencialesModal = new bootstrap.Modal(document.getElementById('credencialesModal'));
-                credencialesModal.show();
-            } else if (@Model.UsuarioExistente.ToString().ToLower()) {
-                const usuarioExistenteModal = new bootstrap.Modal(document.getElementById('usuarioExistenteModal'));
-                usuarioExistenteModal.show();
-            }
-        });
+            
     </script>
 }

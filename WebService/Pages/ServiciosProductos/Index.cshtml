@@ -19,15 +19,7 @@
     </div>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success" role="alert">@TempData["SuccessMessage"]</div>
-}
 
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger" role="alert">@TempData["ErrorMessage"]</div>
-}
 
 <div class="row g-4">
     <div class="col-lg-7">
@@ -251,6 +243,34 @@
         </div>
     </div>
 </div>
+
+@if (!string.IsNullOrEmpty(Model.NotificationMessage))
+{
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-teal">
+                        <i class="bi @Model.NotificationIcon me-2"></i>@Model.NotificationTitle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">@Html.Raw(Model.NotificationMessage)</p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-teal" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = new bootstrap.Modal(document.getElementById('notificationModal'));
+            modal.show();
+        });
+    </script>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

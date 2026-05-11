@@ -79,8 +79,29 @@
     }
     else
     {
-        <div class="alert alert-danger" role="alert">
-            <strong>Error</strong> @Model.ErrorMessage
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark text-light">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title text-danger">
+                            <i class="bi bi-x-circle-fill me-2"></i>Error
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">@Model.ErrorMessage</p>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <a href="/Clientes" class="btn btn-teal">Volver</a>
+                    </div>
+                </div>
+            </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var modal = new bootstrap.Modal(document.getElementById('errorModal'));
+                modal.show();
+            });
+        </script>
     }
 </div>

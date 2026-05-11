@@ -18,6 +18,9 @@ namespace WebService.Pages
         public NivelAcceso CurrentUserLevel { get; set; }
         public string? NuevoEmail { get; set; }
         public string? NuevaPassword { get; set; }
+        public string? NotificationMessage { get; set; }
+        public string? NotificationIcon { get; set; }
+        public string? NotificationTitle { get; set; }
 
         [BindProperty]
         public UsuarioFormDto FormDto { get; set; } = new();
@@ -31,7 +34,30 @@ namespace WebService.Pages
         {
             NuevoEmail = TempData["NuevoEmail"] as string;
             NuevaPassword = TempData["NuevaPassword"] as string;
+            CargarNotificacion();
             await CargarDatosAsync();
+        }
+
+        private void CargarNotificacion()
+        {
+            if (TempData["SuccessMessage"] != null)
+            {
+                NotificationMessage = TempData["SuccessMessage"]?.ToString();
+                NotificationIcon = "bi-check-circle-fill";
+                NotificationTitle = "Éxito";
+            }
+            else if (TempData["ErrorMessage"] != null)
+            {
+                NotificationMessage = TempData["ErrorMessage"]?.ToString();
+                NotificationIcon = "bi-x-circle-fill";
+                NotificationTitle = "Error";
+            }
+            else if (TempData["NewPassword"] != null)
+            {
+                NotificationMessage = "Contraseña temporal: " + TempData["NewPassword"];
+                NotificationIcon = "bi-key-fill";
+                NotificationTitle = "Nueva Contraseña";
+            }
         }
 
         public async Task<IActionResult> OnPostSaveAsync()

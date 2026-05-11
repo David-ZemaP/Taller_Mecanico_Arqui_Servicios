@@ -22,6 +22,8 @@ namespace WebService.Pages
         [BindProperty]
         public ChangePasswordInput Input { get; set; } = new();
 
+        public bool PasswordChanged { get; set; }
+
         public IActionResult OnGet() => Page();
 
         public async Task<IActionResult> OnPostAsync()
@@ -50,9 +52,8 @@ namespace WebService.Pages
                 return Page();
             }
 
-            HttpContext.Session.Clear();
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToPage("/Login");
+            PasswordChanged = true;
+            return Page();
         }
     }
 

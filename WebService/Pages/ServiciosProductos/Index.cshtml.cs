@@ -16,6 +16,9 @@ namespace WebService.Pages.ServiciosProductos
 
         public IList<ProductoDto> Productos { get; set; } = new List<ProductoDto>();
         public IList<ServicioDto> Servicios { get; set; } = new List<ServicioDto>();
+        public string? NotificationMessage { get; set; }
+        public string? NotificationIcon { get; set; }
+        public string? NotificationTitle { get; set; }
 
         [BindProperty]
         public ProductoFormDto ProductoForm { get; set; } = new();
@@ -25,7 +28,24 @@ namespace WebService.Pages.ServiciosProductos
 
         public async Task OnGetAsync()
         {
+            CargarNotificacion();
             await CargarCatalogosAsync();
+        }
+
+        private void CargarNotificacion()
+        {
+            if (TempData["SuccessMessage"] != null)
+            {
+                NotificationMessage = TempData["SuccessMessage"]?.ToString();
+                NotificationIcon = "bi-check-circle-fill";
+                NotificationTitle = "Éxito";
+            }
+            else if (TempData["ErrorMessage"] != null)
+            {
+                NotificationMessage = TempData["ErrorMessage"]?.ToString();
+                NotificationIcon = "bi-x-circle-fill";
+                NotificationTitle = "Error";
+            }
         }
 
         public async Task<JsonResult> OnGetProductoAsync(int id)

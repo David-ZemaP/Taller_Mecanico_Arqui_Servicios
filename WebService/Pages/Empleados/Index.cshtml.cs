@@ -27,6 +27,9 @@ namespace WebService.Pages.Empleados
         public string? NuevaPassword { get; set; }
         public bool UsuarioExistente { get; set; }
         public string? EmailExistente { get; set; }
+        public string? NotificationMessage { get; set; }
+        public string? NotificationIcon { get; set; }
+        public string? NotificationTitle { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? Filtro { get; set; }
@@ -45,8 +48,12 @@ namespace WebService.Pages.Empleados
 
             NuevoEmail = TempData["NuevoEmail"] as string;
             NuevaPassword = TempData["NuevaPassword"] as string;
+            // Consumir TempData para que no reaparezca al recargar
+            TempData.Remove("NuevoEmail");
+            TempData.Remove("NuevaPassword");
             UsuarioExistente = TempData["UsuarioExistente"] as bool? ?? false;
             EmailExistente = TempData["EmailExistente"] as string;
+            CargarNotificacion();
 
             FiltroActual = (Filtro ?? "todos").Trim().ToLowerInvariant() switch
             {
@@ -56,6 +63,28 @@ namespace WebService.Pages.Empleados
             };
 
             await CargarEmpleadosAsync();
+        }
+
+        private void CargarNotificacion()
+        {
+            if (TempData["SuccessMessage"] != null)
+            {
+                NotificationMessage = TempData["SuccessMessage"]?.ToString();
+                NotificationIcon = "bi-check-circle-fill";
+                NotificationTitle = "Éxito";
+            }
+            else if (TempData["EmailWarning"] != null)
+            {
+                NotificationMessage = TempData["EmailWarning"]?.ToString();
+                NotificationIcon = "bi-exclamation-triangle-fill";
+                NotificationTitle = "Advertencia";
+            }
+            else if (TempData["ErrorMessage"] != null)
+            {
+                NotificationMessage = TempData["ErrorMessage"]?.ToString();
+                NotificationIcon = "bi-x-circle-fill";
+                NotificationTitle = "Error";
+            }
         }
 
         public async Task<JsonResult> OnGetEmpleadoAsync(int id)
@@ -108,17 +137,11 @@ namespace WebService.Pages.Empleados
                 // Crear automáticamente el acceso al sistema si se proporcionó email
                 if (!string.IsNullOrWhiteSpace(FormDto.Email) && empleadoId.HasValue)
                 {
-                    var (userOk, plainPassword, _, _) = await _adapter.CreateUsuarioAsync(
+                    var (userOk, _, _, _) = await _adapter.CreateUsuarioAsync(
                         empleadoId.Value, FormDto.Email, null);
 
-                    if (userOk && !string.IsNullOrWhiteSpace(plainPassword))
+                    if (!userOk)
                     {
-                        TempData["NuevoEmail"] = FormDto.Email;
-                        TempData["NuevaPassword"] = plainPassword;
-                    }
-                    else if (!userOk)
-                    {
-                        // El empleado ya tenía usuario asignado
                         TempData["UsuarioExistente"] = true;
                         TempData["EmailExistente"] = FormDto.Email;
                     }
