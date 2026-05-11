@@ -201,6 +201,17 @@ CREATE TABLE IF NOT EXISTS UsuarioLogin (
 
 CREATE INDEX IF NOT EXISTS IX_Producto_Nombre ON Producto (Nombre);
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id              SERIAL PRIMARY KEY,
+    tabla_afectada  VARCHAR(100) NOT NULL,
+    registro_id     INT NOT NULL,
+    accion          VARCHAR(50)  NOT NULL,
+    realizado_por   VARCHAR(150),
+    fecha_hora      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS IX_audit_logs_tabla ON audit_logs (tabla_afectada, registro_id);
+
 
 INSERT INTO ColorVehiculo (Nombre) VALUES 
 ('Blanco'), ('Negro'), ('Plata'), ('Gris'), ('Rojo'), 
@@ -292,6 +303,12 @@ INSERT INTO producto (nombre, precio, stock) VALUES
 ('Terminales de Dirección', 280.00, 12),
 ('Mangueras de Frenos', 400.00, 8)
 ON CONFLICT (nombre) DO NOTHING;
+
+INSERT INTO cliente (nombre, primerapellido, segundoapellido, ci, telefono, email, tipvocliente) VALUES
+('Juan', 'Pérez', 'Gómez', 12345678, 71234567, 'juan.perez@gmial.com', 'Particular')
+
+INSERT INTO vehiculo (clienteid, placa, marcaid, modeloid, colorvehiculoid, anio) VALUES
+(1, 'ABC-1234', 1, 1, 1, 2020);
 
 INSERT INTO servicio (nombre, precio, isdeleted, fechaactualizacion, creadopor) VALUES
 ('Cambio de Aceite', 350.00, FALSE, NULL, 'SYSTEM_SEED'),

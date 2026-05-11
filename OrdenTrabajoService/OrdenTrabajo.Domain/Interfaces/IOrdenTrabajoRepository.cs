@@ -1,7 +1,7 @@
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Common;
+using OrdenTrabajoService.Domain.Entities;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Domain.Ports
+namespace OrdenTrabajoService.Domain.Interfaces
 {
     public interface IOrdenTrabajoRepository : IRepository<OrdenTrabajo>
     {

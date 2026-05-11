@@ -1,5 +1,5 @@
 @page
-@model Taller_Mecanico_Arqui.Pages.ordentrabajo.IndexModel
+@model WebService.Pages.OrdenTrabajo.IndexModel
 @{
     ViewData["Title"] = "Listado de Órdenes";
 }
@@ -99,6 +99,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body py-4 px-4">
+                    <div id="ordenFormErrors" class="alert alert-danger d-none mb-3"></div>
                     <input type="hidden" asp-for="FormDto.OrdenTrabajoId" id="formOrdenId" value="0" />
                     <input type="hidden" asp-for="FormDto.ProductosJson" id="formProductosJson" />
                     <input type="hidden" asp-for="FormDto.ServiciosJson" id="formServiciosJson" />
@@ -162,11 +163,6 @@
                             </select>
                             <span asp-validation-for="FormDto.EstadoPago" class="text-danger"></span>
                         </div>
-                        <div class="col-md-4">
-                            <label asp-for="FormDto.Total" class="form-label text-teal">Total (Bs.) *</label>
-                            <input asp-for="FormDto.Total" type="number" step="0.01" class="form-control form-control-dark" id="formTotal" />
-                            <span asp-validation-for="FormDto.Total" class="text-danger"></span>
-                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -190,7 +186,7 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Precio unitario (Bs.)</label>
-                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="productoPrecio" />
+                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="productoPrecio" readonly />
                             </div>
                             <div class="col-md-2 d-grid">
                                 <button type="button" class="btn btn-outline-info border-secondary" onclick="agregarProductoSeleccionado()">
@@ -230,7 +226,7 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Precio unitario (Bs.)</label>
-                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="servicioPrecio" />
+                                <input type="number" min="0" step="0.01" class="form-control form-control-dark" id="servicioPrecio" readonly />
                             </div>
                             <div class="col-md-1 d-grid">
                                 <button type="button" class="btn btn-outline-info border-secondary" onclick="agregarServicioSeleccionado()">
@@ -255,6 +251,16 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <div class="card-dark p-3 mt-3 border border-secondary">
+                        <div class="row justify-content-end align-items-end">
+                            <div class="col-md-4">
+                                <label asp-for="FormDto.Total" class="form-label text-teal">Total (Bs.) *</label>
+                                <input asp-for="FormDto.Total" type="number" step="0.01" class="form-control form-control-dark fw-bold" id="formTotal" readonly />
+                                <span asp-validation-for="FormDto.Total" class="text-danger"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,6 +362,8 @@
             document.getElementById('servicioPrecio').value = '';
             document.getElementById('formProductosJson').value = '[]';
             document.getElementById('formServiciosJson').value = '[]';
+            document.getElementById('ordenFormErrors').classList.add('d-none');
+            document.getElementById('ordenFormErrors').innerHTML = '';
             renderProductos();
             renderServicios();
             recalcularTotal();
@@ -396,6 +404,10 @@
                                 e.preventDefault();
                                 document.getElementById('formClienteId').value = c.id;
                                 document.getElementById('formClienteSearch').value = c.text;
+                                document.getElementById('formVehiculoId').value = '0';
+                                document.getElementById('formVehiculoSearch').value = '';
+                                document.getElementById('vehiculoResults').innerHTML = '';
+                                document.getElementById('vehiculoResults').style.display = 'none';
                                 container.style.display = 'none';
                             });
                             container.appendChild(a);
@@ -576,6 +588,8 @@
             document.getElementById('servicioPrecio').value = '';
             document.getElementById('formProductosJson').value = '[]';
             document.getElementById('formServiciosJson').value = '[]';
+            document.getElementById('ordenFormErrors').classList.add('d-none');
+            document.getElementById('ordenFormErrors').innerHTML = '';
 
             renderProductos();
             renderServicios();
@@ -593,7 +607,10 @@
             fetch('?handler=Orden&id=' + id)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.error) { alert(data.error); return; }
+                    if (data.error) {
+                        mostrarErrorOrden(data.error);
+                        return;
+                    }
                     document.getElementById('formOrdenId').value = data.ordenTrabajoId;
                     document.getElementById('formFechaIngreso').value = data.fechaIngreso;
                     document.getElementById('formFechaEntrega').value = data.fechaEntrega || '';
@@ -628,12 +645,12 @@
                     document.getElementById('ordenModalLabel').textContent = 'Editar orden #' + data.ordenTrabajoId;
                     document.getElementById('modalSubmitBtn').textContent = 'Actualizar orden';
                 })
-                .catch(() => alert('Error al cargar los datos de la orden'));
+                .catch(() => mostrarErrorOrden('Error al cargar los datos de la orden'));
         }
 
         function agregarProductoSeleccionado() {
             if (!productoSeleccionado) {
-                alert('Seleccione un producto de la lista.');
+                mostrarErrorOrden('Seleccione un producto de la lista.');
                 return;
             }
 
@@ -641,23 +658,31 @@
             const precio = parseFloat(document.getElementById('productoPrecio').value || '0');
 
             if (cantidad <= 0) {
-                alert('La cantidad de producto debe ser mayor a 0.');
+                mostrarErrorOrden('La cantidad de producto debe ser mayor a 0.');
                 return;
             }
 
             if (precio < 0) {
-                alert('El precio del producto (Bs.) no puede ser negativo.');
+                mostrarErrorOrden('El precio del producto (Bs.) no puede ser negativo.');
                 return;
             }
 
             const subtotal = cantidad * precio;
-            productosSeleccionados.push({
-                productoId: productoSeleccionado.id,
-                nombre: productoSeleccionado.text,
-                cantidad: cantidad,
-                precioUnitario: precio,
-                subtotal: subtotal
-            });
+            const productoExistente = productosSeleccionados.find(p => p.productoId === productoSeleccionado.id);
+
+            if (productoExistente) {
+                productoExistente.cantidad += cantidad;
+                productoExistente.precioUnitario = precio;
+                productoExistente.subtotal = productoExistente.cantidad * productoExistente.precioUnitario;
+            } else {
+                productosSeleccionados.push({
+                    productoId: productoSeleccionado.id,
+                    nombre: productoSeleccionado.text,
+                    cantidad: cantidad,
+                    precioUnitario: precio,
+                    subtotal: subtotal
+                });
+            }
 
             document.getElementById('productoSearch').value = '';
             document.getElementById('productoCantidad').value = '1';
@@ -671,7 +696,7 @@
 
         function agregarServicioSeleccionado() {
             if (!servicioSeleccionado) {
-                alert('Seleccione un servicio de la lista.');
+                mostrarErrorOrden('Seleccione un servicio de la lista.');
                 return;
             }
 
@@ -679,7 +704,7 @@
             const precio = parseFloat(document.getElementById('servicioPrecio').value || '0');
 
             if (precio < 0) {
-                alert('El precio del servicio (Bs.) no puede ser negativo.');
+                mostrarErrorOrden('El precio del servicio (Bs.) no puede ser negativo.');
                 return;
             }
 
@@ -708,6 +733,22 @@
             recalcularTotal();
         }
 
+        function actualizarCantidadProducto(index, value) {
+            const cantidad = parseInt(value || '0', 10);
+
+            if (Number.isNaN(cantidad) || cantidad <= 0) {
+                mostrarErrorOrden('La cantidad de producto debe ser mayor a 0.');
+                renderProductos();
+                return;
+            }
+
+            productosSeleccionados[index].cantidad = cantidad;
+            productosSeleccionados[index].subtotal = cantidad * Number(productosSeleccionados[index].precioUnitario || 0);
+            syncDetalleJson();
+            recalcularTotal();
+            renderProductos();
+        }
+
         function eliminarServicio(index) {
             serviciosSeleccionados.splice(index, 1);
             renderServicios();
@@ -725,7 +766,7 @@
             tbody.innerHTML = productosSeleccionados.map((p, i) =>
                 '<tr>' +
                     `<td>${p.nombre}</td>` +
-                    `<td>${p.cantidad}</td>` +
+                    `<td><input type="number" min="1" class="form-control form-control-sm form-control-dark" value="${p.cantidad}" onchange="actualizarCantidadProducto(${i}, this.value)" oninput="actualizarCantidadProducto(${i}, this.value)" /></td>` +
                     `<td>Bs. ${Number(p.precioUnitario).toFixed(2)}</td>` +
                     `<td class="fw-bold">Bs. ${Number(p.subtotal).toFixed(2)}</td>` +
                     `<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${i})"><i class="bi bi-x-lg"></i></button></td>` +
@@ -837,6 +878,12 @@
             }
 
             limpiarFormularioVehiculo();
+            var clienteId = document.getElementById('formClienteId').value || '0';
+            var clienteSearch = document.getElementById('formClienteSearch').value || '';
+            if (clienteId !== '0' && clienteSearch.trim() !== '') {
+                document.getElementById('vehiculoClienteId').value = clienteId;
+                document.getElementById('vehiculoClienteSearch').value = clienteSearch;
+            }
             var vehiculoModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('vehiculoModal'), { backdrop: 'static', focus: false });
             vehiculoModal.show();
         }
@@ -876,9 +923,22 @@
             document.getElementById('deleteOrdenNombre').textContent = nombre;
         }
 
+        function mostrarErrorOrden(mensaje) {
+            var errorDiv = document.getElementById('ordenFormErrors');
+            errorDiv.innerHTML = mensaje;
+            errorDiv.classList.remove('d-none');
+        }
+
         window.onClienteCreado = function(cliente) {
             document.getElementById('formClienteId').value = cliente.clienteId;
-            document.getElementById('formClienteSearch').value = cliente.nombres + ' ' + cliente.primerApellido + ' - CI: ' + cliente.ciNumero;
+            document.getElementById('formClienteSearch').value = cliente.clienteText || (cliente.nombres + ' ' + cliente.primerApellido + ' - CI: ' + cliente.ciNumero);
+            document.getElementById('formVehiculoId').value = '0';
+            document.getElementById('formVehiculoSearch').value = '';
+            document.getElementById('formVehiculoSearch').focus();
+            document.getElementById('vehiculoResults').innerHTML = '';
+            document.getElementById('vehiculoResults').style.display = 'none';
+            document.getElementById('clienteResults').innerHTML = '';
+            document.getElementById('clienteResults').style.display = 'none';
 
             var ordenModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ordenModal'), { backdrop: 'static', focus: false });
             ordenModal.show();
@@ -886,7 +946,17 @@
 
         window.onVehiculoCreado = function(vehiculo) {
             document.getElementById('formVehiculoId').value = vehiculo.vehiculoId;
-            document.getElementById('formVehiculoSearch').value = vehiculo.placa;
+            document.getElementById('formVehiculoSearch').value = vehiculo.placa || '';
+            document.getElementById('vehiculoResults').innerHTML = '';
+            document.getElementById('vehiculoResults').style.display = 'none';
+
+            if (vehiculo.clienteId) {
+                document.getElementById('formClienteId').value = vehiculo.clienteId;
+            }
+            if (vehiculo.clienteText) {
+                document.getElementById('formClienteSearch').value = vehiculo.clienteText;
+            }
+            document.getElementById('formVehiculoSearch').focus();
 
             var ordenModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('ordenModal'), { backdrop: 'static', focus: false });
             ordenModal.show();

@@ -31,7 +31,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. INSERTAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
@@ -56,11 +55,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                         return assignIdResult;
                     }
                 }
-
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", entity.UsuarioLoginId, "INSERT");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
@@ -86,7 +82,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. ACTUALIZAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"
@@ -112,10 +107,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                     return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "El usuario no existe.");
                 }
 
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", entity.UsuarioLoginId, "UPDATE");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
@@ -173,13 +166,21 @@ namespace Taller_Mecanico_Users.Data.Repositories
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM usuariologin WHERE email = @Email LIMIT 1;";
+            command.CommandText = @"
+                SELECT ul.*, e.nivelacceso AS empleado_nivelacceso
+                FROM usuariologin ul
+                LEFT JOIN empleado e ON e.empleadoid = ul.empleadoid
+                WHERE ul.email = @Email LIMIT 1;";
             AddParameter(command, "@Email", email);
 
             using var reader = await (command as System.Data.Common.DbCommand)!.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                return MapReaderToEntity(reader);
+                string? nivelAcceso = null;
+                var ordinal = reader.GetOrdinal("empleado_nivelacceso");
+                if (!reader.IsDBNull(ordinal))
+                    nivelAcceso = reader.GetString(ordinal);
+                return MapReaderToEntity(reader, nivelAcceso);
             }
             return null;
         }
@@ -218,9 +219,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
             return null;
         }
 
-        // ==========================================
-        // MÉTODOS AUXILIARES
-        // ==========================================
         public async Task<Result> DeleteAsync(int id)
         {
             
@@ -230,7 +228,6 @@ namespace Taller_Mecanico_Users.Data.Repositories
 
             try
             {
-                // --- A. ELIMINAR EL USUARIO ---
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = @"DELETE FROM usuariologin WHERE usuariologinid = @UsuarioLoginId;";
@@ -243,10 +240,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                     return Result.Failure(ErrorCodes.UsuarioLoginNotFound, "Usuario no encontrado.");
                 }
 
-                // --- B. AUDITORÍA (delegada al servicio) ---
                 await _auditService.LogAsync(connection, transaction, "usuariologin", id, "DELETE");
 
-                // Confirmamos la transacción
                 await transaction.CommitAsync();
 
                 return Result.Success();
@@ -271,7 +266,7 @@ namespace Taller_Mecanico_Users.Data.Repositories
             command.Parameters.Add(parameter);
         }
 
-        private UsuarioLogin MapReaderToEntity(System.Data.Common.DbDataReader reader)
+        private UsuarioLogin MapReaderToEntity(System.Data.Common.DbDataReader reader, string? nivelAcceso = null)
         {
             var result = UsuarioLogin.Reconstituir(
                 reader.GetInt32(reader.GetOrdinal("usuariologinid")),
@@ -282,7 +277,8 @@ namespace Taller_Mecanico_Users.Data.Repositories
                 reader.IsDBNull(reader.GetOrdinal("ultimoacceso")) ? null : reader.GetDateTime(reader.GetOrdinal("ultimoacceso")),
                 reader.GetBoolean(reader.GetOrdinal("activo")),
                 reader.GetBoolean(reader.GetOrdinal("requierecambiopassword")),
-                reader.GetBoolean(reader.GetOrdinal("escliente"))
+                reader.GetBoolean(reader.GetOrdinal("escliente")),
+                nivelAcceso
             );
 
             if (result.IsFailure)

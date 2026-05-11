@@ -1,6 +1,6 @@
 @page
-@model Taller_Mecanico_Arqui.Pages.Empleados.IndexModel
-@using Taller_Mecanico_Arqui.Domain.Enums
+@model WebService.Pages.Empleados.IndexModel
+@using WebService.Models
 @{
     ViewData["Title"] = "Empleados";
     var currentUserLevel = Model.CurrentUserLevel;
@@ -18,6 +18,14 @@
 {
     <div class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999;">
         <i class="bi bi-exclamation-triangle me-2"></i>@TempData["EmailWarning"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 9999; max-width: 420px;">
+        <i class="bi bi-x-circle me-2"></i>@TempData["ErrorMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
@@ -62,12 +70,12 @@
                         <tr class="border-bottom border-secondary">
                             <td><span class="badge bg-secondary">@(contador++)</span></td>
                             <td class="fw-semibold text-white">@item.NombreCompleto</td>
-                            <td class="text-light">@item.GetType().Name</td>
+                            <td class="text-light">@item.TipoEmpleado</td>
                             <td class="text-light">@item.Telefono</td>
                             <td class="text-light">@item.Email</td>
                             <td class="text-light">@item.FechaContratacion.ToString("dd/MM/yyyy")</td>
                             <td>
-                                <span class="badge @(item.EstadoLaboral == Taller_Mecanico_Arqui.Domain.Enums.EstadoLaboral.Activo ? "bg-success" : "bg-secondary")">
+                                <span class="badge @(item.EstadoLaboral == "Activo" ? "bg-success" : "bg-secondary")">
                                     @item.EstadoLaboral
                                 </span>
                             </td>
@@ -107,7 +115,7 @@
     </div>
 </div>
 
-<!-- MODAL 1: Formulario Create/Edit (reutilizable) -->
+<!-- MODAL 1: Formulario Create/Edit -->
 <div class="modal fade" id="empleadoModal" tabindex="-1" aria-labelledby="empleadoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content bg-dark text-light p-3">
@@ -126,7 +134,6 @@
                                 <option value="Mecanico">Mecánico</option>
                                 <option value="Administrador">Administrador</option>
                             </select>
-                            <span asp-validation-for="FormDto.TipoEmpleado" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
                             <label asp-for="FormDto.EstadoLaboral" class="form-label text-teal">Estado laboral *</label>
@@ -136,7 +143,6 @@
                                 <option value="Licencia">Licencia</option>
                                 <option value="Despedido">Despedido</option>
                             </select>
-                            <span asp-validation-for="FormDto.EstadoLaboral" class="text-danger"></span>
                         </div>
                     </div>
 
@@ -154,7 +160,6 @@
                         <div class="col-md-4">
                             <label asp-for="FormDto.SegundoApellido" class="form-label text-teal">Segundo apellido</label>
                             <input asp-for="FormDto.SegundoApellido" class="form-control form-control-dark" id="formSegundoApellido" />
-                            <span asp-validation-for="FormDto.SegundoApellido" class="text-danger"></span>
                         </div>
                     </div>
 
@@ -167,7 +172,6 @@
                         <div class="col-md-6">
                             <label asp-for="FormDto.CiComplemento" class="form-label text-teal">Complemento CI</label>
                             <input asp-for="FormDto.CiComplemento" class="form-control form-control-dark" id="formCiComplemento" />
-                            <span asp-validation-for="FormDto.CiComplemento" class="text-danger"></span>
                         </div>
                     </div>
 
@@ -198,12 +202,10 @@
                             <div class="col-md-6 mb-3 mb-md-0">
                                 <label asp-for="FormDto.Especialidad" class="form-label text-teal">Especialidad</label>
                                 <input asp-for="FormDto.Especialidad" class="form-control form-control-dark" id="formEspecialidad" />
-                                <span asp-validation-for="FormDto.Especialidad" class="text-danger"></span>
                             </div>
                             <div class="col-md-6">
                                 <label asp-for="FormDto.SalarioPorHora" class="form-label text-teal">Salario por hora en Bs</label>
                                 <input asp-for="FormDto.SalarioPorHora" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioPorHora" />
-                                <span asp-validation-for="FormDto.SalarioPorHora" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -214,7 +216,6 @@
                             <div class="col-md-6 mb-3 mb-md-0">
                                 <label asp-for="FormDto.SalarioMensual" class="form-label text-teal">Salario mensual en Bs</label>
                                 <input asp-for="FormDto.SalarioMensual" type="number" step="0.01" class="form-control form-control-dark" id="formSalarioMensual" />
-                                <span asp-validation-for="FormDto.SalarioMensual" class="text-danger"></span>
                             </div>
                             <div class="col-md-6">
                                 <label asp-for="FormDto.NivelAcceso" class="form-label text-teal">Nivel de acceso</label>
@@ -236,7 +237,6 @@
                                 {
                                     <input asp-for="FormDto.NivelAcceso" class="form-control form-control-dark" id="formNivelAcceso" readonly />
                                 }
-                                <span asp-validation-for="FormDto.NivelAcceso" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -315,7 +315,6 @@
                     <strong>Nuevo administrador creado exitosamente.</strong> Las credenciales de acceso se muestran a continuación.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-
                 <div class="mb-4">
                     <label class="form-label text-teal fw-semibold">Correo electrónico:</label>
                     <div class="input-group">
@@ -325,7 +324,6 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="mb-4">
                     <label class="form-label text-teal fw-semibold">Contraseña:</label>
                     <div class="input-group">
@@ -338,7 +336,6 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>Importante:</strong> El usuario deberá cambiar su contraseña en el primer inicio de sesión.
@@ -369,10 +366,8 @@
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>Administrador creado exitosamente.</strong> Sin embargo, este empleado ya tiene credenciales de acceso asignadas.
                 </div>
-                
                 <p class="text-light">El empleado ya tiene un usuario de acceso registrado con el correo:</p>
                 <p class="text-teal fw-bold fs-5">@Model.EmailExistente</p>
-                
                 <div class="alert alert-info" role="alert">
                     <i class="bi bi-lightbulb me-2"></i>
                     <strong>Recomendación:</strong> Si necesitas cambiar las credenciales, puedes hacerlo desde la sección de Usuarios.
@@ -396,12 +391,10 @@
             var tipo = document.getElementById('formTipoEmpleado').value;
             document.getElementById('camposMecanico').style.display = tipo === 'Mecanico' ? '' : 'none';
             document.getElementById('camposAdministrador').style.display = tipo === 'Administrador' ? '' : 'none';
-            
-            // Mostrar u ocultar el asterisco de email requerido para administradores
             document.getElementById('emailRequired').style.display = tipo === 'Administrador' ? '' : 'none';
         }
-        function limpiarFormulario()
-        {
+
+        function limpiarFormulario() {
             document.getElementById('formEmpleadoId').value = '0';
             document.getElementById('formNombres').value = '';
             document.getElementById('formPrimerApellido').value = '';
@@ -417,9 +410,9 @@
             document.getElementById('formSalarioPorHora').value = '';
             document.getElementById('formSalarioMensual').value = '';
             var nivelSelect = document.getElementById('formNivelAcceso');
-            if (nivelSelect.tagName === 'SELECT') {
+            if (nivelSelect && nivelSelect.tagName === 'SELECT') {
                 nivelSelect.selectedIndex = 0;
-            } else {
+            } else if (nivelSelect) {
                 nivelSelect.value = '';
             }
             document.getElementById('empleadoModalLabel').textContent = 'Crear empleado';
@@ -447,11 +440,7 @@
                     document.getElementById('formSalarioPorHora').value = data.salarioPorHora || '';
                     document.getElementById('formSalarioMensual').value = data.salarioMensual || '';
                     var nivelSelect = document.getElementById('formNivelAcceso');
-                    if (nivelSelect.tagName === 'SELECT') {
-                        nivelSelect.value = data.nivelAcceso || '';
-                    } else {
-                        nivelSelect.value = data.nivelAcceso || '';
-                    }
+                    if (nivelSelect) nivelSelect.value = data.nivelAcceso || '';
                     document.getElementById('empleadoModalLabel').textContent = 'Editar empleado';
                     document.getElementById('modalSubmitBtn').textContent = 'Actualizar empleado';
                     toggleCamposTipo();
@@ -482,7 +471,7 @@
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Correo electrónico</dt>' +
                         '<dd class="col-sm-8 text-white mb-2">' + (data.email || '<span class="text-muted-dark fst-italic">No registrado</span>') + '</dd>' +
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Fecha Contratación</dt>' +
-                        '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-calendar3 text-teal me-2"></i>' + new Date(data.fechaContratacion).toLocaleDateString('es-ES') + '</dd>' +
+                        '<dd class="col-sm-8 text-white mb-2"><i class="bi bi-calendar3 text-teal me-2"></i>' + new Date(data.fechaContratacion).toLocaleDateString("es-ES") + '</dd>' +
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Tipo</dt>' +
                         '<dd class="col-sm-8 text-white mb-2"><span class="badge ' + tipoBadge + '">' + data.tipoEmpleado + '</span></dd>' +
                         '<dt class="col-sm-4 text-muted-dark fw-normal mb-2">Estado Laboral</dt>' +
@@ -521,19 +510,14 @@
             document.getElementById('deleteEmpleadoNombre').textContent = nombre;
         }
 
-        // Funciones para el modal de credenciales
         function mostrarOcultarPassword(inputId) {
             const input = document.getElementById(inputId);
             const button = input.nextElementSibling;
-            const icon = button.querySelector('i');
-            
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.className = 'bi bi-eye-slash me-1';
                 button.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Ocultar';
             } else {
                 input.type = 'password';
-                icon.className = 'bi bi-eye me-1';
                 button.innerHTML = '<i class="bi bi-eye me-1"></i>Mostrar';
             }
         }
@@ -541,37 +525,38 @@
         function copiarAlPortapapeles(inputId) {
             const input = document.getElementById(inputId);
             const button = input.parentElement.querySelector('[onclick*="' + inputId + '"][title="Copiar"]');
-            
             input.select();
-            input.setSelectionRange(0, 99999); // Para móviles
-            
+            input.setSelectionRange(0, 99999);
             try {
                 document.execCommand('copy');
                 const originalContent = button.innerHTML;
                 button.innerHTML = '<i class="bi bi-check me-1"></i>Copiado';
                 button.classList.add('btn-success');
                 button.classList.remove('btn-outline-secondary');
-                
                 setTimeout(() => {
                     button.innerHTML = originalContent;
                     button.classList.remove('btn-success');
                     button.classList.add('btn-outline-secondary');
                 }, 2000);
-            } catch (err) {
-                console.error('Error al copiar: ', err);
-            }
+            } catch (err) { console.error('Error al copiar: ', err); }
         }
 
-        // Mostrar modal de credenciales automáticamente si hay credenciales
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Evita el warning aria-hidden: mueve el foco fuera del modal antes de que Bootstrap lo oculte
+            document.querySelectorAll('.modal').forEach(function (modal) {
+                modal.addEventListener('hide.bs.modal', function () {
+                    if (document.activeElement && modal.contains(document.activeElement)) {
+                        document.activeElement.blur();
+                    }
+                });
+            });
+
             const email = document.getElementById('email_credential')?.value;
             const password = document.getElementById('password_credential')?.value;
-            
             if (email && password) {
                 const credencialesModal = new bootstrap.Modal(document.getElementById('credencialesModal'));
                 credencialesModal.show();
-            }
-            else if (@Model.UsuarioExistente.ToString().ToLower()) {
+            } else if (@Model.UsuarioExistente.ToString().ToLower()) {
                 const usuarioExistenteModal = new bootstrap.Modal(document.getElementById('usuarioExistenteModal'));
                 usuarioExistenteModal.show();
             }

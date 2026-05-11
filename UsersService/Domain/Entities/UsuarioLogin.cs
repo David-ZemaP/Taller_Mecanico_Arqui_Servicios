@@ -15,6 +15,7 @@ namespace Taller_Mecanico_Users.Domain.Entities
         public bool Activo { get; private set; }
         public bool RequiereCambioPassword { get; private set; }
         public bool EsCliente { get; private set; }
+        public string? NivelAcceso { get; private set; }
 
         private UsuarioLogin() { }
 
@@ -46,7 +47,7 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 usuarioLoginId: 0);
         }
 
-        public static Result<UsuarioLogin> Reconstituir(int usuarioLoginId, int? empleadoId, int? clienteId, string email, string passwordHash, DateTime? ultimoAcceso, bool activo, bool requiereCambioPassword = false, bool esCliente = false)
+        public static Result<UsuarioLogin> Reconstituir(int usuarioLoginId, int? empleadoId, int? clienteId, string email, string passwordHash, DateTime? ultimoAcceso, bool activo, bool requiereCambioPassword = false, bool esCliente = false, string? nivelAcceso = null)
         {
             return CreateInternal(
                 empleadoId: empleadoId,
@@ -57,7 +58,8 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 requiereCambioPassword: requiereCambioPassword,
                 esCliente: esCliente,
                 ultimoAcceso: ultimoAcceso,
-                usuarioLoginId: usuarioLoginId);
+                usuarioLoginId: usuarioLoginId,
+                nivelAcceso: nivelAcceso);
         }
 
         public Result RegistrarAcceso()
@@ -164,7 +166,8 @@ namespace Taller_Mecanico_Users.Domain.Entities
             bool requiereCambioPassword,
             bool esCliente,
             DateTime? ultimoAcceso,
-            int usuarioLoginId)
+            int usuarioLoginId,
+            string? nivelAcceso = null)
         {
             var normalizedEmailResult = ValidateEmail(email);
             if (normalizedEmailResult.IsFailure)
@@ -217,7 +220,8 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 UltimoAcceso = ultimoAcceso,
                 Activo = activo,
                 RequiereCambioPassword = requiereCambioPassword,
-                EsCliente = esCliente
+                EsCliente = esCliente,
+                NivelAcceso = nivelAcceso
             });
         }
 

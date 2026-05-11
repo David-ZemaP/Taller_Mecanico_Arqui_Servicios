@@ -1,79 +1,66 @@
 using System.ComponentModel.DataAnnotations;
-using BCrypt.Net;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using System.Security.Claims;
+using WebService.Adapters;
 
-namespace Taller_Mecanico_Arqui.Pages
+namespace WebService.Pages
 {
     [Authorize]
     public class ChangePasswordModel : PageModel
     {
-        private readonly IUsuarioLoginRepository _loginRepository;
+        private readonly UsersServiceAdapter _usersService;
 
-        public ChangePasswordModel(IUsuarioLoginRepository loginRepository)
+        public ChangePasswordModel(UsersServiceAdapter usersService)
         {
-            _loginRepository = loginRepository;
+            _usersService = usersService;
         }
 
         [BindProperty]
         public ChangePasswordInput Input { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync()
-        {
-            var login = await FindLoginAsync();
-            if (login == null)
-                return RedirectToPage("/Login");
-
-            if (!login.RequiereCambioPassword)
-                return RedirectToPage("/Index");
-
-            return Page();
-        }
+        public IActionResult OnGet() => Page();
 
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
-                return Page();
-
-            var login = await FindLoginAsync();
-            if (login == null)
-                return RedirectToPage("/Login");
-
-            if (!login.RequiereCambioPassword)
-                return RedirectToPage("/Index");
-
-            login.CambiarPassword(BCrypt.Net.BCrypt.HashPassword(Input.NewPassword));
-            var updateResult = await _loginRepository.UpdateAsync(login);
-            if (updateResult.IsFailure)
             {
-                ModelState.AddModelError(string.Empty, updateResult.ErrorMessage ?? "No se pudo actualizar la contraseña.");
                 return Page();
             }
 
-            TempData["SuccessMessage"] = "Contraseña actualizada exitosamente.";
-            return RedirectToPage("/Clientes/Perfil");
-        }
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var usuarioLoginId))
+            {
+                ModelState.AddModelError(string.Empty, "No se pudo identificar el usuario autenticado.");
+                return Page();
+            }
 
-        private async Task<Domain.Entities.UsuarioLogin?> FindLoginAsync()
-        {
-            var allLogins = await _loginRepository.GetAllAsync();
-            
-            var clienteId = User.FindFirst("ClienteId")?.Value;
-            if (!string.IsNullOrEmpty(clienteId) && int.TryParse(clienteId, out int cId))
-                return allLogins.FirstOrDefault(l => l.ClienteId == cId);
-            
-            var empleadoId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(empleadoId) && int.TryParse(empleadoId, out int eId))
-                return allLogins.FirstOrDefault(l => l.EmpleadoId == eId);
-            
-            return null;
+            var result = await _usersService.ChangePasswordAsync(
+                usuarioLoginId,
+                Input.CurrentPassword,
+                Input.NewPassword,
+                Input.ConfirmPassword);
+
+            if (!result.ok)
+            {
+                ModelState.AddModelError(string.Empty, result.error ?? "No fue posible actualizar la contraseña.");
+                return Page();
+            }
+
+            HttpContext.Session.Clear();
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToPage("/Login");
         }
     }
 
     public class ChangePasswordInput
     {
+        [Required(ErrorMessage = "La contraseña actual es obligatoria.")]
+        public string CurrentPassword { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "La nueva contraseña es obligatoria.")]
         [StringLength(20, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 20 caracteres.")]
         public string NewPassword { get; set; } = string.Empty;

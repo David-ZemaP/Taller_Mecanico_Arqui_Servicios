@@ -1,4 +1,4 @@
-namespace OrdenTrabajoService.OrdenTrabajo.Domain.Enums
+namespace OrdenTrabajoService.Domain.Enums
 {
     public enum EstadoPago
     {

@@ -1,4 +1,4 @@
-namespace Taller_Mecanico_Arqui.Domain.Enums
+namespace OrdenTrabajoService.Domain.Enums
 {
     public enum EstadoTrabajo
     {

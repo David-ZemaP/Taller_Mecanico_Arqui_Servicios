@@ -1,4 +1,4 @@
-namespace Taller_Mecanico_Arqui.Domain.Entities
+namespace OrdenTrabajoService.Domain.Entities
 {
     public class OrdenTrabajoCatalogo
     {
@@ -11,11 +11,7 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
 
         private OrdenTrabajoCatalogo() { }
 
-        public static OrdenTrabajoCatalogo Crear(
-            int ordenTrabajoId,
-            int productoId,
-            int cantidadUtilizada,
-            decimal precioUnitario)
+        public static OrdenTrabajoCatalogo Crear(int ordenTrabajoId, int productoId, int cantidadUtilizada, decimal precioUnitario)
         {
             return new OrdenTrabajoCatalogo
             {

@@ -1,67 +1,37 @@
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Entities;
+using WebService.Adapters;
+using WebService.DTOs;
 
-namespace Taller_Mecanico_Arqui.Pages.Clientes
+namespace WebService.Pages.Clientes
 {
+    [Authorize]
     public class PerfilModel : PageModel
     {
-        private readonly IClienteRepository _clienteRepository;
-        private readonly IOrdenTrabajoRepository _ordenTrabajoRepository;
+        private readonly ClientesAdapter _clientesAdapter;
 
-        public PerfilModel(
-            IClienteRepository clienteRepository,
-            IOrdenTrabajoRepository ordenTrabajoRepository)
+        public ClienteDto? Cliente { get; set; }
+        public string? ErrorMessage { get; set; }
+
+        public PerfilModel(ClientesAdapter clientesAdapter)
         {
-            _clienteRepository = clienteRepository;
-            _ordenTrabajoRepository = ordenTrabajoRepository;
+            _clientesAdapter = clientesAdapter;
         }
 
-        public Cliente? Cliente { get; set; }
-        public IEnumerable<Domain.Entities.Vehiculo> Vehiculos { get; set; } = new List<Domain.Entities.Vehiculo>();
-        public IList<OrdenTrabajoListDto> Ordenes { get; set; } = new List<OrdenTrabajoListDto>();
-
-        public async Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync(int id)
         {
-            var clienteIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(clienteIdClaim) || !int.TryParse(clienteIdClaim, out var clienteId))
+            var (ok, cliente, error) = await _clientesAdapter.GetClienteByIdAsync(id);
+            if (ok && cliente != null)
             {
-                RedirectToPage("/Login");
-                return;
+                Cliente = cliente;
+                return Page();
             }
-
-            var clienteResult = await _clienteRepository.GetByIdAsync(clienteId);
-            if (clienteResult.IsFailure || clienteResult.Value == null)
+            else
             {
-                RedirectToPage("/Login");
-                return;
+                ErrorMessage = error ?? "No se pudo cargar el cliente.";
+                return RedirectToPage("Index");
             }
-
-            Cliente = clienteResult.Value;
-            Vehiculos = Cliente.Vehiculos;
-
-            var todasOrdenes = await _ordenTrabajoRepository.GetAllAsync();
-            var vehiculosIds = Cliente.Vehiculos.Select(v => v.VehiculoId).ToHashSet();
-
-            Ordenes = todasOrdenes
-                .Where(o => vehiculosIds.Contains(o.VehiculoId))
-                .Select(o => new OrdenTrabajoListDto
-                {
-                    OrdenTrabajoId = o.OrdenTrabajoId,
-                    VehiculoId = o.VehiculoId,
-                    VehiculoPlaca = Cliente.Vehiculos.FirstOrDefault(v => v.VehiculoId == o.VehiculoId)?.Placa ?? "",
-                    FechaIngreso = o.FechaIngreso,
-                    FechaEntrega = o.FechaEntrega,
-                    EstadoTrabajo = o.EstadoTrabajo.ToString(),
-                    EstadoPago = o.EstadoPago.ToString(),
-                    EstadoVehiculo = o.EstadoVehiculo.ToString(),
-                    Total = o.Total
-                })
-                .OrderByDescending(o => o.FechaIngreso)
-                .ToList();
         }
     }
 }

@@ -23,12 +23,17 @@ namespace Taller_Mecanico_Users.Framework.Services
         {
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
 
+            var nivelAcceso = usuario.EsCliente
+                ? "Cliente"
+                : (usuario.NivelAcceso ?? "Parcial");
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.UsuarioLoginId.ToString()),
                 new Claim(ClaimTypes.Email, usuario.Email),
                 new Claim("RequiereCambio", usuario.RequiereCambioPassword.ToString()),
-                new Claim(ClaimTypes.Role, usuario.EsCliente ? "Cliente" : "Empleado")
+                new Claim(ClaimTypes.Role, usuario.EsCliente ? "Cliente" : "Empleado"),
+                new Claim("NivelAcceso", nivelAcceso)
             };
 
             if (usuario.EmpleadoId.HasValue)

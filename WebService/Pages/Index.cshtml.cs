@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Taller_Mecanico_Arqui.Pages;
+namespace WebService.Pages;
 
 public class IndexModel : PageModel
 {

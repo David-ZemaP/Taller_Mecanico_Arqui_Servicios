@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Taller_Mecanico_Arqui.Domain.Common;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Domain.Ports
+namespace OrdenTrabajoService.Domain.Interfaces
 {
     public interface IRepository<T> where T : class
     {

@@ -1,14 +1,11 @@
 using System.Globalization;
-using System.Text.Json;
-using Taller_Mecanico_Arqui.Application.Common;
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using OrdenTrabajoService.Application.DTOs.OrdenTrabajo;
+using OrdenTrabajoService.Application.DTOs.Vehiculo;
+using OrdenTrabajoService.Application.UseCases;
+using OrdenTrabajoService.Domain.Interfaces;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Application.Facades
+namespace OrdenTrabajoService.Application.Facades
 {
     public class OrdenTrabajoCreate
     {
@@ -35,146 +32,47 @@ namespace Taller_Mecanico_Arqui.Application.Facades
         public async Task<IEnumerable<OrdenTrabajoListDto>> GetAllAsync()
         {
             var ordenes = await _getAllUseCase.ExecuteAsync();
-            return ordenes.Select(ToListDto).ToList();
+            return ordenes.Select(o => new OrdenTrabajoListDto
+            {
+                OrdenTrabajoId = o.OrdenTrabajoId,
+                VehiculoId = o.VehiculoId,
+                VehiculoPlaca = o.Vehiculo?.Placa ?? $"Vehículo #{o.VehiculoId}",
+                FechaIngreso = o.FechaIngreso,
+                FechaEntrega = o.FechaEntrega,
+                EstadoTrabajo = o.EstadoTrabajo.ToString(),
+                EstadoPago = o.EstadoPago.ToString(),
+                EstadoVehiculo = o.EstadoVehiculo,
+                Total = o.ProductosUsados.Sum(p => p.Subtotal) + o.ServiciosRealizados.Sum(s => s.Subtotal),
+                IsDeleted = o.IsDeleted
+            }).ToList();
         }
 
         public async Task<Result<OrdenTrabajoDetalleDto>> GetDetalleAsync(int id)
         {
-            var ordenResult = await _getByIdUseCase.ExecuteAsync(id);
-            if (ordenResult.IsFailure)
-                return Result<OrdenTrabajoDetalleDto>.Failure(ordenResult.ErrorCode ?? ErrorCodes.DbError, ordenResult.ErrorMessage ?? "Error al consultar orden.");
+            var result = await _getByIdUseCase.ExecuteAsync(id);
+            if (result.IsFailure)
+                return Result<OrdenTrabajoDetalleDto>.Failure(result.ErrorCode!, result.ErrorMessage!);
 
-            return Result<OrdenTrabajoDetalleDto>.Success(ToDetalleDto(ordenResult.Value!));
-        }
+            var o = result.Value!;
+            var totalProductos = o.ProductosUsados.Sum(p => p.Subtotal);
+            var totalServicios = o.ServiciosRealizados.Sum(s => s.Subtotal);
 
-        public async Task<IEnumerable<VehiculoLookupDto>> BuscarVehiculosAsync(string? term, int? clienteId = null)
-        {
-            if (string.IsNullOrWhiteSpace(term))
-                return Array.Empty<VehiculoLookupDto>();
-
-            term = term.ToLower(CultureInfo.InvariantCulture);
-
-            var vehiculos = await _vehiculoRepository.GetAllAsync();
-            var query = vehiculos
-                .Where(v => !v.IsDeleted && v.Placa.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase));
-
-            if (clienteId.HasValue && clienteId.Value > 0)
+            var dto = new OrdenTrabajoDetalleDto
             {
-                query = query.Where(v => v.ClienteId == clienteId.Value);
-            }
-
-            return query
-                .Select(v => new VehiculoLookupDto
-                {
-                    Id = v.VehiculoId,
-                    Text = v.Placa
-                })
-                .Take(15)
-                .ToList();
-        }
-
-        public async Task<Result> RegistrarProcesoPrincipalAsync(OrdenTrabajoFormDto dto)
-        {
-            if (dto.OrdenTrabajoId == 0)
-            {
-                var createDto = ToCreateDto(dto);
-                var createResult = await _createUseCase.ExecuteAsync(createDto);
-                if (createResult.IsFailure)
-                {
-                    return Result.Failure(createResult.ErrorCode ?? ErrorCodes.DbError, createResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
-                }
-
-                return Result.Success();
-            }
-
-            return await _updateUseCase.ExecuteAsync(ToUpdateDto(dto));
-        }
-
-        public Task<Result> SaveAsync(OrdenTrabajoFormDto dto)
-            => RegistrarProcesoPrincipalAsync(dto);
-
-        public List<string> GetEstadoTrabajoOptions()
-            => Enum.GetNames<EstadoTrabajo>().ToList();
-
-        public List<string> GetEstadoPagoOptions()
-            => Enum.GetNames<EstadoPago>().ToList();
-
-        private static CreateOrdenTrabajoDto ToCreateDto(OrdenTrabajoFormDto dto)
-        {
-            var productos = DeserializeOrEmpty<CreateOrdenTrabajoProductoDto>(dto.ProductosJson);
-            var servicios = DeserializeOrEmpty<CreateOrdenTrabajoServicioDto>(dto.ServiciosJson);
-            var totalProductos = productos.Sum(p => p.Cantidad * (p.PrecioUnitario ?? 0));
-            var totalServicios = servicios.Sum(s => s.Cantidad * (s.PrecioUnitario ?? 0));
-
-            return new CreateOrdenTrabajoDto
-            {
-                VehiculoId = dto.VehiculoId,
-                FechaIngreso = dto.FechaIngreso,
-                EstadoVehiculo = dto.EstadoVehiculo,
-                EstadoTrabajo = dto.EstadoTrabajo,
-                EstadoPago = dto.EstadoPago,
+                OrdenTrabajoId = o.OrdenTrabajoId,
+                ClienteId = o.Vehiculo?.ClienteId ?? 0,
+                ClienteCi = o.Vehiculo?.ClienteCi ?? "No disponible",
+                ClienteNombre = o.Vehiculo?.ClienteNombre ?? "No disponible",
+                VehiculoId = o.VehiculoId,
+                Placa = o.Vehiculo?.Placa ?? "No disponible",
+                FechaIngreso = o.FechaIngreso.ToString("yyyy-MM-dd"),
+                FechaEntrega = o.FechaEntrega?.ToString("yyyy-MM-dd"),
+                EstadoTrabajo = o.EstadoTrabajo.ToString(),
+                EstadoPago = o.EstadoPago.ToString(),
+                EstadoVehiculo = o.EstadoVehiculo,
                 Total = totalProductos + totalServicios,
-                Productos = productos,
-                Servicios = servicios
-            };
-        }
-
-        private static UpdateOrdenTrabajoDto ToUpdateDto(OrdenTrabajoFormDto dto)
-        {
-            var productos = DeserializeOrEmpty<CreateOrdenTrabajoProductoDto>(dto.ProductosJson);
-            var servicios = DeserializeOrEmpty<CreateOrdenTrabajoServicioDto>(dto.ServiciosJson);
-            var totalProductos = productos.Sum(p => p.Cantidad * (p.PrecioUnitario ?? 0));
-            var totalServicios = servicios.Sum(s => s.Cantidad * (s.PrecioUnitario ?? 0));
-
-            return new UpdateOrdenTrabajoDto
-            {
-                OrdenTrabajoId = dto.OrdenTrabajoId,
-                VehiculoId = dto.VehiculoId,
-                FechaIngreso = dto.FechaIngreso,
-                FechaEntrega = dto.FechaEntrega,
-                EstadoTrabajo = dto.EstadoTrabajo,
-                EstadoPago = dto.EstadoPago,
-                EstadoVehiculo = dto.EstadoVehiculo,
-                Total = totalProductos + totalServicios
-            };
-        }
-
-        private static OrdenTrabajoListDto ToListDto(OrdenTrabajo orden)
-        {
-            return new OrdenTrabajoListDto
-            {
-                OrdenTrabajoId = orden.OrdenTrabajoId,
-                VehiculoId = orden.VehiculoId,
-                VehiculoPlaca = orden.Vehiculo?.Placa ?? $"Vehículo #{orden.VehiculoId}",
-                FechaIngreso = orden.FechaIngreso,
-                FechaEntrega = orden.FechaEntrega,
-                EstadoTrabajo = orden.EstadoTrabajo.ToString(),
-                EstadoPago = orden.EstadoPago.ToString(),
-                EstadoVehiculo = orden.EstadoVehiculo,
-                Total = orden.ProductosUsados.Sum(p => p.Subtotal) + orden.ServiciosRealizados.Sum(s => s.Subtotal)
-            };
-        }
-
-        private static OrdenTrabajoDetalleDto ToDetalleDto(OrdenTrabajo orden)
-        {
-            var totalProductos = orden.ProductosUsados.Sum(p => p.Subtotal);
-            var totalServicios = orden.ServiciosRealizados.Sum(s => s.Subtotal);
-
-            return new OrdenTrabajoDetalleDto
-            {
-                OrdenTrabajoId = orden.OrdenTrabajoId,
-                ClienteId = orden.Vehiculo?.ClienteId ?? 0,
-                ClienteCi = orden.Vehiculo?.Cliente?.Ci?.ToString() ?? "No disponible",
-                VehiculoId = orden.VehiculoId,
-                Placa = orden.Vehiculo?.Placa ?? "No disponible",
-                ClienteNombre = orden.Vehiculo?.Cliente?.NombreCompleto?.ToString() ?? "No disponible",
-                FechaIngreso = orden.FechaIngreso.ToString("yyyy-MM-dd"),
-                FechaEntrega = orden.FechaEntrega?.ToString("yyyy-MM-dd"),
-                EstadoTrabajo = orden.EstadoTrabajo.ToString(),
-                EstadoPago = orden.EstadoPago.ToString(),
-                EstadoVehiculo = orden.EstadoVehiculo,
-                Total = totalProductos + totalServicios,
-                Productos = orden.ProductosUsados.Select(p => new OrdenTrabajoDetalleProductoDto
+                IsDeleted = o.IsDeleted,
+                Productos = o.ProductosUsados.Select(p => new OrdenTrabajoDetalleProductoDto
                 {
                     ProductoId = p.ProductoId,
                     Nombre = p.Nombre,
@@ -182,7 +80,7 @@ namespace Taller_Mecanico_Arqui.Application.Facades
                     PrecioUnitario = p.PrecioUnitario,
                     Subtotal = p.Subtotal
                 }).ToList(),
-                Servicios = orden.ServiciosRealizados.Select(s => new OrdenTrabajoDetalleServicioDto
+                Servicios = o.ServiciosRealizados.Select(s => new OrdenTrabajoDetalleServicioDto
                 {
                     ServicioId = s.ServicioId,
                     Nombre = s.Nombre,
@@ -191,26 +89,32 @@ namespace Taller_Mecanico_Arqui.Application.Facades
                     Subtotal = s.Subtotal
                 }).ToList()
             };
+
+            return Result<OrdenTrabajoDetalleDto>.Success(dto);
         }
 
-        private static List<T> DeserializeOrEmpty<T>(string? json)
+        public async Task<IEnumerable<VehiculoLookupDto>> BuscarVehiculosAsync(string? term, int? clienteId = null)
         {
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return new List<T>();
-            }
+            if (string.IsNullOrWhiteSpace(term))
+                return Array.Empty<VehiculoLookupDto>();
 
-            try
-            {
-                return JsonSerializer.Deserialize<List<T>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }) ?? new List<T>();
-            }
-            catch
-            {
-                return new List<T>();
-            }
+            var vehiculos = await _vehiculoRepository.BuscarPorPlacaAsync(term, clienteId);
+
+            return vehiculos
+                .Select(v => new VehiculoLookupDto { Id = v.VehiculoId, Text = v.Placa })
+                .Take(15)
+                .ToList();
         }
+
+        public async Task<Result<int>> RegistrarAsync(CreateOrdenTrabajoDto dto)
+        {
+            var result = await _createUseCase.ExecuteAsync(dto);
+            if (result.IsFailure)
+                return Result<int>.Failure(result.ErrorCode!, result.ErrorMessage!);
+            return Result<int>.Success(result.Value!.OrdenTrabajoId);
+        }
+
+        public Task<Result> ActualizarAsync(UpdateOrdenTrabajoDto dto)
+            => _updateUseCase.ExecuteAsync(dto);
     }
 }

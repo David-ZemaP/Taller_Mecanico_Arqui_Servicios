@@ -1,11 +1,11 @@
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Application.Common;
+using OrdenTrabajoService.Application.Common;
+using OrdenTrabajoService.Application.DTOs.OrdenTrabajo;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Enums;
+using OrdenTrabajoService.Domain.Interfaces;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
+namespace OrdenTrabajoService.Application.UseCases
 {
     public class CreateOrdenTrabajoUseCase
     {
@@ -23,114 +23,78 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
             _servicioRepository = servicioRepository;
         }
 
-        public async Task<Result<Domain.Entities.OrdenTrabajo>> ExecuteAsync(CreateOrdenTrabajoDto dto)
+        public async Task<Result<OrdenTrabajo>> ExecuteAsync(CreateOrdenTrabajoDto dto)
         {
             var estadoTrabajoResult = ValidationHelper.ParseEnum<EstadoTrabajo>(
-                dto.EstadoTrabajo,
-                "Estado de trabajo no válido.",
-                removeSpaces: true);
-
+                dto.EstadoTrabajo, "Estado de trabajo no válido.", removeSpaces: true);
             if (estadoTrabajoResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(estadoTrabajoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoTrabajoResult.ErrorMessage ?? "Estado de trabajo no válido.");
+                return Result<OrdenTrabajo>.Failure(estadoTrabajoResult.ErrorCode!, estadoTrabajoResult.ErrorMessage!);
 
             var estadoPagoResult = ValidationHelper.ParseEnum<EstadoPago>(
-                dto.EstadoPago,
-                "Estado de pago no válido.");
-
+                dto.EstadoPago, "Estado de pago no válido.");
             if (estadoPagoResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(estadoPagoResult.ErrorCode ?? ErrorCodes.ValidationInvalidValue, estadoPagoResult.ErrorMessage ?? "Estado de pago no válido.");
+                return Result<OrdenTrabajo>.Failure(estadoPagoResult.ErrorCode!, estadoPagoResult.ErrorMessage!);
 
-            var estadoTrabajo = estadoTrabajoResult.Value;
-            var estadoPago = estadoPagoResult.Value;
-
-            var orden = Domain.Entities.OrdenTrabajo.Crear(
+            var orden = OrdenTrabajo.Crear(
                 dto.VehiculoId,
                 dto.FechaIngreso,
                 dto.EstadoVehiculo,
-                estadoTrabajo,
-                estadoPago);
+                estadoTrabajoResult.Value,
+                estadoPagoResult.Value);
 
             foreach (var productoDto in dto.Productos.Where(p => p.ProductoId > 0 && p.Cantidad > 0))
             {
                 var productoResult = await _productoRepository.GetByIdAsync(productoDto.ProductoId);
                 if (productoResult.IsFailure)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        productoResult.ErrorCode ?? ErrorCodes.DbError,
-                        productoResult.ErrorMessage ?? "Error al consultar producto.");
-                }
+                    return Result<OrdenTrabajo>.Failure(productoResult.ErrorCode!, productoResult.ErrorMessage!);
 
                 var producto = productoResult.Value;
                 if (producto == null)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        ErrorCodes.ValidationInvalidValue,
+                    return Result<OrdenTrabajo>.Failure(ErrorCodes.ValidationInvalidValue,
                         $"Producto con ID {productoDto.ProductoId} no encontrado.");
-                }
 
                 if (producto.Stock < productoDto.Cantidad)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        $"Stock insuficiente para el producto '{producto.Nombre}'. Stock actual: {producto.Stock}.");
-                }
+                    return Result<OrdenTrabajo>.Failure(ErrorCodes.ValidationInvalidValue,
+                        $"Stock insuficiente para '{producto.Nombre}'. Stock actual: {producto.Stock}.");
 
-                var precioUnitario = productoDto.PrecioUnitario.GetValueOrDefault(producto.Precio);
-                if (precioUnitario < 0)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        "El precio del producto (Bs.) no puede ser negativo.");
-                }
+                var precio = productoDto.PrecioUnitario.GetValueOrDefault(producto.Precio);
+                if (precio < 0)
+                    return Result<OrdenTrabajo>.Failure(ErrorCodes.ValidationInvalidValue,
+                        "El precio del producto no puede ser negativo.");
 
-                orden.AgregarProducto(producto.ProductoId, productoDto.Cantidad, precioUnitario);
+                orden.AgregarProducto(producto.ProductoId, productoDto.Cantidad, precio);
             }
 
             foreach (var servicioDto in dto.Servicios.Where(s => s.ServicioId > 0 && s.Cantidad > 0))
             {
                 var servicioResult = await _servicioRepository.GetByIdAsync(servicioDto.ServicioId);
                 if (servicioResult.IsFailure)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        servicioResult.ErrorCode ?? ErrorCodes.DbError,
-                        servicioResult.ErrorMessage ?? "Error al consultar servicio.");
-                }
+                    return Result<OrdenTrabajo>.Failure(servicioResult.ErrorCode!, servicioResult.ErrorMessage!);
 
                 var servicio = servicioResult.Value;
                 if (servicio == null)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        ErrorCodes.ValidationInvalidValue,
+                    return Result<OrdenTrabajo>.Failure(ErrorCodes.ValidationInvalidValue,
                         $"Servicio con ID {servicioDto.ServicioId} no encontrado.");
-                }
 
-                var precioUnitario = servicioDto.PrecioUnitario.GetValueOrDefault(servicio.Precio);
-                if (precioUnitario < 0)
-                {
-                    return Result<Domain.Entities.OrdenTrabajo>.Failure(
-                        ErrorCodes.ValidationInvalidValue,
-                        "El precio del servicio (Bs.) no puede ser negativo.");
-                }
+                var precio = servicioDto.PrecioUnitario.GetValueOrDefault(servicio.Precio);
+                if (precio < 0)
+                    return Result<OrdenTrabajo>.Failure(ErrorCodes.ValidationInvalidValue,
+                        "El precio del servicio no puede ser negativo.");
 
-                orden.AgregarServicio(servicio.ServicioId, servicioDto.Cantidad, precioUnitario);
+                orden.AgregarServicio(servicio.ServicioId, servicioDto.Cantidad, precio);
             }
 
             if (!dto.Productos.Any() && !dto.Servicios.Any())
-            {
                 orden.ActualizarTotal(dto.Total);
-            }
 
             foreach (var mecanicoId in dto.MecanicosSeleccionados.Where(id => id > 0).Distinct())
-            {
-                var asignacion = Domain.Entities.OrdenTrabajoMecanico.Crear(0, mecanicoId);
-                orden.AsignarMecanico(asignacion);
-            }
+                orden.AsignarMecanico(OrdenTrabajoMecanico.Crear(0, mecanicoId));
 
             var addResult = await _repository.AddAsync(orden);
             if (addResult.IsFailure)
-                return Result<Domain.Entities.OrdenTrabajo>.Failure(addResult.ErrorCode ?? ErrorCodes.DbError, addResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
+                return Result<OrdenTrabajo>.Failure(addResult.ErrorCode!, addResult.ErrorMessage!);
 
-            return Result<Domain.Entities.OrdenTrabajo>.Success(orden);
+            return Result<OrdenTrabajo>.Success(orden);
         }
     }
 }

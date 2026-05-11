@@ -1,30 +1,103 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: taller-mecanico-postgres
+
+  # ─────────────────────────────────────────────
+  # Base de datos única (PostgreSQL 17)
+  # Accesible en localhost:5433 para desarrollo local
+  # ─────────────────────────────────────────────
+  postgres_db:
+    image: postgres:17
+    container_name: TallerMecanico_PG
     restart: unless-stopped
     environment:
-      POSTGRES_DB: taller_mecanico
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: tallermecanico2026
+      POSTGRES_DB: TallerMecanico
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./Scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+      - ./Scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: taller-mecanico-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@taller.local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      - postgres_db
+
+  # ─────────────────────────────────────────────
+  # Servicio 2: Usuarios y Empleados (puerto 51029)
+  # Contexto: UsersService/ (todos los sub-proyectos están dentro)
+  # ─────────────────────────────────────────────
+  users-service:
+    build:
+      context: ./UsersService
+      dockerfile: App/Dockerfile
+    container_name: users-service
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Dentro de Docker el host es el nombre del servicio, puerto interno 5432
+      ConnectionStrings__DefaultConnection: "Host=postgres_db;Port=5432;Database=TallerMecanico;Username=admin;Password=tallermecanico2026"
+    ports:
+      - "51029:80"
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────
+  # Servicio 1: Orden de Trabajo (puerto 5229)
+  # Contexto: raíz del repo (necesita UsersService/Domain y Framework)
+  # ─────────────────────────────────────────────
+  orden-service:
+    build:
+      context: .
+      dockerfile: OrdenTrabajoService/Dockerfile
+    container_name: orden-service
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres_db;Port=5432;Database=TallerMecanico;Username=admin;Password=tallermecanico2026"
+      JwtSettings__SecretKey: "SuperSecretaClaveDePruebaParaTallerMecanico2026!!!"
+      JwtSettings__Issuer: "TallerMecanicoUsersApi"
+      JwtSettings__Audience: "TallerMecanicoClients"
+    ports:
+      - "5229:80"
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────
+  # Frontend: WebService / Razor Pages (puerto 5146)
+  # Contexto: WebService/ (sin dependencias de otros proyectos locales)
+  # ─────────────────────────────────────────────
+  web-service:
+    build:
+      context: .
+      dockerfile: WebService/Dockerfile
+    container_name: web-service
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Dentro de Docker se usan los nombres de los servicios como host
+      ServiceUrls__UsersService: "http://users-service/"
+      ServiceUrls__OrdenTrabajoService: "http://orden-service/"
+    ports:
+      - "5146:80"
+    depends_on:
+      - users-service
+      - orden-service
 
 volumes:
-  postgres_data:
+  pgdata:

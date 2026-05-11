@@ -1,36 +1,23 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using BCrypt.Net;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Domain.Entities;
+using System.Security.Claims;
+using WebService.Adapters;
 
-namespace Taller_Mecanico_Arqui.Pages
+namespace WebService.Pages
 {
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly IUsuarioLoginRepository _loginRepository;
-        private readonly IEmpleadoRepository _empleadoRepository;
-        private readonly IClienteRepository _clienteRepository;
-        private readonly ILogger<LoginModel> _logger;
+        private readonly UsersServiceAdapter _usersService;
 
-        public LoginModel(
-            IUsuarioLoginRepository loginRepository,
-            IEmpleadoRepository empleadoRepository,
-            IClienteRepository clienteRepository,
-            ILogger<LoginModel> logger)
+        public LoginModel(UsersServiceAdapter usersService)
         {
-            _loginRepository = loginRepository;
-            _empleadoRepository = empleadoRepository;
-            _clienteRepository = clienteRepository;
-            _logger = logger;
+            _usersService = usersService;
         }
 
         [BindProperty]
@@ -41,117 +28,67 @@ namespace Taller_Mecanico_Arqui.Pages
         public void OnGet(string? returnUrl = null)
         {
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            {
                 ReturnUrl = returnUrl;
-            }
         }
 
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
-            ReturnUrl = returnUrl ?? "/";
-
             if (!ModelState.IsValid)
-                return Page();
-
-            UsuarioLogin? usuario;
-            try
             {
-                usuario = await _loginRepository.GetByEmailAsync(Input.Email);
-            }
-            catch (NpgsqlException ex)
-            {
-                _logger.LogWarning(ex, "No se pudo conectar a PostgreSQL durante el inicio de sesion para {Email}.", Input.Email);
-                ModelState.AddModelError(string.Empty, "La base de datos no esta disponible en este momento. Intenta nuevamente en unos minutos.");
                 return Page();
             }
 
-            if (usuario == null || !BCrypt.Net.BCrypt.Verify(Input.Password, usuario.PasswordHash))
+            var result = await _usersService.LoginAsync(Input.Email, Input.Password);
+            if (!result.ok || result.response is null || string.IsNullOrWhiteSpace(result.response.Token))
             {
-                ModelState.AddModelError(string.Empty, "Correo electronico o contrasena incorrectos.");
+                ModelState.AddModelError(string.Empty, result.error ?? "No fue posible iniciar sesión.");
                 return Page();
             }
 
-            if (usuario.EsCliente)
-            {
-                return await HandleClienteLoginAsync(usuario);
-            }
-            else
-            {
-                return await HandleEmpleadoLoginAsync(usuario);
-            }
-        }
+            HttpContext.Session.SetString("JwtToken", result.response.Token);
 
-        private async Task<IActionResult> HandleClienteLoginAsync(UsuarioLogin usuario)
-        {
-            var clienteResult = await _clienteRepository.GetByIdAsync(usuario.ClienteId!.Value);
-            if (clienteResult.IsFailure)
+            var claims = new List<Claim>();
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(result.response.Token);
+            var inboundMap = JwtSecurityTokenHandler.DefaultInboundClaimTypeMap;
+            foreach (var c in jwt.Claims)
             {
-                ModelState.AddModelError(string.Empty, clienteResult.ErrorMessage ?? "No se pudo validar el cliente.");
-                return Page();
+                var type = inboundMap.TryGetValue(c.Type, out var mapped) ? mapped : c.Type;
+                claims.Add(new Claim(type, c.Value, c.ValueType, c.Issuer, c.OriginalIssuer));
             }
+            // Store the raw JWT as a claim so adapters can recover it if the session is lost
+            claims.Add(new Claim("JwtToken", result.response.Token));
 
-            var cliente = clienteResult.Value;
-            if (cliente == null)
+            var emailClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(emailClaim))
             {
-                ModelState.AddModelError(string.Empty, "Cliente no encontrado.");
-                return Page();
+                emailClaim = Input.Email;
             }
 
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
-            var claims = new List<Claim>
+            if (!claims.Any(c => c.Type == ClaimTypes.Name))
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.ClienteId.ToString()!),
-                new Claim(ClaimTypes.Name, cliente.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Role, "Cliente"),
-                new Claim("NivelAcceso", "Cliente"),
-                new Claim("ClienteId", usuario.ClienteId.ToString()!)
-            };
+                claims.Add(new Claim(ClaimTypes.Name, emailClaim));
+            }
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
-            return RedirectToPage("/Clientes/Perfil");
-        }
-
-        private async Task<IActionResult> HandleEmpleadoLoginAsync(UsuarioLogin usuario)
-        {
-            var empleadoResult = await _empleadoRepository.GetByIdAsync(usuario.EmpleadoId!.Value);
-            if (empleadoResult.IsFailure)
+            var principal = new ClaimsPrincipal(identity);
+            var authProperties = new AuthenticationProperties
             {
-                ModelState.AddModelError(string.Empty, empleadoResult.ErrorMessage ?? "No se pudo validar el empleado.");
-                return Page();
-            }
-
-            var empleado = empleadoResult.Value;
-            if (empleado == null || empleado is not Administrador admin)
-            {
-                ModelState.AddModelError(string.Empty, "Solo los administradores pueden acceder al sistema.");
-                return Page();
-            }
-
-            usuario.RegistrarAcceso();
-            await _loginRepository.UpdateAsync(usuario);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.EmpleadoId.ToString()!),
-                new Claim(ClaimTypes.Name, empleado.NombreCompleto.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Role, "Administrador"),
-                new Claim("NivelAcceso", admin.NivelAcceso.ToString())
+                IsPersistent = Input.RememberMe
             };
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = Input.RememberMe });
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
 
-            if (usuario.RequiereCambioPassword && usuario.Email != "administrador.principal@taller.com")
+            if (result.response.RequiereCambioPassword)
             {
                 return RedirectToPage("/ChangePassword");
             }
 
-            return LocalRedirect(ReturnUrl);
+            var targetUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? returnUrl
+                : ReturnUrl;
+
+            return LocalRedirect(targetUrl);
         }
     }
 

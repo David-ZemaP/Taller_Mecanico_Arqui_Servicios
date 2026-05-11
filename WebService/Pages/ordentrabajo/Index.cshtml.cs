@@ -1,39 +1,20 @@
-using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Taller_Mecanico_Arqui.Application.Facades;
-using Taller_Mecanico_Arqui.Application.DTOs.OrdenTrabajo;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Enums;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Infrastructure.Authorization;
+using WebService.Adapters;
+using WebService.DTOs;
 
-namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
+namespace WebService.Pages.OrdenTrabajo
 {
-    [RequireAccessLevel(NivelAcceso.Parcial)]
     public class IndexModel : PageModel
     {
-        private readonly OrdenTrabajoCreate _ordenTrabajoCreate;
-        private readonly OrdenTrabajoAnular _ordenTrabajoAnular;
-        private readonly IRepository<Producto> _productoRepository;
-        private readonly IRepository<Servicio> _servicioRepository;
-        private readonly IClienteRepository _clienteRepository;
+        private readonly OrdenTrabajoAdapter _adapter;
 
-        public IndexModel(
-            OrdenTrabajoCreate ordenTrabajoCreate,
-            OrdenTrabajoAnular ordenTrabajoAnular,
-            IRepository<Producto> productoRepository,
-            IRepository<Servicio> servicioRepository,
-            IClienteRepository clienteRepository)
+        public IndexModel(OrdenTrabajoAdapter adapter)
         {
-            _ordenTrabajoCreate = ordenTrabajoCreate;
-            _ordenTrabajoAnular = ordenTrabajoAnular;
-            _productoRepository = productoRepository;
-            _servicioRepository = servicioRepository;
-            _clienteRepository = clienteRepository;
+            _adapter = adapter;
         }
 
         public IList<OrdenTrabajoListDto> OrdenesTrabajo { get; set; } = new List<OrdenTrabajoListDto>();
@@ -47,106 +28,95 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
         public async Task OnGetAsync()
         {
             CargarOpcionesEstado();
-            OrdenesTrabajo = (await _ordenTrabajoCreate.GetAllAsync()).ToList();
+            OrdenesTrabajo = await _adapter.GetAllOrdenesAsync();
         }
 
         public async Task<JsonResult> OnGetOrdenAsync(int id)
         {
-            var ordenResult = await _ordenTrabajoCreate.GetDetalleAsync(id);
-            if (ordenResult.IsFailure)
-            {
-                if (ordenResult.ErrorCode == ErrorCodes.OrdenTrabajoNotFound)
-                    return new JsonResult(new { error = "Orden no encontrada." }) { StatusCode = 404 };
-
-                return new JsonResult(new { error = ordenResult.ErrorMessage ?? "Error al consultar orden." }) { StatusCode = 500 };
-            }
-
-            return new JsonResult(ordenResult.Value!);
-        }
-
-        public async Task<JsonResult> OnGetBuscarVehiculosAsync(string term, int? clienteId)
-        {
-            var vehiculos = await _ordenTrabajoCreate.BuscarVehiculosAsync(term, clienteId);
-            return new JsonResult(vehiculos);
+            var orden = await _adapter.GetOrdenDetalleAsync(id);
+            if (orden is null)
+                return new JsonResult(new { error = "Orden no encontrada." }) { StatusCode = 404 };
+            return new JsonResult(orden);
         }
 
         public async Task<JsonResult> OnGetBuscarClientesAsync(string term)
         {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+                return new JsonResult(Array.Empty<object>());
+            var clientes = await _adapter.BuscarClientesAsync(term);
+            var result = clientes.Select(c => new
+            {
+                id = c.ClienteId,
+                text = $"{c.Nombres} {c.PrimerApellido} - CI: {c.CiNumero}"
+            });
+            return new JsonResult(result);
+        }
+
+        public async Task<JsonResult> OnGetBuscarVehiculosAsync(string term, int? clienteId)
+        {
             if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
-
-            term = term.ToLower(CultureInfo.InvariantCulture);
-
-            var clientes = (await _clienteRepository.GetAllAsync())
-                .Where(c => !c.IsDeleted &&
-                    ((c.NombreCompleto?.ToString() ?? string.Empty)
-                        .ToLower(CultureInfo.InvariantCulture)
-                        .Contains(term, StringComparison.OrdinalIgnoreCase)
-                     || c.Ci.Numero.ToString().Contains(term)))
-                .OrderBy(c => c.NombreCompleto?.ToString())
-                .Select(c => new { id = c.ClienteId, text = (c.NombreCompleto?.ToString() ?? "Sin nombre") + " - CI: " + c.Ci.Numero })
-                .Take(15)
-                .ToList();
-
-            return new JsonResult(clientes);
+                return new JsonResult(Array.Empty<object>());
+            var result = await _adapter.BuscarVehiculosAsync(term, clienteId);
+            return new JsonResult(result);
         }
 
         public async Task<JsonResult> OnGetBuscarProductosAsync(string term)
         {
             if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
+                return new JsonResult(Array.Empty<object>());
 
-            term = term.ToLower(CultureInfo.InvariantCulture);
-            var productos = (await _productoRepository.GetAllAsync())
-                .Where(p => p.Nombre.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .Select(p => new
-                {
-                    id = p.ProductoId,
-                    text = p.Nombre,
-                    precio = p.Precio,
-                    stock = p.Stock
-                })
+            var productos = await _adapter.GetAllProductosAsync();
+            var normalized = term.ToLower(CultureInfo.InvariantCulture);
+            var result = productos
+                .Where(p => p.Nombre.ToLower(CultureInfo.InvariantCulture)
+                    .Contains(normalized, StringComparison.OrdinalIgnoreCase))
+                .Select(p => new { id = p.ProductoId, text = p.Nombre, precio = p.Precio, stock = p.Stock })
                 .Take(15)
                 .ToList();
-
-            return new JsonResult(productos);
+            return new JsonResult(result);
         }
 
         public async Task<JsonResult> OnGetBuscarServiciosAsync(string term)
         {
             if (string.IsNullOrWhiteSpace(term))
-                return new JsonResult(new List<object>());
+                return new JsonResult(Array.Empty<object>());
 
-            term = term.ToLower(CultureInfo.InvariantCulture);
-            var servicios = (await _servicioRepository.GetAllAsync())
-                .Where(s => s.Nombre.ToLower(CultureInfo.InvariantCulture).Contains(term, StringComparison.OrdinalIgnoreCase))
-                .Select(s => new
-                {
-                    id = s.ServicioId,
-                    text = s.Nombre,
-                    precio = s.Precio
-                })
+            var servicios = await _adapter.GetAllServiciosAsync();
+            var normalized = term.ToLower(CultureInfo.InvariantCulture);
+            var result = servicios
+                .Where(s => s.Nombre.ToLower(CultureInfo.InvariantCulture)
+                    .Contains(normalized, StringComparison.OrdinalIgnoreCase))
+                .Select(s => new { id = s.ServicioId, text = s.Nombre, precio = s.Precio })
                 .Take(15)
                 .ToList();
-
-            return new JsonResult(servicios);
+            return new JsonResult(result);
         }
 
         public async Task<IActionResult> OnPostSaveAsync()
         {
             CargarOpcionesEstado();
 
+            // Parse JSON fields populated by JavaScript before submitting
+            ParseJsonItems();
+
             if (!ModelState.IsValid)
             {
-                OrdenesTrabajo = (await _ordenTrabajoCreate.GetAllAsync()).ToList();
+                OrdenesTrabajo = await _adapter.GetAllOrdenesAsync();
                 return Page();
             }
 
-            var saveResult = await _ordenTrabajoCreate.SaveAsync(FormDto);
-            if (saveResult.IsFailure)
+            bool ok;
+            string? error;
+
+            if (FormDto.OrdenTrabajoId == 0)
+                (ok, error, _) = await _adapter.RegistrarOrdenAsync(FormDto);
+            else
+                (ok, error) = await _adapter.ActualizarOrdenAsync(FormDto);
+
+            if (!ok)
             {
-                ModelState.AddModelError(string.Empty, saveResult.ErrorMessage ?? "No se pudo registrar la orden de trabajo.");
-                OrdenesTrabajo = (await _ordenTrabajoCreate.GetAllAsync()).ToList();
+                ModelState.AddModelError(string.Empty, error ?? "No se pudo guardar la orden de trabajo.");
+                OrdenesTrabajo = await _adapter.GetAllOrdenesAsync();
                 return Page();
             }
 
@@ -155,23 +125,45 @@ namespace Taller_Mecanico_Arqui.Pages.ordentrabajo
 
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
-            var deleteResult = await _ordenTrabajoAnular.DeleteAsync(id);
-            if (deleteResult.IsFailure)
-            {
-                TempData["ErrorMessage"] = deleteResult.ErrorMessage;
-            }
-
+            var (ok, error) = await _adapter.AnularOrdenAsync(id);
+            if (!ok)
+                TempData["ErrorMessage"] = error;
             return RedirectToPage();
+        }
+
+        private void ParseJsonItems()
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(FormDto.ProductosJson) && FormDto.ProductosJson != "[]")
+                    FormDto.Productos = JsonSerializer.Deserialize<List<OrdenTrabajoProductoItemDto>>(
+                        FormDto.ProductosJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            catch { FormDto.Productos = new(); }
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(FormDto.ServiciosJson) && FormDto.ServiciosJson != "[]")
+                    FormDto.Servicios = JsonSerializer.Deserialize<List<OrdenTrabajoServicioItemDto>>(
+                        FormDto.ServiciosJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            catch { FormDto.Servicios = new(); }
         }
 
         private void CargarOpcionesEstado()
         {
-            EstadoTrabajoOptions = _ordenTrabajoCreate.GetEstadoTrabajoOptions()
-                .Select(estado => new SelectListItem(estado, estado))
-                .ToList();
+            EstadoTrabajoOptions = new List<string>
+            {
+                "Recibido", "EnDiagnostico", "EnReparacion",
+                "EnEsperaRepuestos", "ListoParaEntrega", "Entregado"
+            }
+            .Select(e => new SelectListItem(e, e))
+            .ToList();
 
-            EstadoPagoOptions = _ordenTrabajoCreate.GetEstadoPagoOptions()
-                .Select(estado => new SelectListItem(estado, estado))
+            EstadoPagoOptions = new List<string> { "Pendiente", "Pagado", "Cancelado", "Rechazado" }
+                .Select(e => new SelectListItem(e, e))
                 .ToList();
         }
     }

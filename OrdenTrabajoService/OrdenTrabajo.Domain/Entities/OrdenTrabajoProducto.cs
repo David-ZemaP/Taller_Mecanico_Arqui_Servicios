@@ -1,4 +1,4 @@
-namespace Taller_Mecanico_Arqui.Domain.Entities
+namespace OrdenTrabajoService.Domain.Entities
 {
     public class OrdenTrabajoProducto
     {

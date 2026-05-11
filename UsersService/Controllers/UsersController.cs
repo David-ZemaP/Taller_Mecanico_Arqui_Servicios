@@ -16,6 +16,7 @@ namespace Taller_Mecanico_Users.Controllers
         private readonly CreateUserUseCase _createUserUseCase;
         private readonly GetUserByIdUseCase _getUserByIdUseCase;
         private readonly GetUsersUseCase _getUsersUseCase;
+        private readonly GetClientesUseCase _getClientesUseCase;
         private readonly UpdateUserUseCase _updateUserUseCase;
         private readonly ChangePasswordUseCase _changePasswordUseCase;
         private readonly ResetPasswordUseCase _resetPasswordUseCase;
@@ -25,6 +26,7 @@ namespace Taller_Mecanico_Users.Controllers
             CreateUserUseCase createUserUseCase,
             GetUserByIdUseCase getUserByIdUseCase,
             GetUsersUseCase getUsersUseCase,
+            GetClientesUseCase getClientesUseCase,
             UpdateUserUseCase updateUserUseCase,
             ChangePasswordUseCase changePasswordUseCase,
             ResetPasswordUseCase resetPasswordUseCase,
@@ -33,6 +35,7 @@ namespace Taller_Mecanico_Users.Controllers
             _createUserUseCase = createUserUseCase;
             _getUserByIdUseCase = getUserByIdUseCase;
             _getUsersUseCase = getUsersUseCase;
+            _getClientesUseCase = getClientesUseCase;
             _updateUserUseCase = updateUserUseCase;
             _changePasswordUseCase = changePasswordUseCase;
             _resetPasswordUseCase = resetPasswordUseCase;
@@ -40,17 +43,24 @@ namespace Taller_Mecanico_Users.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden crear
+        [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
-            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email);
+            var usuarioResult = await _createUserUseCase.ExecuteAsync(request.EmpleadoId, request.Email, request.Password);
             if (usuarioResult.IsFailure || usuarioResult.Value == null)
             {
                 return ApiResultMapper.MapError(this, usuarioResult);
             }
 
-            var usuario = usuarioResult.Value;
-            return CreatedAtAction(nameof(GetUserById), new { id = usuario.UsuarioLoginId }, new { usuario.UsuarioLoginId, usuario.Email });
+            var creation = usuarioResult.Value;
+            return CreatedAtAction(nameof(GetUserById), new { id = creation.User.UsuarioLoginId },
+                new
+                {
+                    creation.User.UsuarioLoginId,
+                    creation.User.Email,
+                    plainPassword = creation.PlainPassword,
+                    notificationRecipients = creation.NotificationRecipients
+                });
         }
 
         [HttpGet("{id}")]
@@ -80,8 +90,16 @@ namespace Taller_Mecanico_Users.Controllers
             return Ok(usuarios.Select(ToDto));
         }
 
+        [HttpGet("clientes")]
+        [Authorize(Roles = "Empleado")]
+        public async Task<IActionResult> GetClientes()
+        {
+            var clientes = await _getClientesUseCase.ExecuteAsync();
+            return Ok(clientes.Select(ToDto));
+        }
+
         [HttpPut("{id}")]
-        [Authorize(Roles = "Empleado")] // Solo empleados pueden actualizar
+        [Authorize(Roles = "Empleado")] 
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
             var result = await _updateUserUseCase.ExecuteAsync(id, request.Email, request.Activo);
@@ -122,7 +140,7 @@ namespace Taller_Mecanico_Users.Controllers
                 return ApiResultMapper.MapError(this, result);
             }
 
-            return NoContent();
+            return Ok(new { plainPassword = result.Value });
         }
 
         [HttpDelete("{id}")]
@@ -169,6 +187,7 @@ namespace Taller_Mecanico_Users.Controllers
     {
         public int EmpleadoId { get; set; }
         public string Email { get; set; } = string.Empty;
+        public string? Password { get; set; }
     }
 
     public class UpdateUserRequest

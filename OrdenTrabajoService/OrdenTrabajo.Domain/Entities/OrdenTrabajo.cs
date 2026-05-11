@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Taller_Mecanico_Arqui.Domain.Enums;
+using OrdenTrabajoService.Domain.Enums;
 
-namespace Taller_Mecanico_Arqui.Domain.Entities
+namespace OrdenTrabajoService.Domain.Entities
 {
     public class OrdenTrabajo
     {
@@ -27,7 +24,6 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
         private readonly List<OrdenTrabajoMecanico> _mecanicosAsignados = new();
         public IReadOnlyCollection<OrdenTrabajoMecanico> MecanicosAsignados => _mecanicosAsignados.AsReadOnly();
 
-        // --- NUEVAS LISTAS PARA PRODUCTOS Y SERVICIOS ---
         private readonly List<OrdenTrabajoProducto> _productosUsados = new();
         public IReadOnlyCollection<OrdenTrabajoProducto> ProductosUsados => _productosUsados.AsReadOnly();
 
@@ -83,39 +79,33 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
             };
         }
 
-        // --- NUEVOS M�TODOS PARA AGREGAR DETALLES ---
         public void AgregarProducto(int productoId, int cantidad, double precioUnitario)
         {
             var subtotal = cantidad * precioUnitario;
-            _productosUsados.Add(new OrdenTrabajoProducto(this.OrdenTrabajoId, productoId, cantidad, precioUnitario, subtotal));
+            _productosUsados.Add(new OrdenTrabajoProducto(OrdenTrabajoId, productoId, cantidad, precioUnitario, subtotal));
             RecalcularTotal();
         }
 
         public void AgregarServicio(int servicioId, int cantidad, double precioUnitario)
         {
             var subtotal = cantidad * precioUnitario;
-            _serviciosRealizados.Add(new OrdenTrabajoServicio(this.OrdenTrabajoId, servicioId, cantidad, precioUnitario, subtotal));
+            _serviciosRealizados.Add(new OrdenTrabajoServicio(OrdenTrabajoId, servicioId, cantidad, precioUnitario, subtotal));
             RecalcularTotal();
         }
 
-        // M�todo privado para encapsular la matem�tica de la factura
         private void RecalcularTotal()
         {
-            double totalProductos = _productosUsados.Sum(p => p.Subtotal);
-            double totalServicios = _serviciosRealizados.Sum(s => s.Subtotal);
-
-            ActualizarTotal(totalProductos + totalServicios);
+            ActualizarTotal(
+                _productosUsados.Sum(p => p.Subtotal) +
+                _serviciosRealizados.Sum(s => s.Subtotal));
         }
 
         public void ActualizarEstadoTrabajo(EstadoTrabajo estado)
         {
             EstadoTrabajo = estado;
             FechaActualizacion = DateTime.UtcNow;
-
             if (estado == EstadoTrabajo.Entregado)
-            {
                 FechaEntrega = DateTime.UtcNow;
-            }
         }
 
         public void ActualizarEstadoPago(EstadoPago estado)
@@ -127,34 +117,22 @@ namespace Taller_Mecanico_Arqui.Domain.Entities
         public void ActualizarTotal(double total)
         {
             if (total < 0)
-                throw new ArgumentException("El total no puede ser negativo");
-
+                throw new ArgumentException("El total no puede ser negativo.");
             Total = total;
             FechaActualizacion = DateTime.UtcNow;
         }
 
-        public void AgregarFoto(OrdenTrabajoFoto foto)
-        {
-            _fotosVehiculo.Add(foto);
-        }
+        public void AgregarFoto(OrdenTrabajoFoto foto) => _fotosVehiculo.Add(foto);
 
         public void AsignarMecanico(OrdenTrabajoMecanico mecanicoAsignado)
         {
             if (!_mecanicosAsignados.Any(m => m.MecanicoId == mecanicoAsignado.MecanicoId))
-            {
                 _mecanicosAsignados.Add(mecanicoAsignado);
-            }
         }
 
-        public void CargarProducto(OrdenTrabajoProducto producto)
-        {
-            _productosUsados.Add(producto);
-        }
+        public void CargarProducto(OrdenTrabajoProducto producto) => _productosUsados.Add(producto);
 
-        public void CargarServicio(OrdenTrabajoServicio servicio)
-        {
-            _serviciosRealizados.Add(servicio);
-        }
+        public void CargarServicio(OrdenTrabajoServicio servicio) => _serviciosRealizados.Add(servicio);
 
         public void MarcarEliminado()
         {

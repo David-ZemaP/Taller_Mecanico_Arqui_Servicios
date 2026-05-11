@@ -1,7 +1,7 @@
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Domain.Ports;
+using OrdenTrabajoService.Domain.Interfaces;
+using Taller_Mecanico_Users.Domain.Common;
 
-namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
+namespace OrdenTrabajoService.Application.UseCases
 {
     public class SetAnulacionOrdenTrabajoUseCase
     {
@@ -15,15 +15,12 @@ namespace Taller_Mecanico_Arqui.Application.UseCases.OrdenTrabajo
         public async Task<Result> ExecuteAsync(int ordenTrabajoId, bool anular)
         {
             var ordenResult = await _repository.GetByIdAsync(ordenTrabajoId);
-
             if (ordenResult.IsFailure)
-                return Result.Failure(ordenResult.ErrorCode ?? ErrorCodes.DbError, ordenResult.ErrorMessage ?? "Error al consultar orden de trabajo.");
+                return Result.Failure(ordenResult.ErrorCode!, ordenResult.ErrorMessage!);
 
-            if (anular)
-            {
-                if (ordenResult.Value == null)
-                    return Result.Failure(ErrorCodes.OrdenTrabajoNotFound, $"Orden de trabajo con ID {ordenTrabajoId} no encontrada");
-            }
+            if (anular && ordenResult.Value == null)
+                return Result.Failure(ErrorCodes.OrdenTrabajoNotFound,
+                    $"Orden de trabajo con ID {ordenTrabajoId} no encontrada.");
 
             return await _repository.SetAnuladoAsync(ordenTrabajoId, anular);
         }

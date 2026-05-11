@@ -1,25 +1,23 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Taller_Mecanico_Arqui.Domain.Entities;
-using Taller_Mecanico_Arqui.Domain.Common;
-using Taller_Mecanico_Arqui.Infrastructure.Persistence;
-using Taller_Mecanico_Arqui.Domain.Ports;
-using Taller_Mecanico_Arqui.Infrastructure.Services;
+using Npgsql;
+using OrdenTrabajoService.Domain.Entities;
+using OrdenTrabajoService.Domain.Interfaces;
+using OrdenTrabajoService.Infrastructure.Persistence;
+using Taller_Mecanico_Users.Domain.Common;
+using Taller_Mecanico_Users.Framework.Persistence;
+using Taller_Mecanico_Users.Framework.Services;
 
-namespace Taller_Mecanico_Arqui.Infrastructure.Persistence.Repositories
+namespace OrdenTrabajoService.Infrastructure.Repositories
 {
     public class OrdenTrabajoCatalogoRepository : IOrdenTrabajoCatalogoRepository
     {
         private readonly ISqlConnectionFactory _connectionFactory;
-        private readonly SqlEntityQueryService _queryService;
-        private readonly AuthenticationHelper _authHelper;
+        private readonly OrdenTrabajoQueryService _queryService;
+        private readonly IAuthenticationHelper _authHelper;
 
         public OrdenTrabajoCatalogoRepository(
             ISqlConnectionFactory connectionFactory,
-            SqlEntityQueryService queryService,
-            AuthenticationHelper authHelper)
+            OrdenTrabajoQueryService queryService,
+            IAuthenticationHelper authHelper)
         {
             _connectionFactory = connectionFactory;
             _queryService = queryService;
@@ -28,42 +26,40 @@ namespace Taller_Mecanico_Arqui.Infrastructure.Persistence.Repositories
 
         public async Task<IEnumerable<OrdenTrabajoCatalogo>> GetByOrdenTrabajoIdAsync(int ordenTrabajoId)
         {
-            await using var connection = _connectionFactory.CreateConnection();
+            await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
             await connection.OpenAsync();
-
-            var todosCatalogos = _queryService.LoadOrdenTrabajoCatalogos(connection);
-            return todosCatalogos.Where(c => c.OrdenTrabajoId == ordenTrabajoId).ToList();
+            var todos = _queryService.LoadOrdenTrabajoCatalogos(connection);
+            return todos.Where(c => c.OrdenTrabajoId == ordenTrabajoId).ToList();
         }
 
         public async Task<Result> AddAsync(OrdenTrabajoCatalogo entity)
         {
             try
             {
-                await using var connection = _connectionFactory.CreateConnection();
+                await using var connection = (NpgsqlConnection)_connectionFactory.CreateConnection();
                 await connection.OpenAsync();
 
-                var sql = @"
-INSERT INTO ordentrabajocatalogo (ordentrabajoid, productoid, cantidadutilizada, preciounitario, creadopor, fecharegistro)
-VALUES (@ordentrabajoid, @productoid, @cantidadutilizada, @preciounitario, @creadopor, @fecharegistro);";
+                var actor = _authHelper.GetCurrentAuditActor();
+                const string sql = @"
+INSERT INTO ordentrabajocatalogo
+    (ordentrabajoid, productoid, cantidadutilizada, preciounitario, creadopor, fecharegistro)
+VALUES (@ordenid, @productoid, @cantidad, @precio, @actor, @fecha);";
 
-                var actorAuditoria = _authHelper.GetCurrentAuditActor();
+                await using var cmd = new NpgsqlCommand(sql, connection);
+                cmd.Parameters.AddWithValue("ordenid", entity.OrdenTrabajoId);
+                cmd.Parameters.AddWithValue("productoid", entity.ProductoId);
+                cmd.Parameters.AddWithValue("cantidad", entity.CantidadUtilizada);
+                cmd.Parameters.AddWithValue("precio", entity.PrecioUnitario);
+                cmd.Parameters.AddWithValue("actor", actor);
+                cmd.Parameters.AddWithValue("fecha", entity.FechaRegistro);
 
-                await using var command = new Npgsql.NpgsqlCommand(sql, connection);
-                command.Parameters.AddWithValue("ordentrabajoid", entity.OrdenTrabajoId);
-                command.Parameters.AddWithValue("productoid", entity.ProductoId);
-                command.Parameters.AddWithValue("cantidadutilizada", entity.CantidadUtilizada);
-                command.Parameters.AddWithValue("preciounitario", entity.PrecioUnitario);
-                command.Parameters.AddWithValue("creadopor", actorAuditoria);
-                command.Parameters.AddWithValue("fecharegistro", entity.FechaRegistro);
-
-                await command.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                return Result.Failure(
-                    ErrorCodes.DbError,
-                    $"Error al registrar el catálogo de la orden de trabajo: {ex.Message}");
+                return Result.Failure(ErrorCodes.DbError,
+                    $"Error al registrar catálogo de orden de trabajo: {ex.Message}");
             }
         }
     }
