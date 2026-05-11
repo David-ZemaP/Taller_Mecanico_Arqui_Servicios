@@ -19,3 +19,4 @@ namespace OrdenTrabajoService.Application.Facades
             => AnularProcesoPrincipalAsync(id, anular: true);
     }
 }
+

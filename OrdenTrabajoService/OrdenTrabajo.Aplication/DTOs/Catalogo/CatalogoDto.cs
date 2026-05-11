@@ -35,3 +35,4 @@ namespace OrdenTrabajoService.Application.DTOs.Catalogo
         public string Nombre { get; set; } = string.Empty;
     }
 }
+

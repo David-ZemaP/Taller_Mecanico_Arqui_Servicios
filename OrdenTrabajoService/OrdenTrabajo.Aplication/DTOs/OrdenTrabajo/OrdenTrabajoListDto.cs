@@ -14,3 +14,4 @@ namespace OrdenTrabajoService.Application.DTOs.OrdenTrabajo
         public bool IsDeleted { get; set; }
     }
 }
+

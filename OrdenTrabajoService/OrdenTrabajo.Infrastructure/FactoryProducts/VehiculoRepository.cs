@@ -4,8 +4,8 @@ using OrdenTrabajoService.Domain.Entities;
 using OrdenTrabajoService.Domain.Interfaces;
 using OrdenTrabajoService.Infrastructure.Persistence;
 using Taller_Mecanico_Users.Domain.Common;
-using Taller_Mecanico_Users.Framework.Persistence;
-using Taller_Mecanico_Users.Framework.Services;
+using Taller_Mecanico_Users.Application.Persistence;
+using Taller_Mecanico_Users.Application.Services;
 
 namespace OrdenTrabajoService.Infrastructure.Repositories
 {
@@ -148,3 +148,4 @@ WHERE vehiculoid = @id AND NOT isdeleted;";
         }
     }
 }
+

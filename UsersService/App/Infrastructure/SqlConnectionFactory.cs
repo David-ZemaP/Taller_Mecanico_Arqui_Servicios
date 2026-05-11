@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System.Data.Common;
-using Taller_Mecanico_Users.Framework.Persistence;
+using Taller_Mecanico_Users.Application.Persistence;
 
 namespace Taller_Mecanico_Users.App.Infrastructure
 {

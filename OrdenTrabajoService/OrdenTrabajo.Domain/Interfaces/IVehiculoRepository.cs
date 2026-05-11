@@ -7,3 +7,4 @@ namespace OrdenTrabajoService.Domain.Interfaces
         Task<IEnumerable<Vehiculo>> BuscarPorPlacaAsync(string term, int? clienteId = null);
     }
 }
+

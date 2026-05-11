@@ -12,7 +12,7 @@
     <None Include="App\App.csproj" />
     <None Include="Data\Data.csproj" />
     <None Include="Domain\Domain.csproj" />
-    <None Include="Framework\Framework.csproj" />
+    <None Include="Application\Application.csproj" />
     <None Include="Taller_Mecanico_Users.sln" />
     <None Include="UseCases\UseCases.csproj" />
   </ItemGroup>

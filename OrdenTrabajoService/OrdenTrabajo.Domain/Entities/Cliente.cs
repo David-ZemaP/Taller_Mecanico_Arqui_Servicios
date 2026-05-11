@@ -59,3 +59,4 @@ namespace OrdenTrabajoService.Domain.Entities
         }
     }
 }
+

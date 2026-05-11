@@ -18,3 +18,4 @@ namespace OrdenTrabajoService.Application.DTOs.Vehiculo
         public string ColorNombre { get; set; } = string.Empty;
     }
 }
+

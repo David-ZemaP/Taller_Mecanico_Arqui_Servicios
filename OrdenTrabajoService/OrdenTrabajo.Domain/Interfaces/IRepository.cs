@@ -11,3 +11,4 @@ namespace OrdenTrabajoService.Domain.Interfaces
         Task DeleteAsync(int id);
     }
 }
+

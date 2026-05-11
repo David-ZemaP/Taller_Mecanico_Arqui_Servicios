@@ -24,12 +24,12 @@ namespace Taller_Mecanico_Users.UseCases.Users
     {
         private readonly IUsuarioLoginRepository _loginRepository;
         private readonly Domain.Ports.IPasswordHasher _passwordHasher;
-        private readonly Taller_Mecanico_Users.Framework.Services.IJwtTokenGenerator _tokenGenerator;
+        private readonly Taller_Mecanico_Users.Application.Services.IJwtTokenGenerator _tokenGenerator;
 
         public LoginUseCase(
             IUsuarioLoginRepository loginRepository,
             Domain.Ports.IPasswordHasher passwordHasher,
-            Taller_Mecanico_Users.Framework.Services.IJwtTokenGenerator tokenGenerator)
+            Taller_Mecanico_Users.Application.Services.IJwtTokenGenerator tokenGenerator)
         {
             _loginRepository = loginRepository;
             _passwordHasher = passwordHasher;

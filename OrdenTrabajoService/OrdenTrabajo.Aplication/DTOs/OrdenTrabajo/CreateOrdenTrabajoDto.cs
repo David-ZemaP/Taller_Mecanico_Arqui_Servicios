@@ -27,3 +27,4 @@ namespace OrdenTrabajoService.Application.DTOs.OrdenTrabajo
         public double? PrecioUnitario { get; set; }
     }
 }
+

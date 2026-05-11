@@ -1,8 +1,8 @@
 using System.Data;
 using System.Data.Common;
 using Taller_Mecanico_Users.Domain.Ports;
-using Taller_Mecanico_Users.Framework.Persistence;
-using Taller_Mecanico_Users.Framework.Services;
+using Taller_Mecanico_Users.Application.Persistence;
+using Taller_Mecanico_Users.Application.Services;
 
 namespace Taller_Mecanico_Users.Data.Repositories
 {

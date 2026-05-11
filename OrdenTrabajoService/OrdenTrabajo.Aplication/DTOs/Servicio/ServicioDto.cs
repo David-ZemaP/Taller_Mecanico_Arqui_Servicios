@@ -20,3 +20,4 @@ namespace OrdenTrabajoService.Application.DTOs.Servicio
         public double Precio { get; set; }
     }
 }
+

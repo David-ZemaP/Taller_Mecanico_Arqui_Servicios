@@ -8,8 +8,8 @@ using OrdenTrabajoService.Domain.Interfaces;
 using OrdenTrabajoService.Infrastructure.Persistence;
 using OrdenTrabajoService.Infrastructure.Repositories;
 using OrdenTrabajoService.Infrastructure.Services;
-using Taller_Mecanico_Users.Framework.Persistence;
-using Taller_Mecanico_Users.Framework.Services;
+using Taller_Mecanico_Users.Application.Persistence;
+using Taller_Mecanico_Users.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,3 +77,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

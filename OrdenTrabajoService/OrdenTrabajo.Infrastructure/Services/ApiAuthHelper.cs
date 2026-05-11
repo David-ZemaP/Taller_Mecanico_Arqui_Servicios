@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Taller_Mecanico_Users.Framework.Services;
+using Taller_Mecanico_Users.Application.Services;
 
 namespace OrdenTrabajoService.Infrastructure.Services
 {
@@ -30,3 +30,4 @@ namespace OrdenTrabajoService.Infrastructure.Services
         }
     }
 }
+

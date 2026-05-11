@@ -9,3 +9,4 @@ namespace OrdenTrabajoService.Domain.Interfaces
         Task<Result> AddAsync(OrdenTrabajoCatalogo entity);
     }
 }
+

@@ -23,3 +23,4 @@ namespace OrdenTrabajoService.Application.DTOs.Producto
         public int Stock { get; set; }
     }
 }
+

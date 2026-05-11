@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Taller_Mecanico_Users.App.Middleware;
+using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Env.Load(Path.Combine(AppContext.BaseDirectory, ".env"));
 
 builder.Services.AddControllers();
 
@@ -34,50 +37,50 @@ builder.Services.AddAuthentication(options =>
 });
 
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Persistence.ISqlConnectionFactory, 
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Persistence.ISqlConnectionFactory, 
     Taller_Mecanico_Users.App.Infrastructure.SqlConnectionFactory>();
 
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuthenticationHelper, 
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IAuthenticationHelper, 
     Taller_Mecanico_Users.App.Services.AuthenticationHelper>();
 builder.Services.AddHttpContextAccessor();
 
 
-builder.Services.AddSingleton<Taller_Mecanico_Users.Framework.Services.SmtpSettings>();
+builder.Services.AddSingleton<Taller_Mecanico_Users.Application.Services.SmtpSettings>();
 var smtpEnabled = builder.Configuration.GetValue<bool>("Smtp:Enabled");
 if (smtpEnabled)
 {
-    builder.Services.AddScoped<Taller_Mecanico_Users.App.Services.SmtpMailSender>();
-    builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.App.Services.SmtpMailSender>());
-    builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.App.Services.SmtpMailSender>());
+    builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.SmtpMailSender>();
+    builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.Application.Services.SmtpMailSender>());
+    builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.Application.Services.SmtpMailSender>());
 }
 else
 {
-    builder.Services.AddScoped<Taller_Mecanico_Users.App.Services.DummyMailSender>();
-    builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.App.Services.DummyMailSender>());
-    builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.App.Services.DummyMailSender>());
+    builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.DummyMailSender>();
+    builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.Application.Services.DummyMailSender>());
+    builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IMailSender>(sp => sp.GetRequiredService<Taller_Mecanico_Users.Application.Services.DummyMailSender>());
 }
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IPasswordSecurity, 
-    Taller_Mecanico_Users.Framework.Services.PasswordSecurityService>();
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IPasswordSecurity, 
+    Taller_Mecanico_Users.Application.Services.PasswordSecurityService>();
 builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IPasswordSecurity, 
-    Taller_Mecanico_Users.Framework.Services.PasswordSecurityService>();
+    Taller_Mecanico_Users.Application.Services.PasswordSecurityService>();
 
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IPasswordHasher, 
-    Taller_Mecanico_Users.Framework.Services.BcryptPasswordHasher>();
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IPasswordHasher, 
+    Taller_Mecanico_Users.Application.Services.BcryptPasswordHasher>();
 builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IPasswordHasher, 
-    Taller_Mecanico_Users.Framework.Services.BcryptPasswordHasher>();
+    Taller_Mecanico_Users.Application.Services.BcryptPasswordHasher>();
 
 
-builder.Services.AddSingleton<Taller_Mecanico_Users.Framework.Services.IJwtSettings, 
-    Taller_Mecanico_Users.Framework.Services.JwtSettings>();
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IJwtTokenGenerator, 
-    Taller_Mecanico_Users.Framework.Services.JwtTokenGenerator>();
+builder.Services.AddSingleton<Taller_Mecanico_Users.Application.Services.IJwtSettings, 
+    Taller_Mecanico_Users.Application.Services.JwtSettings>();
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IJwtTokenGenerator, 
+    Taller_Mecanico_Users.Application.Services.JwtTokenGenerator>();
 
 
-builder.Services.AddScoped<Taller_Mecanico_Users.Framework.Services.IAuditService, 
-    Taller_Mecanico_Users.Framework.Services.AuditService>();
+builder.Services.AddScoped<Taller_Mecanico_Users.Application.Services.IAuditService, 
+    Taller_Mecanico_Users.Application.Services.AuditService>();
 
 
 
@@ -133,7 +136,7 @@ static async Task SeedDefaultAdminAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
         var connectionFactory = scope.ServiceProvider
-            .GetRequiredService<Taller_Mecanico_Users.Framework.Persistence.ISqlConnectionFactory>();
+            .GetRequiredService<Taller_Mecanico_Users.Application.Persistence.ISqlConnectionFactory>();
         var passwordHasher = scope.ServiceProvider
             .GetRequiredService<Taller_Mecanico_Users.Domain.Ports.IPasswordHasher>();
 

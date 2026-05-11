@@ -26,3 +26,4 @@ namespace OrdenTrabajoService.Domain.Entities
         }
     }
 }
+

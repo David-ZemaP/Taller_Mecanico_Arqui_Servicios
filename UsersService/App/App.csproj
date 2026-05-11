@@ -11,7 +11,7 @@
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Data\Data.csproj" />
     <ProjectReference Include="..\UseCases\UseCases.csproj" />
-    <ProjectReference Include="..\Framework\Framework.csproj" />
+    <ProjectReference Include="..\Application\Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!--Incluir controladores ubicados en la carpeta raíz Controllers/ -->
@@ -20,6 +20,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="DotNetEnv" Version="2.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />

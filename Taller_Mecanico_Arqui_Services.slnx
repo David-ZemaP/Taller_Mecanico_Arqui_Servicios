@@ -1,25 +1,10 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/TallerMecanico.API/TallerMecanico.API.csproj" />
-    <Project Path="src/TallerMecanico.Core/TallerMecanico.Core.csproj" />
-    <Project Path="src/TallerMecanico.Services/TallerMecanico.Services.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/TallerMecanico.Tests/TallerMecanico.Tests.csproj" />
-  </Folder>
   <Folder Name="/UsersService/">
     <Project Path="UsersService/App/App.csproj" />
     <Project Path="UsersService/Data/Data.csproj" />
     <Project Path="UsersService/Domain/Domain.csproj" />
-    <Project Path="UsersService/Framework/Framework.csproj" />
-    <Project Path="UsersService/Taller_Mecanico_Users.csproj" />
+    <Project Path="UsersService/Application/Application.csproj" />
     <Project Path="UsersService/UseCases/UseCases.csproj" />
-  </Folder>
-  <Folder Name="/UsersService/Tools/">
-    <Project Path="UsersService/Tools/CreateUserTest/CreateUserTest.csproj" />
-    <Project Path="UsersService/Tools/InitDb/InitDb.csproj" />
-    <Project Path="UsersService/Tools/SmtpTest/SmtpTest.csproj" />
-    <Project Path="UsersService/Tools/UserCreationTest2/UserCreationTest2.csproj" />
   </Folder>
   <Project Path="OrdenTrabajoService/OrdenTrabajoService.csproj" />
   <Project Path="WebService/WebService.csproj" />

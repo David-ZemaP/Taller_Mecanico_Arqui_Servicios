@@ -37,3 +37,4 @@ namespace OrdenTrabajoService.Application.DTOs.OrdenTrabajo
         public double Subtotal { get; set; }
     }
 }
+

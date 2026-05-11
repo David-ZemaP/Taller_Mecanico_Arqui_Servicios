@@ -12,3 +12,4 @@ namespace OrdenTrabajoService.Application.DTOs.OrdenTrabajo
         public double Total { get; set; }
     }
 }
+

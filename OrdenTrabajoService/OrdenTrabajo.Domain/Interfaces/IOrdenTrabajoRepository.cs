@@ -8,3 +8,4 @@ namespace OrdenTrabajoService.Domain.Interfaces
         Task<Result> SetAnuladoAsync(int id, bool anulado);
     }
 }
+

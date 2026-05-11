@@ -50,3 +50,4 @@ namespace OrdenTrabajoService.Domain.Entities
         }
     }
 }
+

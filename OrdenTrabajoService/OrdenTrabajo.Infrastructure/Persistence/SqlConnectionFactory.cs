@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System.Data.Common;
-using Taller_Mecanico_Users.Framework.Persistence;
+using Taller_Mecanico_Users.Application.Persistence;
 
 namespace OrdenTrabajoService.Infrastructure.Persistence
 {
@@ -19,3 +19,4 @@ namespace OrdenTrabajoService.Infrastructure.Persistence
             => new NpgsqlConnection(_connectionString);
     }
 }
+
