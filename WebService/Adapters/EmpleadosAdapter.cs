@@ -150,6 +150,23 @@ namespace WebService.Adapters
             }
         }
 
+        public async Task<(bool ok, UsuarioDto? usuario, string? error)> GetUsuarioByEmpleadoIdAsync(int empleadoId)
+        {
+            try
+            {
+                var response = await SendAsync(HttpMethod.Get, $"api/users/empleado/{empleadoId}");
+                if (!response.IsSuccessStatusCode)
+                    return (false, null, await ReadErrorAsync(response));
+
+                var result = await DeserializeAsync<UsuarioDto>(response);
+                return (true, result, null);
+            }
+            catch (Exception)
+            {
+                return (false, null, "No se pudo conectar con el servicio de usuarios.");
+            }
+        }
+
         public async Task<(bool ok, string? plainPassword, IReadOnlyList<string>? notificationRecipients, string? error)> CreateUsuarioAsync(int empleadoId, string email, string? password)
         {
             try
@@ -227,6 +244,23 @@ namespace WebService.Adapters
             }
         }
 
+        public async Task<(bool ok, string? error)> UpdateUsuarioRolAsync(int usuarioId, string rolNombre)
+        {
+            try
+            {
+                var body = new { rolNombre };
+                var response = await SendAsync(HttpMethod.Put, $"api/users/{usuarioId}/rol", body);
+                if (!response.IsSuccessStatusCode)
+                    return (false, await ReadErrorAsync(response));
+
+                return (true, null);
+            }
+            catch (Exception)
+            {
+                return (false, "No se pudo conectar con el servicio de usuarios.");
+            }
+        }
+
         private static object BuildEmpleadoBody(EmpleadoFormDto form) => new
         {
             nombre = form.Nombres,
@@ -241,8 +275,8 @@ namespace WebService.Adapters
             estadoLaboral = form.EstadoLaboral,
             especialidad = form.Especialidad,
             salarioPorHora = form.SalarioPorHora,
-            salarioMensual = form.SalarioMensual,
-            nivelAcceso = form.NivelAcceso
+            salarioMensual = form.SalarioMensual
+            // El rol se maneja por separado a través del usuario
         };
 
         private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string endpoint, object? body = null)

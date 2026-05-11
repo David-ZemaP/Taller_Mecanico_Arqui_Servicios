@@ -145,6 +145,19 @@ namespace WebService.Pages.Empleados
                         TempData["UsuarioExistente"] = true;
                         TempData["EmailExistente"] = FormDto.Email;
                     }
+                    else if (!string.IsNullOrWhiteSpace(FormDto.RolNombre))
+                    {
+                        // Buscar el usuario por empleadoId y luego asignar el rol
+                        var (empUserOk, empUser, _) = await _adapter.GetUsuarioByEmpleadoIdAsync(empleadoId.Value);
+                        if (empUserOk && empUser != null)
+                        {
+                            var (rolOk, rolError) = await _adapter.UpdateUsuarioRolAsync(empUser.UsuarioLoginId, FormDto.RolNombre);
+                            if (!rolOk)
+                            {
+                                TempData["EmailWarning"] = $"Empleado creado pero no se pudo asignar el rol: {rolError}";
+                            }
+                        }
+                    }
                 }
             }
             else

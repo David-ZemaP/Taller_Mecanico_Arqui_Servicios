@@ -59,7 +59,10 @@ namespace WebService.DTOs
         public string? Especialidad { get; set; }
         public decimal? SalarioPorHora { get; set; }
         public decimal? SalarioMensual { get; set; }
-        public string? NivelAcceso { get; set; }
+        
+        // Nuevo: Rol del usuario (reemplaza NivelAcceso)
+        // Mapping: Administrador -> Administrador, Mecanico -> Mecanico
+        public string? RolNombre { get; set; }
     }
 
     public class UsuarioDto

@@ -97,6 +97,19 @@ namespace Taller_Mecanico_Users.Controllers
             return Ok(usuarios.Select(ToDto));
         }
 
+        [HttpGet("empleado/{empleadoId}")]
+        [Authorize(Roles = "Empleado")]
+        public async Task<IActionResult> GetUserByEmpleadoId(int empleadoId)
+        {
+            var usuario = await _usuarioLoginRepository.GetByEmpleadoIdAsync(empleadoId);
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado para este empleado." });
+            }
+
+            return Ok(ToDto(usuario));
+        }
+
         [HttpGet("clientes")]
         [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> GetClientes()
