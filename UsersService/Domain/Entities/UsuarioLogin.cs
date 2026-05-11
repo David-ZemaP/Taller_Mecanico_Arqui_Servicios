@@ -20,6 +20,8 @@ namespace Taller_Mecanico_Users.Domain.Entities
         public string? ActualizadoPor { get; private set; }
         public DateTime? FechaActualizacion { get; private set; }
         public string? InactivadoPor { get; private set; }
+        public int? RolId { get; private set; }
+        public Rol? Rol { get; private set; }
 
         private UsuarioLogin() { }
 
@@ -67,7 +69,30 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 creadoPor: null,
                 actualizadoPor: null,
                 fechaActualizacion: null,
-                inactivadoPor: null);
+                inactivadoPor: null,
+                rolId: null,
+                rol: null);
+        }
+
+        public static Result<UsuarioLogin> Reconstituir(int usuarioLoginId, int? empleadoId, int? clienteId, string email, string passwordHash, DateTime? ultimoAcceso, bool activo, bool requiereCambioPassword, bool esCliente, string? nivelAcceso, string? creadoPor, string? actualizadoPor, DateTime? fechaActualizacion, string? inactivadoPor, int? rolId, Rol? rol)
+        {
+            return CreateInternal(
+                empleadoId: empleadoId,
+                clienteId: clienteId,
+                email: email,
+                passwordHash: passwordHash,
+                activo: activo,
+                requiereCambioPassword: requiereCambioPassword,
+                esCliente: esCliente,
+                ultimoAcceso: ultimoAcceso,
+                usuarioLoginId: usuarioLoginId,
+                nivelAcceso: nivelAcceso,
+                creadoPor: null,
+                actualizadoPor: null,
+                fechaActualizacion: null,
+                inactivadoPor: null,
+                rolId: rolId,
+                rol: rol);
         }
 
         public Result RegistrarAcceso()
@@ -112,6 +137,12 @@ namespace Taller_Mecanico_Users.Domain.Entities
 
             UsuarioLoginId = usuarioLoginId;
             return Result.Success();
+        }
+
+        public void AsignarRol(Rol rol)
+        {
+            RolId = rol.RolId;
+            Rol = rol;
         }
 
         public Result Desactivar()
@@ -196,7 +227,9 @@ namespace Taller_Mecanico_Users.Domain.Entities
             string? creadoPor = null,
             string? actualizadoPor = null,
             DateTime? fechaActualizacion = null,
-            string? inactivadoPor = null)
+            string? inactivadoPor = null,
+            int? rolId = null,
+            Rol? rol = null)
         {
             var normalizedEmailResult = ValidateEmail(email);
             if (normalizedEmailResult.IsFailure)
@@ -254,7 +287,9 @@ namespace Taller_Mecanico_Users.Domain.Entities
                 CreadoPor = creadoPor,
                 ActualizadoPor = actualizadoPor,
                 FechaActualizacion = fechaActualizacion,
-                InactivadoPor = inactivadoPor
+                InactivadoPor = inactivadoPor,
+                RolId = rolId,
+                Rol = rol
             });
         }
 

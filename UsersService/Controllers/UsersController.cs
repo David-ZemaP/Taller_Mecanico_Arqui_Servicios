@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using Taller_Mecanico_Users.UseCases.Users;
+using Taller_Mecanico_Users.Domain.Ports;
 
 namespace Taller_Mecanico_Users.Controllers
 {
@@ -21,6 +22,8 @@ namespace Taller_Mecanico_Users.Controllers
         private readonly ChangePasswordUseCase _changePasswordUseCase;
         private readonly ResetPasswordUseCase _resetPasswordUseCase;
         private readonly DeleteUserUseCase _deleteUserUseCase;
+        private readonly IRolRepository _rolRepository;
+        private readonly IUsuarioLoginRepository _usuarioLoginRepository;
 
         public UsersController(
             CreateUserUseCase createUserUseCase,
@@ -30,7 +33,9 @@ namespace Taller_Mecanico_Users.Controllers
             UpdateUserUseCase updateUserUseCase,
             ChangePasswordUseCase changePasswordUseCase,
             ResetPasswordUseCase resetPasswordUseCase,
-            DeleteUserUseCase deleteUserUseCase)
+            DeleteUserUseCase deleteUserUseCase,
+            IRolRepository rolRepository,
+            IUsuarioLoginRepository usuarioLoginRepository)
         {
             _createUserUseCase = createUserUseCase;
             _getUserByIdUseCase = getUserByIdUseCase;
@@ -40,6 +45,8 @@ namespace Taller_Mecanico_Users.Controllers
             _changePasswordUseCase = changePasswordUseCase;
             _resetPasswordUseCase = resetPasswordUseCase;
             _deleteUserUseCase = deleteUserUseCase;
+            _rolRepository = rolRepository;
+            _usuarioLoginRepository = usuarioLoginRepository;
         }
 
         [HttpPost]
@@ -143,6 +150,52 @@ namespace Taller_Mecanico_Users.Controllers
             return Ok(new { plainPassword = result.Value });
         }
 
+        [HttpPut("{id}/rol")]
+        [Authorize(Roles = "Empleado")]
+        public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateRoleRequest request)
+        {
+            // Verificar que el usuario actual tenga permisos (Gerente o Administrador)
+            var currentNivelAcceso = User.FindFirst("NivelAcceso")?.Value;
+            if (currentNivelAcceso != "Gerente" && currentNivelAcceso != "Completo")
+            {
+                return Forbid();
+            }
+
+            // Obtener el rol por nombre
+            var rol = await _rolRepository.GetByNombreAsync(request.RolNombre);
+            if (rol == null)
+            {
+                return BadRequest(new { message = "Rol no válido. Roles válidos: Gerente, Administrador, Mecanico, Cliente" });
+            }
+
+            // Obtener el usuario
+            var usuarioResult = await _usuarioLoginRepository.GetByIdAsync(id);
+            if (usuarioResult.IsFailure || usuarioResult.Value == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado" });
+            }
+
+            var usuario = usuarioResult.Value;
+            
+            // No permitir que un cliente se asigne rol de empleado
+            if (usuario.EsCliente && request.RolNombre != "Cliente")
+            {
+                return BadRequest(new { message = "Un cliente no puede tener rol de empleado" });
+            }
+
+            // Asignar el rol y actualizar
+            usuario.AsignarRol(rol);
+            usuario.RegistrarActualizacion(User.FindFirst(ClaimTypes.Email)?.Value);
+            var result = await _usuarioLoginRepository.UpdateAsync(usuario);
+            
+            if (result.IsFailure)
+            {
+                return ApiResultMapper.MapError(this, result);
+            }
+
+            return Ok(new { message = "Rol actualizado correctamente", rolId = rol.RolId, rolNombre = rol.Nombre });
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Empleado")]
         public async Task<IActionResult> DeleteUser(int id)
@@ -169,6 +222,28 @@ namespace Taller_Mecanico_Users.Controllers
 
         private static UserDto ToDto(Taller_Mecanico_Users.Domain.Entities.UsuarioLogin usuario)
         {
+            // Mapear Rol a NivelAcceso para el frontend
+            string nivelAcceso;
+            if (usuario.EsCliente)
+            {
+                nivelAcceso = "Cliente";
+            }
+            else if (usuario.Rol != null)
+            {
+                nivelAcceso = usuario.Rol.Nombre switch
+                {
+                    "Gerente" => "Gerente",
+                    "Administrador" => "Completo",
+                    "Mecanico" => "Parcial",
+                    "Cliente" => "Cliente",
+                    _ => "Parcial"
+                };
+            }
+            else
+            {
+                nivelAcceso = usuario.NivelAcceso ?? "Parcial";
+            }
+
             return new UserDto
             {
                 UsuarioLoginId = usuario.UsuarioLoginId,
@@ -178,7 +253,8 @@ namespace Taller_Mecanico_Users.Controllers
                 UltimoAcceso = usuario.UltimoAcceso,
                 Activo = usuario.Activo,
                 RequiereCambioPassword = usuario.RequiereCambioPassword,
-                EsCliente = usuario.EsCliente
+                EsCliente = usuario.EsCliente,
+                NivelAcceso = nivelAcceso
             };
         }
     }
@@ -203,6 +279,11 @@ namespace Taller_Mecanico_Users.Controllers
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
+    public class UpdateRoleRequest
+    {
+        public string RolNombre { get; set; } = string.Empty;
+    }
+
     public class UserDto
     {
         public int UsuarioLoginId { get; set; }
@@ -213,5 +294,6 @@ namespace Taller_Mecanico_Users.Controllers
         public bool Activo { get; set; }
         public bool RequiereCambioPassword { get; set; }
         public bool EsCliente { get; set; }
+        public string? NivelAcceso { get; set; }
     }
 }

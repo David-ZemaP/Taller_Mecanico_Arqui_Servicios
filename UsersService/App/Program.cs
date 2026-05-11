@@ -89,6 +89,10 @@ builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IUsuarioLoginRepos
 
 builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IEmpleadoRepository,
     Taller_Mecanico_Users.Data.Repositories.EmpleadoRepository>();
+
+builder.Services.AddScoped<Taller_Mecanico_Users.Domain.Ports.IRolRepository,
+    Taller_Mecanico_Users.Data.Repositories.RolRepository>();
+
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.GetEmpleadosUseCase>();
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.CreateEmpleadoUseCase>();
 builder.Services.AddScoped<Taller_Mecanico_Users.UseCases.Empleados.UpdateEmpleadoUseCase>();
@@ -192,23 +196,31 @@ static async Task SeedDefaultAdminAsync(IServiceProvider services)
         var count = Convert.ToInt64(await ((System.Data.Common.DbCommand)checkCmd).ExecuteScalarAsync());
         if (count > 0) return;
 
-        // Create admin login user (RequiereCambioPassword = FALSE so no forced reset)
+        // Get rolId for "Gerente"
+        var getRolCmd = conn.CreateCommand();
+        getRolCmd.CommandText = "SELECT rolid FROM rol WHERE LOWER(nombre) = 'gerente' LIMIT 1;";
+        var rolIdObj = await ((System.Data.Common.DbCommand)getRolCmd).ExecuteScalarAsync();
+        var gerenteRolId = rolIdObj != null ? Convert.ToInt32(rolIdObj) : (int?)null;
+
+        // Create admin login user with rol de Gerente
         var passwordHash = passwordHasher.HashPassword(adminPassword);
         var insUserCmd = conn.CreateCommand();
         insUserCmd.CommandText = @"
             INSERT INTO usuariologin
-                (empleadoid, email, passwordhash, activo, requierecambiopassword, escliente)
+                (empleadoid, email, passwordhash, activo, requierecambiopassword, escliente, rolid)
             VALUES
-                (@EmpleadoId, @Email, @PasswordHash, TRUE, FALSE, FALSE);";
+                (@EmpleadoId, @Email, @PasswordHash, TRUE, FALSE, FALSE, @RolId);";
         var pa = insUserCmd.CreateParameter(); pa.ParameterName = "@EmpleadoId"; pa.Value = empleadoId;
         var pb = insUserCmd.CreateParameter(); pb.ParameterName = "@Email";      pb.Value = adminEmail;
         var pc = insUserCmd.CreateParameter(); pc.ParameterName = "@PasswordHash"; pc.Value = passwordHash;
+        var pd = insUserCmd.CreateParameter(); pd.ParameterName = "@RolId"; pd.Value = gerenteRolId ?? (object)DBNull.Value;
         insUserCmd.Parameters.Add(pa);
         insUserCmd.Parameters.Add(pb);
         insUserCmd.Parameters.Add(pc);
+        insUserCmd.Parameters.Add(pd);
         await ((System.Data.Common.DbCommand)insUserCmd).ExecuteNonQueryAsync();
 
-        Console.WriteLine("[Seed] Usuario administrador creado correctamente.");
+        Console.WriteLine("[Seed] Usuario administrador creado correctamente con rol de Gerente.");
     }
     catch (Exception ex)
     {

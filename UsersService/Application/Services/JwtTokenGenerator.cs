@@ -23,9 +23,29 @@ namespace Taller_Mecanico_Users.Application.Services
         {
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
 
-            var nivelAcceso = usuario.EsCliente
-                ? "Cliente"
-                : (usuario.NivelAcceso ?? "Parcial");
+            // Obtener nivel de acceso desde Rol o fallback a defaults
+            string nivelAcceso;
+            if (usuario.EsCliente)
+            {
+                nivelAcceso = "Cliente";
+            }
+            else if (usuario.Rol != null)
+            {
+                // Mapear rol de BD a nivel de acceso del frontend
+                nivelAcceso = usuario.Rol.Nombre switch
+                {
+                    "Gerente" => "Gerente",
+                    "Administrador" => "Completo",
+                    "Mecanico" => "Parcial",
+                    "Cliente" => "Cliente",
+                    _ => "Parcial"
+                };
+            }
+            else
+            {
+                // Fallback para usuarios sin rol asignado
+                nivelAcceso = usuario.NivelAcceso ?? "Parcial";
+            }
 
             var claims = new List<Claim>
             {
